@@ -1,0 +1,47 @@
+# Deterministic Check Catalogue
+
+Per-check scope for the consistency battery. The script is the source of truth: run `--list-checks` for the live manifest, and read the per-function docstrings in `check_consistency.py` for exact behaviour. This file is the readable reference; keep it aligned with the manifest when checks are added or changed.
+
+The battery has 27 checks across five packets: schema-language (7), wiki-pages (5), styles-files (12), ai-writing-tells (1), and naming (2).
+
+## Packet: schema-language
+
+- `retired_feature_mentions` — scans `CLAUDE.md`, `README.md`, `1-wiki/`, and `.claude/skills/` for mentions of features the schema has retired.
+- `working_skill_count_prose` — compares prose that states a working-skill count against the actual folder count under `.claude/skills/` (meta-skills excluded). Flags a stale number word.
+- `old_schema_wording` — flags retired citation-heavy template phrases (the old `note`-suffixed callout names, `what-sources-say`, `citation-attached`, the old `([[Source]]` citation form). Strips inline-code spans before testing, so quoted examples do not false-positive.
+- `operations_list_matches_skills` — parses the bulleted skill names under `## Operations` in `CLAUDE.md` and cross-checks both directions against `.claude/skills/<name>/`. Flags a listed skill with no folder, and a folder missing from the list. Root-level proposals.
+- `retired_skill_references` — reads `CLAUDE.md`, `README.md`, and skill bodies and scripts for references routing to a merged-away skill. `ingest-deep` is flagged anywhere; `reingest` only in its routing form (backticked or slash-prefixed), since unbackticked mode vocabulary is legitimate. Resolves the required-skills enumeration line too. Exempts the owning `ingest/` folder, the `consistency/` folder, and `*-memory.md` history. Add a name to `RETIRED_SKILL_NAMES` in the script when a skill merges or retires. Root-level proposals.
+- `section_lists_match_schema` — parses the numbered slug lists under `### Required Callout Sections` in `CLAUDE.md` and asserts they equal `EXPECTED_SECTIONS` in the script. `EXPECTED_SECTIONS` is a hardcoded copy of the schema; without this check a section-template edit in `CLAUDE.md` would silently leave `body_section_order` enforcing the old list. Resets its page-type context on any unrecognized heading, so a stray list does not pollute another page type's slug set, and surfaces an unrecognized page-type label so a new page type cannot be added without the script noticing. Root-level proposals.
+- `catalogue_matches_manifest` — parses this file's `## Packet:` sections, their bullet check_ids, and the stated total and per-packet counts, and asserts they match the script's `CHECK_MANIFEST` / `PACKET_CHECKS`. Guards this catalogue (a doc copy of the manifest) against silent drift. Root-level proposals.
+
+## Packet: wiki-pages
+
+- `placeholder_consistency` — flags a wiki page that mixes more than one empty-section placeholder phrase.
+- `body_section_order` — checks that each source, concept/entity, and synthesis page carries its required callouts in the schema order (per `EXPECTED_SECTIONS`).
+- `source_venue_year_split` — flags a source-page `venue:` field that embeds a year; the year belongs in the separate `year:` field.
+- `index_vs_files_drift` — compares the page lists in `1-wiki/index.md` against the files on disk in each wiki folder, both directions. A missing wiki subfolder no longer crashes the run; the folder simply contributes no files.
+- `attachments_folder_coverage` — confirms `1-wiki/attachments/` exists and that every stem subfolder maps to an existing source page.
+
+## Packet: styles-files
+
+- `callout_css_coverage` — every required callout slug (derived from `EXPECTED_SECTIONS`) has a style in the callout stylesheet.
+- `gitkeep_coverage` — every non-hidden folder carries a `.gitkeep` so it survives a fresh clone.
+- `referenced_paths_exist` — path references in `README.md` and `.claude/skills/` resolve to real files or folders. Three forms are read: backticked paths, markdown link targets, and tokens inside shell-language fences (bash, sh, shell, zsh, console). Backtick and link scanning is suppressed inside any non-shell fence. Candidates must start with a known top-level prefix or be a top-level file; placeholder paths, `path:lineno` references, and paths with spaces are skipped. `CLAUDE.md` and `MEMORY.md` are out of scope (illustrative example paths).
+- `orphan_skill_scripts` — every file under a skill's `scripts/` folder is referenced by at least one `SKILL.md`. References may be absolute or relative to the skill folder. Cache and compiled files are skipped.
+- `shared_reference_integrity` — every `.claude/skills/multi-skill/references/*.md` must be (a) cited by at least two distinct skills (that location is for cross-skill material; a reference used by one skill belongs in its own `references/`) and (b) a single copy, with no same-named `references/<file>` duplicated in a skill folder. Motivating case: `verification.md`, run by `ingest` and `query`. Root-level proposals.
+- `personal_info_leakage` — scans for email addresses and clearly-formatted North American phone numbers outside the about-me page. Skips `0-raw/`, `a-archive/`, `2-outputs/`, `.git/`, and `.obsidian/`. Conservative by design.
+- `identity_term_leakage` — scans for the user's name, supervisors, lab, institution, and personal URL handles outside about-me. Terms are auto-extracted from the about-me `## Identity` section, so the check stays in sync as that file evolves. Iteration over the extracted terms is sorted, so finding order is stable across runs.
+- `domain_literature_leakage` — scans `CLAUDE.md` and the `.claude/skills/` text files (including each skill's `scripts/` and their tests) for bibkey-pattern paper citations not in the placeholder allowlist (`PLACEHOLDER_BIBKEYS`), which leak a vault's research-corpus literature into generic infrastructure. The only structural exemption is the `*-memory.md` journals; legitimate citations in a domain-specific skill are recorded as sanctioned exceptions in `consistency-memory.md` rather than special-cased here, so the check names no project skill and stays portable. A test that needs a non-placeholder bibkey composes it at runtime so no literal token sits in its source. Deliberately bibkey-only: domain terms, domain-specific identifiers, and substantive domain claims across the whole skill are a reading task handled by the judgment-drift packet, not a regex. Root-level proposals.
+- `filename_references_resolve` — backticked bare filenames in prose across `CLAUDE.md`, `README.md`, `MEMORY.md`, and the `.md` files under `.claude/skills/`, `a-archive/` (except `a-archive/reference/`, which quotes filenames from other systems), and `1-wiki/` must resolve to a real basename in the repo. Path-shaped references (with a slash) are left to `referenced_paths_exist`. Placeholder tokens and fenced blocks are skipped. To keep an illustrative example, use placeholder form such as `<bibkey>.pdf` rather than a fake filename.
+- `memory_file_graduation_prompt` — counts H2 entries in `MEMORY.md`, the multi-skill memory file, and each per-skill memory file; marks any file over its soft cap (15 for `MEMORY.md`, 10 for the journals) as carrying graduation candidates. A smoke detector by count only; the per-entry audit lives in the `cleanup` skill. Advisory.
+- `dir_tree_drift` — parses the ASCII tree under `## Directory Structure` in `CLAUDE.md` and compares it to the repo. Flags tree entries absent on disk and on-disk paths the tree should list but omits. Root-level proposals.
+- `unbackticked_paths_resolve` — finds path-shaped tokens with a known schema prefix in `CLAUDE.md` prose outside backticks and fences, and verifies each resolves. Pairs with `filename_references_resolve` to catch path drift regardless of backtick convention. Root-level proposals.
+
+## Packet: ai-writing-tells
+
+- `ai_writing_tells` — mechanical regex tells from `ai-writing-tells.md`: high-density vocabulary, puffery, hedging, citation-markup leakage, placeholder leakage, UTM parameters, leftover subject headers, footnote arrows, negative parallelism, and the "Despite challenges" conclusion template. Scans project docs only (`CLAUDE.md`, `README.md`, `MEMORY.md`, the style folder, and skill `SKILL.md` and reference files). Self-skips the documents that quote the patterns. Wiki pages are scanned by `lint`, not here.
+
+## Packet: naming
+
+- `file_naming_consistency` — wiki pages and attachments are kebab-case lowercase; output files match `{kind}-YYYY-MM-DD-HHMM(-extra)?.md` for the kind matching their parent folder; skill folders are kebab-case. Source pages and outputs that reference a raw source by its stem keep the raw case. `0-raw/` is exempt; the `quarantined/` and `superseded/` archive folders keep original filenames.
+- `output_kinds_match_disk` — asserts the script's `OUTPUT_KIND_DIRS` equals the on-disk `2-outputs/` subfolders minus the archive folders and the `STANDALONE_SKILL_NAMES` output folders. Flags an output folder missing from the constant (its files would escape `file_naming_consistency`) and a listed kind whose folder is absent. `synthesis` is intentionally not a kind — the synthesis skill writes durable pages to `1-wiki/syntheses/`, not dated outputs. The standalone skill (`mock-defence`) is exempt — kept out of the catalogues by design. Root-level proposals.

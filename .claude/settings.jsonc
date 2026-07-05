@@ -1,0 +1,119 @@
+{
+    // ─────────────────────────────────────────────────────────────────
+    // Annotated reference for .claude/settings.json.
+    //
+    // Claude Code reads settings.json, NOT this .jsonc file — this is a
+    // commented copy that explains what each setting does and documents
+    // the OPTIONAL ones you can turn on. To change your active config,
+    // edit settings.json (and mirror the change here to keep the notes
+    // current).
+    //
+    // What is optional: the "Protected directories" block at the end of the
+    // deny list is NOT enabled in the active settings.json. Copy those rules
+    // into settings.json's deny list if you want to lock 0-raw/, a-archive/,
+    // and real-committee/profiles/ against agent edits and deletion.
+    // Everything above that block mirrors the active settings.json.
+    // ─────────────────────────────────────────────────────────────────
+    "permissions": {
+        // ── ALLOW: run without prompting ──────────────────────────────
+        // Everyday git operations that don't destroy history or local state.
+        "allow": [
+            "Bash(git commit:*)",
+            "Bash(git pull:*)",
+            "Bash(git push:*)"
+        ],
+        // ── DENY: always blocked ──────────────────────────────────────
+        "deny": [
+            // Package managers — block install/remove/upgrade so the agent
+            // can't mutate your system or project environments unprompted.
+            // (Covers every tool you use: brew, pip, uv, pipx, conda, mamba, npm.)
+            "Bash(brew install:*)",
+            "Bash(brew reinstall:*)",
+            "Bash(brew upgrade:*)",
+            "Bash(brew uninstall:*)",
+            "Bash(pip install:*)",
+            "Bash(pip uninstall:*)",
+            "Bash(pip3 install:*)",
+            "Bash(pip3 uninstall:*)",
+            "Bash(python -m pip install:*)", // pip invoked via the module form
+            "Bash(python -m pip uninstall:*)",
+            "Bash(python3 -m pip install:*)",
+            "Bash(python3 -m pip uninstall:*)",
+            "Bash(uv pip install:*)", // uv's pip-compat shim
+            "Bash(uv pip uninstall:*)",
+            "Bash(uv add:*)", // uv's project-dependency commands
+            "Bash(uv remove:*)",
+            "Bash(pipx install:*)",
+            "Bash(pipx uninstall:*)",
+            "Bash(conda install:*)",
+            "Bash(conda update:*)",
+            "Bash(conda remove:*)",
+            "Bash(mamba install:*)", // conda-compatible, so blocked in parallel
+            "Bash(mamba update:*)",
+            "Bash(mamba remove:*)",
+            // npm — install/update/uninstall, including every short alias
+            // (i, up, un, rm, r) so an abbreviation can't slip past the filter.
+            "Bash(npm install:*)",
+            "Bash(npm i:*)",
+            "Bash(npm update:*)",
+            "Bash(npm up:*)",
+            "Bash(npm upgrade:*)",
+            "Bash(npm uninstall:*)",
+            "Bash(npm un:*)",
+            "Bash(npm remove:*)",
+            "Bash(npm rm:*)",
+            "Bash(npm r:*)",
+            // File deletion — no removing or trashing files unprompted.
+            "Bash(rm:*)",
+            "Bash(rmdir:*)",
+            "Bash(trash:*)",
+            // Destructive git — commands that discard commits, uncommitted
+            // work, tags, or stashes with no recovery.
+            "Bash(git clean -f:*)", // delete untracked files
+            "Bash(git branch -D:*)", // force-delete a branch (unmerged commits lost)
+            "Bash(git tag -d:*)", // delete a tag
+            "Bash(git tag --delete:*)", // same, long form
+            "Bash(git stash clear:*)", // wipe ALL stashes
+            "Bash(git stash drop:*)", // delete one stash
+            "Bash(git reset --hard:*)", // discard all uncommitted changes
+            "Bash(git checkout --force:*)", // switch refs, discarding local changes
+            "Bash(git checkout -f:*)", // same, short form
+            "Bash(git checkout .:*)", // revert tracked files in current dir
+            "Bash(git restore .:*)", // modern equivalent of the above
+            // Privilege escalation — never let the agent run as root.
+            "Bash(sudo:*)",
+            // ── OPTIONAL — Protected directories ──────────────────────
+            // These rules are NOT in the active settings.json — they are
+            // documented here as an opt-in you can enable. Add them to
+            // settings.json's deny list to turn them on. Each block locks a
+            // folder against BOTH Claude's file tools (Edit/Write) AND shell
+            // mutation (rm/rmdir/mv/trash), so the contents can't be
+            // modified, deleted, or moved by any route — enforcing the
+            // schema's "0-raw/ is read-only, a-archive/ is user-curated"
+            // rules. Recommended when you share the vault or want the raw
+            // sources and archive protected from agent edits.
+            // 0-raw/ — likely raw/source data you never want altered.
+            "Edit(0-raw/**)", // no editing files under 0-raw/
+            "Write(0-raw/**)", // no creating/overwriting files there
+            "Bash(rm *0-raw*)", // no shell delete touching that path
+            "Bash(rmdir *0-raw*)",
+            "Bash(mv *0-raw*)", // no moving/renaming it
+            "Bash(trash *0-raw*)",
+            // a-archive/ — archived material, kept read-only.
+            "Edit(a-archive/**)",
+            "Write(a-archive/**)",
+            "Bash(rm *a-archive*)",
+            "Bash(rmdir *a-archive*)",
+            "Bash(mv *a-archive*)",
+            "Bash(trash *a-archive*)",
+            // real-committee/profiles/ — protected wherever it sits in the
+            // tree (leading * matches any parent path).
+            "Edit(*real-committee/profiles/**)",
+            "Write(*real-committee/profiles/**)",
+            "Bash(rm *real-committee/profiles*)",
+            "Bash(rmdir *real-committee/profiles*)",
+            "Bash(mv *real-committee/profiles*)",
+            "Bash(trash *real-committee/profiles*)"
+        ]
+    }
+}

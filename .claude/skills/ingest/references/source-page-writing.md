@@ -1,0 +1,23 @@
+# ingest — Source-Page Writing (Step 5)
+
+Per-callout writing guidance for the source page, the inline-embed format, and the citation / attachments-list / no-bold rules. Used by `ingest` Step 5. Sections are not quotas — fill only with genuine, source-grounded content within the frames/purpose; otherwise leave the `> - None noted` placeholder.
+
+- **Only fill sections with genuine, source-grounded content within the frames/purpose** (sections are not quotas). Section guidance:
+  - `TL;DR`: one or two plain bullets. `Contribution`: what the source adds. `Key Claims`: the few claims worth remembering (deep: as many as the purpose earns; a short list in a tight scope is correct). A claim is load-bearing if a downstream page, a synthesis, or the stated purpose would rely on it, or it carries a number or result; when in doubt, treat it as load-bearing and anchor it (a short verbatim quote plus a locator in `Evidence`). A causal, comparative, or evaluative claim states its reason or mechanism, taken faithfully from the source — never a fabricated "because".
+  - `Evidence`: precise page/section/figure/slide/timestamp pointers for the listed claims (deep: equation numbers, table pointers, setup details, exact quotes where wording is load-bearing). Deep mode, load-bearing equations: instantiate one tiny worked numeric example (concrete values, or a limiting case) to confirm the plain-language gloss before writing it — this catches an equation transcribed correctly but read in the wrong sense, which the restated-numbers match-check cannot; flag rather than fabricate if the example does not resolve. Image embeds live inline — the locator on the bullet, then a blank quoted line (`>`), the embed on its own line, then another blank quoted line (`>`) below it. The blank lines above and below set the embed off as its own block so Obsidian renders it (an embed butted directly against the bullet above or the line below mis-renders). The embed line is a single space after `>`, no indentation, no leading `- ` dash (four or more spaces after `>` make it an indented code block that renders the raw `![[…]]` instead of the image):
+    ```markdown
+    > - fig. 4, p. 7: gap between baselines
+    >
+    > ![[1-wiki/attachments/{stem}/gap-chart.png]]
+    >
+    ```
+    Crops must contain the full figure plus the full caption and nothing else.
+  - `Method`: how the source arrived at its claims, implementation details (hardware, dataset, hyperparameters; deep: training regime), and methodology/architecture figures (same embed format — blank quoted line above and below). Deep writes more here, within the purpose.
+  - `Assumptions`: premises the argument depends on, including unstated ones (deep goes further — surfacing assumptions is foundational-reference work). Distinct from `Limitations`.
+  - `Limitations`: weaknesses the source itself acknowledges, paraphrased in its voice with locators (deep: capture the full set the authors list). Distinct from `Assumptions`, `Appraisal`, `Contradictions`.
+  - `Appraisal`: your judgement of trustworthiness — strength of evidence, bias, replication status, reasons to downgrade. Empty `> - None noted` is fine on a first normal ingest; deep/foundational sources warrant a real appraisal pass.
+  - `Concepts and Entities`: pipe-rendered wikilinks to the notes this source supports within the frames.
+  - `Contradictions`, `Open Questions`, `Connections`: in-scope items or `> - None noted`. Preserve contradictions rather than smoothing them.
+- List every extracted file in `attachments:` frontmatter (`- "[[1-wiki/attachments/{stem}/basename.png]]"`); embeds use `![[...]]` without pipe.
+- Do not cite the source on every bullet (the page is already scoped to it). Paraphrase in plain language — bullets are not copy-paste extracts even at depth; rewrite in the user's voice with the locator preserved. Verbatim text belongs only inside quote marks paired with a locator, reserved for load-bearing wording.
+- No bold, no italic. For any technical term the page introduces, wikilink it inline (pipe-rendered) with a short gloss: `the [[1-wiki/concepts/positional-encoding.md|positional encoding]] — adds order information to token embeddings`. Subsequent uses need no gloss, but keep the wikilink — link every genuine reference to a page that exists, on every occurrence, not only first use (`CLAUDE.md` → Wikilink Format); a page never links to itself. A term whose page does not exist may stay a first-use dangling link. Use `*[tentative]*` sparingly for thin/indirect support — the canonical marker token is `*[tentative]*` (CLAUDE.md → Bullet Markers); state the reason in the bullet's prose, not inside the marker.

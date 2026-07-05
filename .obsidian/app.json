@@ -1,0 +1,25 @@
+{
+  "showInlineTitle": true,
+  "autoPairBrackets": true,
+  "autoPairMarkdown": true,
+  "alwaysUpdateLinks": true,
+  "focusNewTab": false,
+  "pdfExportSettings": {
+    "pageSize": "Letter",
+    "landscape": false,
+    "margin": "0",
+    "downscalePercent": 100
+  },
+  "userIgnoreFilters": [
+    "0-raw/",
+    "2-outputs/",
+    "a-archive/",
+    "1-wiki/hot",
+    "1-wiki/index",
+    "1-wiki/log",
+    "CLAUDE",
+    "MEMORY",
+    "README"
+  ],
+  "readableLineLength": true
+}

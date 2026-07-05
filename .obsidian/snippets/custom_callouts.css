@@ -1,0 +1,279 @@
+/*
+
+Callout Styles
+
+*/
+
+/* This targets the icon and title inside each callout. Adjust font
+sizes to make them larger. */
+
+/* For the callout title, adjust its font size to match h2 */
+.callout-title {
+    font-size: 22px;
+    font-weight: bold;
+    line-height: 1.2;
+}
+
+.callout[data-callout] {
+    --icon-size: 22px;
+}
+
+/* Individual Callout Colors and Icons */
+
+
+/*
+
+https://coolors.co/
+
+Palette source: Palette10 6 (Tableau-10 family) — 10 hues, used verbatim:
+  blue          29, 113, 173
+  orange        244, 114, 0
+  green         43, 156, 42
+  red           198, 36, 36
+  purple        134, 81, 181
+  brown         136, 82, 71
+  pink          219, 80, 177
+  gray          117, 117, 117
+  yellow-olive  180, 180, 32
+  cyan          18, 179, 194
+
+Plus two Palette10 6 extensions:
+  saffron       220, 150, 30  (added because source pages needed an 11th hue;
+                               used by appraisal, disconfirming,
+                               and what-would-change-this)
+  indigo         79,  89, 142  (added when source pages grew to 12 callouts;
+                               used by limitations)
+
+Note: Obsidian renders --callout-color through low-opacity tinting on the
+background and a mid-strength accent on the title. Source RGBs render
+softer than they look in a swatch.
+
+Each page type uses 8-12 of these 12 hues with no within-page duplicates.
+Callouts that appear on multiple page types (evidence, contradictions,
+open-questions, connections, sources) are pinned to one hue each so the
+visual identity is consistent across pages.
+
+*/
+
+/*
+
+WIKI PAGE SECTIONS — one callout type per page-section in CLAUDE.md.
+Shared across page types: connections, open-questions, contradictions, sources, evidence.
+
+*/
+
+/* Source pages */
+
+.callout[data-callout="tldr"] {
+    --callout-color: 244, 114, 0;
+    /* orange — punchy attention-grab */
+    --callout-icon: lucide-zap;
+}
+
+.callout[data-callout="contribution"] {
+    --callout-color: 219, 80, 177;
+    /* pink — warm "this matters" tone, distinct from tldr orange */
+    --callout-icon: lucide-sparkles;
+}
+
+.callout[data-callout="key-claims"] {
+    --callout-color: 43, 156, 42;
+    /* green — claims */
+    --callout-icon: lucide-list-checks;
+}
+
+.callout[data-callout="evidence"] {
+    --callout-color: 134, 81, 181;
+    /* purple — evidence trail, holds image embeds inline */
+    --callout-icon: lucide-search-check;
+}
+
+.callout[data-callout="method"] {
+    --callout-color: 136, 82, 71;
+    /* brown — procedural, how the source got its results */
+    --callout-icon: lucide-cog;
+}
+
+.callout[data-callout="assumptions"] {
+    --callout-color: 117, 117, 117;
+    /* gray — premises taken for granted */
+    --callout-icon: lucide-anchor;
+}
+
+.callout[data-callout="limitations"] {
+    --callout-color: 79, 89, 142;
+    /* indigo — source's self-acknowledged weaknesses (12th hue, Palette10 6 extension) */
+    --callout-icon: lucide-alert-triangle;
+}
+
+.callout[data-callout="appraisal"] {
+    --callout-color: 220, 150, 30;
+    /* saffron — your judgement of source trustworthiness (Palette10 6 extension) */
+    --callout-icon: lucide-scale;
+}
+
+.callout[data-callout="concepts-entities"] {
+    --callout-color: 29, 113, 173;
+    /* blue — note network */
+    --callout-icon: lucide-notebook-tabs;
+}
+
+/* Optional / legacy source-page callouts */
+
+.callout[data-callout="findings"] {
+    --callout-color: 43, 156, 42;
+    /* green — discovery, kin to claims */
+    --callout-icon: lucide-search;
+}
+
+.callout[data-callout="quotes"] {
+    --callout-color: 134, 81, 181;
+    /* purple — verbatim, kin to evidence */
+    --callout-icon: lucide-quote;
+}
+
+/* Concept and entity pages */
+
+.callout[data-callout="idea"] {
+    --callout-color: 29, 113, 173;
+    /* blue — core idea */
+    --callout-icon: lucide-lightbulb;
+}
+
+.callout[data-callout="why"] {
+    --callout-color: 244, 114, 0;
+    /* orange — significance, energetic "why this matters" */
+    --callout-icon: lucide-circle-help;
+}
+
+.callout[data-callout="not-this"] {
+    --callout-color: 117, 117, 117;
+    /* gray — boundary marker, "this is NOT that" */
+    --callout-icon: lucide-x-circle;
+}
+
+.callout[data-callout="examples"] {
+    --callout-color: 219, 80, 177;
+    /* pink — illustrative, distinct from claims-green */
+    --callout-icon: lucide-list;
+}
+
+.callout[data-callout="disconfirming"] {
+    --callout-color: 220, 150, 30;
+    /* saffron — actively-sought disconfirming evidence (Darwin's golden rule) */
+    --callout-icon: lucide-thumbs-down;
+}
+
+/* Optional / legacy concept-entity callouts */
+
+.callout[data-callout="what-it-is"] {
+    --callout-color: 29, 113, 173;
+    /* blue — definitional, kin to idea */
+    --callout-icon: lucide-bookmark;
+}
+
+.callout[data-callout="what-sources-say"] {
+    --callout-color: 136, 82, 71;
+    /* brown — sources family, citation reference */
+    --callout-icon: lucide-message-circle;
+}
+
+.callout[data-callout="variants"] {
+    --callout-color: 18, 179, 194;
+    /* cyan — branching, kin to why */
+    --callout-icon: lucide-git-branch;
+}
+
+/* Synthesis pages */
+
+.callout[data-callout="question"] {
+    --callout-color: 29, 113, 173;
+    /* blue — inquiry */
+    --callout-icon: lucide-help-circle;
+}
+
+.callout[data-callout="answer"] {
+    --callout-color: 43, 156, 42;
+    /* green — synthesis answer, kin to claims */
+    --callout-icon: lucide-message-square;
+}
+
+.callout[data-callout="scope"] {
+    --callout-color: 117, 117, 117;
+    /* gray — boundary of where the answer applies */
+    --callout-icon: lucide-square-dashed;
+}
+
+.callout[data-callout="tensions"] {
+    --callout-color: 244, 114, 0;
+    /* orange — friction, present-tense pushback */
+    --callout-icon: lucide-shield-alert;
+}
+
+.callout[data-callout="what-would-change-this"] {
+    --callout-color: 220, 150, 30;
+    /* saffron — falsifiers, future evidence that would invalidate the answer */
+    --callout-icon: lucide-refresh-cw;
+}
+
+/* Optional / legacy synthesis callout */
+
+.callout[data-callout="counterevidence"] {
+    --callout-color: 244, 114, 0;
+    /* orange — pushback, kin to tensions */
+    --callout-icon: lucide-shield-alert;
+}
+
+/* Author entity pages (legacy) */
+
+.callout[data-callout="what-they-do"] {
+    --callout-color: 29, 113, 173;
+    /* blue — kin to what-it-is */
+    --callout-icon: lucide-user;
+}
+
+.callout[data-callout="affiliations"] {
+    --callout-color: 117, 117, 117;
+    /* gray — institutional neutral */
+    --callout-icon: lucide-building;
+}
+
+.callout[data-callout="sources-by-this-author"] {
+    --callout-color: 136, 82, 71;
+    /* brown — sources family */
+    --callout-icon: lucide-list-ordered;
+}
+
+/* Shared across page types */
+
+.callout[data-callout="contradictions"] {
+    --callout-color: 198, 36, 36;
+    /* red — conflict */
+    --callout-icon: lucide-alert-circle;
+}
+
+.callout[data-callout="open-questions"] {
+    --callout-color: 18, 179, 194;
+    /* cyan — unresolved inquiry, distinct from idea/question blue */
+    --callout-icon: lucide-help-circle;
+}
+
+.callout[data-callout="connections"] {
+    --callout-color: 180, 180, 32;
+    /* yellow-olive — graph/network */
+    --callout-icon: lucide-network;
+}
+
+.callout[data-callout="sources"] {
+    --callout-color: 136, 82, 71;
+    /* brown — source support, citation reference */
+    --callout-icon: lucide-library;
+}
+
+/* Optional / legacy shared callout */
+
+.callout[data-callout="relevance"] {
+    --callout-color: 18, 179, 194;
+    /* cyan — connecting outward, kin to open-questions */
+    --callout-icon: lucide-link-2;
+}
