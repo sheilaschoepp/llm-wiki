@@ -239,11 +239,13 @@ CHECKS: dict[str, str | None] = {
     'index_missing_entry': 'warning',
     'index_stale_entry': 'warning',
     'intra_page_redundancy': 'warning',
+    'locator_page_mismatch': 'error',
     'missing_index': 'error',
     'missing_reciprocal_contradiction': 'warning',
     'needs_update_without_reason': 'warning',
     'orphan_page': 'info',
     'page_locator_unlinked': 'warning',
+    'pagination_map_unregistered': 'info',
     'placeholder_only_page': 'info',
     'raw_without_source_page': 'error',
     'recursive_wiki_citation': 'warning',
@@ -255,6 +257,7 @@ CHECKS: dict[str, str | None] = {
     'source_stem_mismatch': 'info',
     'sources_callout_desync': 'warning',
     'stale_draft': 'info',
+    'stale_mention_ignore': 'warning',
     'stale_needs_update': 'warning',
     'status_draft': 'info',
     'status_invalid': 'warning',
@@ -292,22 +295,73 @@ PAGE_LOCATOR_RE = re.compile(r'(?<!\|)\bpp?\. ?\d+(?:[–-]\d+)?')
 # mechanical citation-form checks on concept/entity/synthesis pages.
 # An inline raw-source deep-link used as a citation: group 1 is its display text.
 CITATION_DEEPLINK_RE = re.compile(r'\[\[0-raw/[^\]]*#page=\d+\|([^\]]*)\]\]')
-# A structural anchor inside a citation display: section/appendix/chapter OR
-# figure/table/equation (the CLAUDE.md anchor set), plus the front-matter sections
-# that have no number — `abstract` (and `intro`/`introduction` when used as the
-# named anchor). The abstract is a real, citable structural location; forcing
+# The same deep-link, capturing the two keys the pagination map needs: group 1 is
+# the raw path (`0-raw/papers/<stem>.pdf`), group 2 the physical page N. Kept
+# separate from CITATION_DEEPLINK_RE so that regex's `group(1) == display` stays
+# stable for its existing callers.
+CITATION_DEEPLINK_KEY_RE = re.compile(r'\[\[(0-raw/[^\]#|]+)#page=(\d+)\|')
+# The printed-page NUMBER cited in a display: `p. M` (single page only — `pp.`
+# ranges are intentionally not matched, so locator_page_mismatch stays
+# conservative). `\b`-guarded so the `p.` inside `app.` never matches.
+CITATION_PAGE_NUM_RE = re.compile(r'\bp\.\s?(\d+)\b(?!\s*[–-]\s*\d)', re.IGNORECASE)
+# A structural anchor inside a citation display: section/appendix/chapter,
+# figure/table/equation, OR theorem-environment result — definition/theorem/lemma/
+# proposition/corollary/algorithm (the CLAUDE.md anchor set), plus the front-matter
+# sections that have no number — `abstract` (and `intro`/`introduction` when used as
+# the named anchor). The abstract is a real, citable structural location; forcing
 # abstract content into `sec. 1` mislabels it, since on most papers sec. 1 is not
 # even on the abstract's page.
 CITATION_ANCHOR_RE = re.compile(
-    r'\b(?:sec|app|ch|chap|fig|tab|eq)\.|§|\babstract\b', re.IGNORECASE)
+    r'\b(?:sec|app|ch|chap|fig|tab|eq|def|thm|lem|prop|cor|alg)\.|§|\babstract\b',
+    re.IGNORECASE)
 # A printed-page token inside a citation display: `p. M` / `pp. M–N`.
 CITATION_PAGE_RE = re.compile(r'\bpp?\.\s?\d', re.IGNORECASE)
+# The unpaginated-supplement exemption (CLAUDE.md -> Source Support And
+# Verification): a published appendix often carries no printed page number, so an
+# `app.`-anchored display cites the anchor alone (`app. D.1, tab. 8`) rather than
+# fabricating a `p. M` no reader can find on the page. Only `app.` earns the
+# exemption — a `sec.`/`fig.`/`tab.`-only display is still incomplete. The cost is
+# that a *paginated* appendix can now drop its `p. M` unflagged; that is audit's
+# call to make against the raw, and the schema prefers a missing page to an
+# invented one.
+CITATION_APPENDIX_ANCHOR_RE = re.compile(r'\bapp\.', re.IGNORECASE)
+
+
+def locator_display_complete(*, display: str,
+                             raw: str | None = None,
+                             phys: int | None = None) -> bool:
+    """Whether a `#page=N` deep-link display carries a complete locator: a
+    structural anchor AND a printed page, with the page requirement relaxed for a
+    genuinely unpaginated region.
+
+    When `raw` and `phys` are supplied and the pagination map covers that page,
+    the map is authoritative: a page that PRINTS a number must carry `p. M`
+    (`app.` earns no exemption there — a paginated appendix still needs its
+    page), and a page that prints NOTHING may stand on its structural anchor
+    alone. When the raw is unregistered (or the keys are not supplied), fall back
+    to the display-only heuristic: an `app.`-anchored display may omit the page
+    (the unpaginated-supplement exemption), any other anchor still needs one.
+    Shared by citation_locator_incomplete and source_locator_incomplete so the
+    two page types cannot drift apart on what "complete" means.
+    """
+    if not CITATION_ANCHOR_RE.search(display):
+        return False
+    has_page = bool(CITATION_PAGE_RE.search(display))
+    if raw is not None and phys is not None:
+        status, _ = printed_page(raw=raw, phys=phys)
+        if status == 'paginated':
+            return has_page          # the page prints a number — it must be cited
+        if status == 'unpaginated':
+            return True              # the page prints nothing — anchor alone is OK
+        # 'unregistered' — fall through to the display-only heuristic below
+    return has_page or bool(CITATION_APPENDIX_ANCHOR_RE.search(display))
 # The leading structural-anchor TOKEN of a locator display (with its number, so
 # `sec. 3.2` and `sec. 4` are distinct), used to tell an anchor CHANGE from a
-# relocation: `sec. 3.2`, `app. C`, `fig. 4`, `tab. 8`, `eq. 3`, `ch. 2`, or
-# the unnumbered `abstract`. En dash / hyphen allowed for ranges (`sec. 3.2-3.3`).
+# relocation: `sec. 3.2`, `app. C`, `fig. 4`, `tab. 8`, `eq. 3`, `ch. 2`,
+# `thm. 3.1`, or the unnumbered `abstract`. En dash / hyphen allowed for ranges (`sec. 3.2-3.3`).
 LOCATOR_ANCHOR_TOKEN_RE = re.compile(
-    r'\b(?:sec|app|ch|chap|fig|tab|eq)\.\s?[\w.–-]*|\babstract\b', re.IGNORECASE)
+    r'\b(?:sec|app|ch|chap|fig|tab|eq|def|thm|lem|prop|cor|alg)\.\s?[\w.–-]*'
+    r'|\babstract\b', re.IGNORECASE)
 # A source-page wikilink in citation form (no `#^callout` section anchor).
 SOURCE_PAGE_LINK_RE = re.compile(r'\[\[1-wiki/sources/[^\]|#]+\.md\|[^\]]*\]\]')
 # A callout body bullet that opens with a wiki-PAGE wikilink: `> - [[1-wiki/…|display]]…`.
@@ -322,9 +376,12 @@ BULLET_INITIAL_WIKILINK_RE = re.compile(
 # or more raw deep-links wrapped in a literal outer `[ ]` (rendering `[key; loc]`),
 # which surfaces as the triple-bracket `[[[` opener. CLAUDE.md -> Source Support
 # And Verification now mandates the round-bracket form `(key; loc)`; this catches
-# the old form. Group 1 is the inner content, so the auto-fix is a wrap swap:
-# `SQUARE_CITATION_RE.sub(r'(\1)', body)` turns the outer `[ ]` into `( )` and
-# leaves the inner wikilinks untouched.
+# the old form. Group 1 is the inner content. The auto-fix is applied only within
+# the code-/Sources-/quote-masked scan `check_citation_bracket_style` builds, and
+# per flagged occurrence: swap the outer `[ ]` for `( )`, leaving the inner wikilinks
+# untouched. Never a global `SQUARE_CITATION_RE.sub(r'(\1)', body)` over the unmasked
+# body — that would rewrite a `[[[…]]]`-shaped literal inside a quote, the false green
+# the mask exists to prevent.
 SQUARE_CITATION_RE = re.compile(
     r'\['                                              # literal outer [
     r'(\[\[1-wiki/sources/[^\]|#]+\.md\|[^\]]*\]\]'    # source-page wikilink
@@ -502,6 +559,179 @@ def _load_hyphenation_lists(
         elif section == 'verified-ignore':
             ignore.add(item.lower())
     return disallowed, frozenset(allowed), frozenset(heads), frozenset(ignore)
+
+
+# --- Verified-ignore list for the unlinked_page_mention check ------------------
+# `unlinked_page_mention` is heuristic in the same way the hyphenation check is:
+# it matches a page's title/alias in another page's prose, but whether a given
+# occurrence is a GENUINE reference or generic wording — a homograph, a common
+# noun that happens to be a page title, a term inside a larger established phrase
+# — is a judgement CLAUDE.md -> Wikilink Format explicitly leaves to a reader.
+# `audit` makes that call per occurrence (audit Step 7) and records a
+# confirmed-generic one here, so the next lint run does not re-flag it and the
+# next audit does not re-litigate it. This is the escape valve
+# HYPHENATION_VERIFIED_IGNORE gives the hyphenation check.
+#
+# An entry is `page-path :: target-stem :: phrase`. It is scoped to the PAGE the
+# judgement was made on — genuine-vs-generic is a per-page call, so an entry
+# never suppresses a mention on some other page — and anchored to the PHRASE the
+# mention sits in. The phrase anchor makes an entry SELF-INVALIDATING: reword the
+# sentence and the entry stops matching, so the mention re-flags. The failure
+# mode of a stale entry is therefore a re-flag (safe), never a silently swallowed
+# genuine reference. A stale entry suppresses nothing and is inert.
+# Data file: .claude/skills/lint/unlinked-mention-ignore.md.
+UNLINKED_MENTION_IGNORE_FILE = (
+    Path(__file__).resolve().parent.parent / 'unlinked-mention-ignore.md'
+)
+
+
+def _load_unlinked_mention_ignore(
+    path: Path = UNLINKED_MENTION_IGNORE_FILE,
+) -> list[dict[str, Any]]:
+    """Parse the verified-ignore entries, one dict per line: page, target, phrase,
+    the 1-based `line` in the data file (so a stale entry can be reported at its
+    own line), and the compiled phrase `pattern`.
+
+    Tolerant by design (audit edits this file autonomously): a missing or
+    unreadable file returns no entries — the check then runs fully unsuppressed,
+    which is the safe direction — and a malformed line is skipped, never raised.
+    Never crashes lint.
+    """
+    entries: list[dict[str, Any]] = []
+    try:
+        text = path.read_text(encoding='utf-8')
+    except OSError:
+        return entries
+    section: str | None = None
+    for lineno, raw in enumerate(text.splitlines(), 1):
+        line = raw.strip()
+        if line.startswith('## '):
+            section = line[3:].strip().lower()
+            continue
+        if section != 'verified-ignore' or not line.startswith('- '):
+            continue
+        item = line[2:].strip()
+        if not item or item.startswith('<!--'):
+            continue
+        parts = [p.strip() for p in item.split('::')]
+        if len(parts) != 3 or not all(parts):
+            continue
+        page, target, phrase = parts
+        entries.append({
+            'page': page,
+            'target': target,
+            'phrase': phrase,
+            'line': lineno,
+            # Whitespace-flexible: a recorded phrase still matches after a reflow
+            # of the line it sits on. Everything else is matched literally, so a
+            # reword of the phrase itself correctly stops matching.
+            'pattern': re.compile(r'\s+'.join(re.escape(w) for w in phrase.split()),
+                                  re.IGNORECASE),
+        })
+    return entries
+
+
+UNLINKED_MENTION_IGNORE = _load_unlinked_mention_ignore()
+
+
+# What each physical page of each raw PDF actually PRINTS. A locator states two
+# page facts: where the page sits in the file (`#page=N`, the physical page, for
+# the deep-link) and what the page prints (`p. M`, the number a reader cites).
+# These diverge whenever a PDF is not paginated 1, 2, 3… from its first physical
+# page — proceedings that start at a high number, an appendix that restarts or
+# continues, a page that prints no number at all — and the printed number is a
+# fact about the raw, not derivable by rule. It is recorded once per raw in
+# `.claude/skills/lint/pagination-map.md`, whose header carries the rationale;
+# `scripts/pagination_map.py` proposes entries from the PDF and a human confirms
+# each against a rendered footer. check_wiki.py never opens a PDF — it reads only
+# this map — so lint stays cheap and dependency-free. The map drives the
+# anchor-only exemption in the two locator-completeness checks and the
+# `locator_page_mismatch` check.
+PAGINATION_MAP_FILE = Path(__file__).resolve().parent.parent / 'pagination-map.md'
+
+
+def _parse_page_span(text: str) -> list[int] | None:
+    """`5` -> [5]; `1-9` -> [1, 2, …, 9]. None when unparseable."""
+    text = text.strip()
+    if text.isdigit():
+        return [int(text)]
+    m = re.fullmatch(r'(\d+)\s*-\s*(\d+)', text)
+    if not m:
+        return None
+    lo, hi = int(m.group(1)), int(m.group(2))
+    return list(range(lo, hi + 1)) if lo <= hi else None
+
+
+def _load_pagination_map(
+    path: Path = PAGINATION_MAP_FILE,
+) -> dict[str, dict[int, int | None]]:
+    """Parse the `## <raw path>` sections of pagination-map.md into
+    {raw path: {physical page: printed number | None}}.
+
+    Each section body carries `- <physical> = <printed>` lines; either side may
+    be a `lo-hi` span (spans on both sides must be equal length, mapped in
+    order), and the right side may be `none` (the page prints no determinable
+    number). A trailing `# comment` is ignored.
+
+    Tolerant by design (audit edits this file autonomously): a missing or
+    unreadable file returns {} — every raw then reads as unregistered and the
+    locator checks fall back to the `app.`-anchor heuristic (the pre-map
+    behaviour), so lint still runs (recoverable from git). A malformed line is
+    skipped, never raised. Never crashes lint.
+    """
+    out: dict[str, dict[int, int | None]] = {}
+    try:
+        text = path.read_text(encoding='utf-8')
+    except OSError:
+        return out
+    raw: str | None = None
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith('## '):
+            heading = stripped[3:].strip()
+            raw = heading if heading.startswith('0-raw/') else None
+            if raw:
+                out.setdefault(raw, {})
+            continue
+        if raw is None or not stripped.startswith('- '):
+            continue
+        item = stripped[2:].split('#', 1)[0].strip()  # drop a trailing comment
+        if '=' not in item:
+            continue
+        lhs, _, rhs = item.partition('=')
+        physical = _parse_page_span(text=lhs)
+        if not physical:
+            continue
+        rhs = rhs.strip().lower()
+        if rhs == 'none':
+            for phys in physical:
+                out[raw][phys] = None
+            continue
+        printed = _parse_page_span(text=rhs)
+        if not printed or len(printed) != len(physical):
+            continue
+        for phys, number in zip(physical, printed):
+            out[raw][phys] = number
+    return out
+
+
+PAGINATION_MAP = _load_pagination_map()
+
+
+def printed_page(raw: str, phys: int) -> tuple[str, int | None]:
+    """What physical page `phys` of `raw` prints, per the pagination map:
+
+      ('paginated', M)        the page prints M — a locator must cite `p. M`.
+      ('unpaginated', None)   the page prints no number — a locator correctly
+                              cites its structural anchor alone.
+      ('unregistered', None)  no map entry covers this page; callers fall back
+                              to the display heuristic rather than invent a fact.
+    """
+    pages = PAGINATION_MAP.get(raw)
+    if pages is None or phys not in pages:
+        return ('unregistered', None)
+    number = pages[phys]
+    return ('unpaginated', None) if number is None else ('paginated', number)
 
 
 def _never_match() -> re.Pattern[str]:
@@ -779,15 +1009,25 @@ def finding(check: str, file: str, message: str, fix_hint: str = '',
     }
 
 
+# Cap the best-effort `git show HEAD:` fetch so a hung git never stalls lint.
+GIT_SHOW_TIMEOUT_S = 15
+
+
 def _git_show_head(rel: str) -> str | None:
     """The file's content at git HEAD, or None if unavailable (not a git repo, a
     new/untracked file, or any git error). The diff-guard is best-effort: with no
     HEAD to compare against it is a silent no-op."""
     try:
         r = subprocess.run(['git', 'show', f'HEAD:{rel}'],
-                           capture_output=True, text=True, timeout=15)
+                           capture_output=True, text=True,
+                           timeout=GIT_SHOW_TIMEOUT_S)
         return r.stdout if r.returncode == 0 else None
-    except Exception:
+    except (OSError, subprocess.SubprocessError, UnicodeDecodeError):
+        # OSError: git not installed (FileNotFoundError). SubprocessError:
+        # the timeout fires (TimeoutExpired). UnicodeDecodeError: `text=True`
+        # decodes stdout in the call, so a non-UTF-8 blob at HEAD raises here
+        # (it is a ValueError, not an OSError). A genuine bug (NameError, etc.)
+        # still surfaces rather than being silently swallowed.
         return None
 
 
@@ -904,8 +1144,23 @@ def check_verified_hash(path: Path, fm: dict[str, Any],
     stored = fm.get('verified_hash')
     try:
         actual = body_hash(path=str(path))
-    except (OSError, ValueError):
-        return []  # unreadable / malformed frontmatter — other checks own that
+    except OSError:
+        return []  # unreadable mid-run (TOCTOU); check_page's own read already surfaces a real absence
+    except ValueError:
+        # body_hash refuses a frontmatter block it cannot cleanly close: it needs an
+        # exact `---` delimiter line, but parse_frontmatter's strip-based match accepts
+        # a whitespace-padded `---`. So `frontmatter_missing` does NOT fire and no other
+        # check owns this case — surface it rather than silently exempting a `verified`
+        # page from the hash check (a self-concealing false green).
+        return [finding(
+            check='verified_hash_mismatch',
+            file=rel,
+            message=('`status: verified` page has a malformed frontmatter `---` '
+                     'delimiter (stray whitespace), so its checked content cannot be '
+                     'hashed or confirmed current.'),
+            fix_hint=('Repair the frontmatter `---` delimiter lines (exact `---`, no '
+                      'surrounding whitespace), then re-run lint; demote to `draft` if unsure.'),
+        )]
     if not stored:
         return [finding(
             check='verified_hash_mismatch',
@@ -1167,6 +1422,11 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
     # citation_locator_incomplete; inverse of the retired source_locator_anchor_inlined.
     if kind in SOURCE_KINDS:
         findings.extend(check_source_locator_complete(body=body, rel=rel, end=end))
+
+    # Every #page=N locator's cited `p. M` must match what the pagination map
+    # says that physical page prints (check_id: locator_page_mismatch). Applies
+    # to every page kind that carries raw deep-links, so it is not kind-gated.
+    findings.extend(check_locator_page_match(body=body, rel=rel, end=end))
 
     # Sentence-initial capitalization of bullet-initial wikilink displays
     # (check_id: wikilink_display_uncapitalized). Applies to every page kind —
@@ -1592,7 +1852,10 @@ def check_citation_form(body: str, rel: str, end: int) -> list[dict[str, Any]]:
     different (page-token-as-link) form.
 
     - citation_locator_incomplete: a raw `#page=N` deep-link whose display lacks
-      a structural anchor (sec./app./ch./fig./tab./eq.) or a page (`p. M`).
+      a structural anchor (sec./app./ch./fig./tab./eq./def./thm./lem./prop./cor./alg.)
+      or a page (`p. M`). An
+      `app.`-anchored display may omit `p. M` (the unpaginated-supplement
+      exemption; see locator_display_complete).
     - citation_unpaired: a raw deep-link not preceded on its bullet by a
       source-page wikilink (the canonical form pairs them).
     """
@@ -1603,17 +1866,23 @@ def check_citation_form(body: str, rel: str, end: int) -> list[dict[str, Any]]:
     for m in CITATION_DEEPLINK_RE.finditer(scan):
         display = m.group(1)
         actual_line = end + 1 + scan[:m.start()].count('\n') + 1
-        if not (CITATION_ANCHOR_RE.search(display) and CITATION_PAGE_RE.search(display)):
+        km = CITATION_DEEPLINK_KEY_RE.search(m.group(0))
+        raw_path = km.group(1) if km else None
+        phys = int(km.group(2)) if km else None
+        if not locator_display_complete(display=display, raw=raw_path, phys=phys):
             findings.append(finding(
                 check='citation_locator_incomplete',
                 file=rel,
                 message=(f'Citation deep-link display `{display}` (line '
                          f'{actual_line}) lacks a structural anchor '
-                         f'(sec./app./ch./fig./tab./eq.) and/or a page (`p. M`); '
+                         f'(sec./app./ch./fig./tab./eq./def./thm./lem./prop./cor./alg.) '
+                         f'and/or a page (`p. M`); '
                          f'the canonical citation form requires both.'),
                 fix_hint=('Put both an anchor and the printed page inside the '
                           '`#page=N` display, e.g. '
-                          '`[[0-raw/papers/X.pdf#page=5|sec. 3.2, p. 5]]`.'),
+                          '`[[0-raw/papers/X.pdf#page=5|sec. 3.2, p. 5]]`. An '
+                          'appendix that carries no printed page cites the anchor '
+                          'alone (`app. D.1, tab. 8`) — never invent a `p. M`.'),
             ))
         # Canonical form pairs the deep-link with a source-page link earlier in
         # the same bullet. Callout bullets are single physical lines, so scan
@@ -1641,9 +1910,12 @@ def check_citation_bracket_style(body: str, rel: str, end: int) -> list[dict[str
     synthesis pages. CLAUDE.md -> Source Support And Verification mandates the
     round-bracket Form 2 `([[…|key]]; [[…|sec. X, p. M]])`; the old form wrapped
     the same wikilinks in a literal outer `[ ]` (rendering `[key; loc]`), which
-    surfaces as the triple-bracket `[[[` opener. Auto-fixable: swap the outer
-    `[ ]` for `( )` with `SQUARE_CITATION_RE.sub(r'(\\1)', body)`; the inner
-    wikilinks (which carry source identity and the locator) are unchanged.
+    surfaces as the triple-bracket `[[[` opener. Auto-fixable: within the
+    code-/Sources-/quote-masked scan built below, and per flagged occurrence only,
+    swap the outer `[ ]` for `( )` (the inner wikilinks, which carry source identity
+    and the locator, are unchanged) — never a global `.sub` over the unmasked body,
+    which would rewrite a `[[[…]]]` literal inside a quote (a re-stamp-eligible false
+    green; see the quote mask below).
 
     Scoped to concept/entity/synthesis pages, matching the other citation-form
     checks. Source pages use a different (page-token-as-link) form and are exempt.
@@ -1651,6 +1923,13 @@ def check_citation_bracket_style(body: str, rel: str, end: int) -> list[dict[str
     """
     findings: list[dict[str, Any]] = []
     scan = _blank_sources_callout(text=_mask_code_spans(text=body))
+    # Blank double-quoted verbatim spans too (mirrors check_hyphenated_open_compound
+    # / check_unlinked_page_mentions): a `[[[…]]]`-shaped literal inside a quote is
+    # an example, not a citation, and must stay byte-identical. This fix is on the
+    # verification-neutral re-stamp allowlist, so a swap reaching a quoted span would
+    # ride through as a silent false green (CLAUDE.md -> Page Status text-content
+    # exclusion). Length-preserving, so the line-count math below is unaffected.
+    scan = re.sub(r'"[^"\n]*"', lambda m: ' ' * len(m.group(0)), scan)
     for m in SQUARE_CITATION_RE.finditer(scan):
         actual_line = end + 1 + scan[:m.start()].count('\n') + 1
         findings.append(finding(
@@ -1663,17 +1942,22 @@ def check_citation_bracket_style(body: str, rel: str, end: int) -> list[dict[str
             fix_hint=('Swap the outer literal `[` `]` for `(` `)`, leaving the '
                       'inner wikilinks unchanged: '
                       '`[[[…|key]]; [[…|sec. X, p. M]]]` -> '
-                      '`([[…|key]]; [[…|sec. X, p. M]])` '
-                      "(`SQUARE_CITATION_RE.sub(r'(\\1)', body)`)."),
+                      '`([[…|key]]; [[…|sec. X, p. M]])`. Swap only this flagged '
+                      'occurrence, within the same code-/Sources-/quote-masked '
+                      'scan the detector uses — never a `[[[…]]]` inside a verbatim '
+                      'quote or code span, which is a literal, not a citation.'),
         ))
     return findings
 
 
 def check_source_locator_complete(body: str, rel: str, end: int) -> list[dict[str, Any]]:
     """On a source page, a `#page=N` locator deep-link must list its structural
-    anchor (sec./fig./tab./eq./app./ch.) AND its page together INSIDE the link
+    anchor (sec./fig./tab./eq./app./ch./def./thm./lem./prop./cor./alg.) AND its
+    page together INSIDE the link
     display — `[[…#page=1|sec. 1, p. 1]]` — never split with the anchor outside
-    (`sec. 1, [[…#page=1|p. 1]]`) or page-only (`[[…#page=1|p. 1]]`).
+    (`sec. 1, [[…#page=1|p. 1]]`) or page-only (`[[…#page=1|p. 1]]`). An
+    `app.`-anchored display may stand on the anchor alone (the unpaginated-supplement
+    exemption; see locator_display_complete).
 
     The source-page counterpart of citation_locator_incomplete (which enforces the
     same anchor-inside-the-display form on concept/entity/synthesis pages). Source
@@ -1690,19 +1974,79 @@ def check_source_locator_complete(body: str, rel: str, end: int) -> list[dict[st
     scan = _blank_sources_callout(text=_mask_code_spans(text=body))
     for m in CITATION_DEEPLINK_RE.finditer(scan):
         display = m.group(1)
-        if not (CITATION_ANCHOR_RE.search(display) and CITATION_PAGE_RE.search(display)):
+        km = CITATION_DEEPLINK_KEY_RE.search(m.group(0))
+        raw_path = km.group(1) if km else None
+        phys = int(km.group(2)) if km else None
+        if not locator_display_complete(display=display, raw=raw_path, phys=phys):
             actual_line = end + 1 + scan[:m.start()].count('\n') + 1
             findings.append(finding(
                 check='source_locator_incomplete',
                 file=rel,
                 message=(f'Source-page locator display `{display}` (line '
                          f'{actual_line}) does not carry a structural anchor '
-                         f'(sec./app./ch./fig./tab./eq.) and a page (`p. M`) '
+                         f'(sec./app./ch./fig./tab./eq./def./thm./lem./prop./cor./alg.) '
+                         f'and a page (`p. M`) '
                          f'together inside the `#page=N` link.'),
                 fix_hint=('List the section/figure anchor and the page together '
                           'inside the link display — e.g. `sec. 1, '
-                          '[[…#page=1|p. 1]]` becomes `[[…#page=1|sec. 1, p. 1]]`.'),
+                          '[[…#page=1|p. 1]]` becomes `[[…#page=1|sec. 1, p. 1]]`. '
+                          'An appendix that carries no printed page cites the '
+                          'anchor alone (`app. D.1, tab. 8`) — never invent a `p. M`.'),
             ))
+    return findings
+
+
+def check_locator_page_match(body: str, rel: str, end: int) -> list[dict[str, Any]]:
+    """A `#page=N` deep-link whose display cites `p. M`, but the pagination map
+    says physical page N of that raw prints a DIFFERENT number — or prints none
+    at all. The one check that catches a confidently-wrong printed page: a
+    locator that renders plausibly and passes every completeness check yet sends
+    a reader to a page number the source does not carry (CLAUDE.md -> Source
+    Support And Verification; lint Limits names this the worst failure mode).
+
+    Keyed on the map, so an unregistered raw is silently skipped
+    (check_pagination_registration nudges to register it). Deliberately
+    conservative for an error-severity check: only a single `p. M` is matched
+    (`pp. M–N` ranges are not), and `\\b`-guarding keeps the `p.` inside `app.`
+    from matching. Runs on every wiki page kind that carries deep-links.
+
+    Inline code and the Sources callout are masked (length-preserving) so match
+    offsets map back to real line numbers.
+    """
+    findings: list[dict[str, Any]] = []
+    scan = _blank_sources_callout(text=_mask_code_spans(text=body))
+    for m in CITATION_DEEPLINK_RE.finditer(scan):
+        display = m.group(1)
+        pm = CITATION_PAGE_NUM_RE.search(display)
+        if pm is None:
+            continue  # no single `p. M` cited; completeness owns the missing-page case
+        km = CITATION_DEEPLINK_KEY_RE.search(m.group(0))
+        if km is None:
+            continue
+        raw_path, phys = km.group(1), int(km.group(2))
+        status, printed = printed_page(raw=raw_path, phys=phys)
+        if status == 'unregistered':
+            continue
+        cited = int(pm.group(1))
+        if status == 'paginated' and cited == printed:
+            continue
+        actual_line = end + 1 + scan[:m.start()].count('\n') + 1
+        if status == 'paginated':
+            message = (f'Locator display `{display}` (line {actual_line}) cites '
+                       f'`p. {cited}`, but the pagination map says physical page '
+                       f'{phys} of `{raw_path}` prints `{printed}`.')
+            fix_hint = (f'Cite the page the source prints (`p. {printed}`), or '
+                        f'correct `#page={phys}` if the physical page is wrong.')
+        else:  # unpaginated: the page prints no number
+            message = (f'Locator display `{display}` (line {actual_line}) cites '
+                       f'`p. {cited}`, but the pagination map says physical page '
+                       f'{phys} of `{raw_path}` prints no number.')
+            fix_hint = ('Drop `p. M` and cite the structural anchor alone (e.g. '
+                        '`app. D.1, tab. 8`); never state a printed page the raw '
+                        'does not carry.')
+        findings.append(finding(
+            check='locator_page_mismatch', file=rel,
+            message=message, fix_hint=fix_hint))
     return findings
 
 
@@ -2982,10 +3326,20 @@ def check_unlinked_page_mentions(wiki_root: Path) -> list[dict[str, Any]]:
     judgement of which occurrences are genuine references vs generic wording.
     Code spans, existing `[[wikilinks]]`, and double-quoted spans are masked
     (the quote exception); a page's own stem/aliases are excluded so it is not
-    asked to link to itself.
+    asked to link to itself. An occurrence audit has confirmed generic is
+    suppressed via UNLINKED_MENTION_IGNORE, the check's verified-ignore list —
+    scoped to the page and anchored to the phrase, so it re-flags if reworded.
     """
     findings: list[dict[str, Any]] = []
     repo_root = wiki_root.parent
+
+    # Index the verified-ignore entries by (page, target), and track which ones
+    # actually suppress an occurrence this run. An entry that suppresses nothing
+    # is stale (see the stale_mention_ignore pass at the end).
+    ignore_by_key: dict[tuple[str, str], list[int]] = {}
+    for idx, e in enumerate(UNLINKED_MENTION_IGNORE):
+        ignore_by_key.setdefault((e['page'], e['target']), []).append(idx)
+    used_entries: set[int] = set()
 
     form_to_stem: dict[str, str] = {}
     own_forms: dict[str, set[str]] = {}
@@ -3005,6 +3359,8 @@ def check_unlinked_page_mentions(wiki_root: Path) -> list[dict[str, Any]]:
                 form_to_stem.setdefault(f, page.stem)
 
     if not form_to_stem:
+        findings.extend(_stale_mention_ignore_findings(
+            used=used_entries, page_paths=page_paths, repo_root=repo_root))
         return findings
 
     # Longest-first so a multi-word form wins over a contained shorter one
@@ -3044,14 +3400,38 @@ def check_unlinked_page_mentions(wiki_root: Path) -> list[dict[str, Any]]:
             # so this only removes the one title line.)
             scan = re.sub(r'(?m)^#[ ].*$', lambda m: ' ' * len(m.group(0)), scan)
             self_forms = own_forms.get(page.stem, set())
+            rel = str(page.relative_to(repo_root))
+
+            # Spans of the confirmed-generic phrases audit recorded for this page
+            # (UNLINKED_MENTION_IGNORE): an occurrence sitting inside one was
+            # judged generic wording, not a genuine reference, and is not
+            # re-flagged. Matched against the same masked body the mentions are,
+            # so a recorded phrase can never reach into a code span or wikilink.
+            # Each span carries the index of the entry that recorded it, so an
+            # entry that never actually suppresses an occurrence can be reported
+            # as stale below.
+            ignored_spans: dict[str, list[tuple[int, int, int]]] = {}
+            for (ig_page, ig_target), idxs in ignore_by_key.items():
+                if ig_page != rel:
+                    continue
+                spans = ignored_spans.setdefault(ig_target, [])
+                for idx in idxs:
+                    spans.extend((pm.start(), pm.end(), idx)
+                                 for pm in UNLINKED_MENTION_IGNORE[idx]['pattern']
+                                 .finditer(scan))
+
             counts: dict[str, int] = {}
             for m in mention_re.finditer(scan):
                 form = m.group(1).lower()
                 target = form_to_stem.get(form)
                 if target is None or target == page.stem or form in self_forms:
                     continue
+                covering = [idx for s, e, idx in ignored_spans.get(target, ())
+                            if s <= m.start() and m.end() <= e]
+                if covering:
+                    used_entries.update(covering)
+                    continue
                 counts[target] = counts.get(target, 0) + 1
-            rel = str(page.relative_to(repo_root))
             for target, n in sorted(counts.items()):
                 tgt_rel = str(page_paths[target].relative_to(repo_root))
                 findings.append(finding(
@@ -3063,8 +3443,66 @@ def check_unlinked_page_mentions(wiki_root: Path) -> list[dict[str, Any]]:
                              f'wikilinked.'),
                     fix_hint=(f'Wikilink each genuine reference as '
                               f'`[[{tgt_rel}|{target.replace("-", " ")}]]`; '
-                              f'skip generic non-reference usage and quoted text.'),
+                              f'skip generic non-reference usage and quoted text. '
+                              f'Record an occurrence confirmed generic in '
+                              f'`.claude/skills/lint/unlinked-mention-ignore.md` '
+                              f'(`{rel} :: {target} :: <phrase>`) so it is not '
+                              f're-flagged.'),
                 ))
+
+    findings.extend(_stale_mention_ignore_findings(
+        used=used_entries, page_paths=page_paths, repo_root=repo_root))
+    return findings
+
+
+def _stale_mention_ignore_findings(
+    used: set[int],
+    page_paths: dict[str, Path],
+    repo_root: Path,
+) -> list[dict[str, Any]]:
+    """Report every verified-ignore entry that suppressed nothing this run.
+
+    A stale entry is INERT, not dangerous — the phrase anchor means it can only
+    fail to match, never wrongly suppress (check_unlinked_page_mentions) — so this
+    is hygiene, not a correctness defect: dead entries otherwise accumulate
+    silently as pages are reworded, renamed, or removed, and nothing would ever
+    prompt their removal. It is Warning-tier all the same, because in this repo the
+    tier says WHO ACTS: Warning is lint's authored worklist that `audit` carries
+    out (audit owns this data file), while Info is explicitly not audit's to action
+    — an Info-tier stale entry would be a finding no skill is allowed to clean up.
+    Warnings never block audit, so the gate is unaffected.
+    An entry goes stale three ways, and the message names which: the page it was
+    recorded on is gone, the target page is gone, or no unlinked mention of the
+    target falls inside the recorded phrase any more (the wording changed, or the
+    mention has since been wikilinked — either way the judgement no longer binds).
+    """
+    findings: list[dict[str, Any]] = []
+    ignore_rel = '.claude/skills/lint/unlinked-mention-ignore.md'
+    for idx, e in enumerate(UNLINKED_MENTION_IGNORE):
+        if idx in used:
+            continue
+        page, target = e['page'], e['target']
+        if not (repo_root / page).exists():
+            why = f'the page it was recorded on (`{page}`) no longer exists'
+        elif target not in page_paths:
+            why = f'its target page `{target}` no longer exists'
+        else:
+            why = (f'no unlinked mention of `{target}` falls inside the recorded '
+                   f'phrase in `{page}` any more (the wording changed, or the '
+                   f'mention is now wikilinked)')
+        findings.append(finding(
+            check='stale_mention_ignore',
+            file=ignore_rel,
+            message=(f'Verified-ignore entry on line {e["line"]} suppresses '
+                     f'nothing: {why}. The entry is inert (a phrase-anchored entry '
+                     f'can only fail to match, never wrongly suppress), so this is '
+                     f'hygiene, not a defect.'),
+            fix_hint=(f'Delete the entry (`{page} :: {target} :: {e["phrase"]}`) '
+                      f'from `{ignore_rel}`. If the occurrence still exists but was '
+                      f'reworded, re-record it against the current phrase — do not '
+                      f'edit the phrase to match without re-confirming the '
+                      f'occurrence is still generic wording.'),
+        ))
     return findings
 
 
@@ -3148,6 +3586,43 @@ def check_chronology(wiki_root: Path) -> list[dict[str, Any]]:
     return findings
 
 
+def check_pagination_registration(wiki_root: Path) -> list[dict[str, Any]]:
+    """A raw cited somewhere with a `#page=N` deep-link but absent from the
+    pagination map. The citation still lints — the locator-completeness checks
+    fall back to the `app.`-anchor heuristic, and locator_page_mismatch simply
+    cannot run on the raw — so this is an INFO nudge, not a blocker: register the
+    raw so its `p. M` locators can be verified. One finding per unregistered raw,
+    reported against the raw path.
+    """
+    findings: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for folder in ('sources', 'entities', 'concepts', 'syntheses'):
+        folder_path = wiki_root / folder
+        if not folder_path.exists():
+            continue
+        for page in sorted(folder_path.glob('*.md')):
+            text = page.read_text(encoding='utf-8')
+            for km in CITATION_DEEPLINK_KEY_RE.finditer(text):
+                raw_path = km.group(1)
+                if raw_path in PAGINATION_MAP or raw_path in seen:
+                    continue
+                seen.add(raw_path)
+                findings.append(finding(
+                    check='pagination_map_unregistered',
+                    file=raw_path,
+                    message=(f'`{raw_path}` is cited with a `#page=N` deep-link '
+                             f'but has no section in the pagination map, so its '
+                             f'`p. M` locators cannot be verified against what '
+                             f'each physical page prints.'),
+                    fix_hint=('Propose entries with `python3 '
+                              '.claude/skills/lint/scripts/pagination_map.py '
+                              f'{raw_path}`, confirm each against a rendered '
+                              f'footer, then add the `## {raw_path}` section to '
+                              '`.claude/skills/lint/pagination-map.md`.'),
+                ))
+    return findings
+
+
 def main() -> int:
     if len(sys.argv) >= 2 and sys.argv[1] == '--list-checks':
         print(json.dumps(
@@ -3189,6 +3664,7 @@ def main() -> int:
     findings.extend(check_wikilink_pipe_spacing(wiki_root=wiki_root))
     findings.extend(check_bare_basename_links(wiki_root=wiki_root))
     findings.extend(check_unlinked_page_mentions(wiki_root=wiki_root))
+    findings.extend(check_pagination_registration(wiki_root=wiki_root))
 
     print(json.dumps(findings, indent=2))
     # Exit non-zero only on blocking errors so CI / hooks can gate. Standing

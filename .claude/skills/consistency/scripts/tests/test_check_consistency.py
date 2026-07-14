@@ -121,11 +121,39 @@ class TestCheckConsistency(unittest.TestCase):
 
     # --- domain_literature_leakage: corpus citations in generic infra ---
 
+    def test_domain_literature_leakage_exempts_agent_data_files(self) -> None:
+        # The agent-writable curated DATA files (CLAUDE.md -> Stay In Your Lane)
+        # are data, not skill logic, and their content is BY CONSTRUCTION the
+        # vault's own -- e.g. pagination-map.md sections are keyed on the vault's
+        # raw stems, every one a corpus bibkey. Requiring placeholder bibkeys
+        # there is incoherent; same rationale as the `-memory.md` journals.
+        leaked = _synthetic_bibkey(author='Corpus', year='2097', title='GammaEF')
+        lint = self.tmp / '.claude' / 'skills' / 'lint'
+        lint.mkdir(parents=True)
+        (lint / 'SKILL.md').write_text('A lint skill.\n')
+        for name in cc.AGENT_DATA_FILES:
+            (lint / name).write_text(f'## 0-raw/papers/{leaked}.pdf\n- 1 = 1\n')
+        flagged = {f['file'] for f in cc.check_domain_literature_leakage(self.tmp)}
+        for name in cc.AGENT_DATA_FILES:
+            assert f'.claude/skills/lint/{name}' not in flagged, name
+        # ...but an ordinary file in the SAME folder is still scanned.
+        (lint / 'references.md').write_text(f'See `{leaked}`.\n')
+        flagged = {f['file'] for f in cc.check_domain_literature_leakage(self.tmp)}
+        assert '.claude/skills/lint/references.md' in flagged
+
+    def test_agent_data_files_constant_matches_disk(self) -> None:
+        # The constant is the script's copy of a CLAUDE.md declaration; if a data
+        # file is renamed or added without updating it, the exemption silently
+        # stops applying (or applies to nothing). Pin it to what ships.
+        lint_dir = REPO / '.claude' / 'skills' / 'lint'
+        for name in cc.AGENT_DATA_FILES:
+            assert (lint_dir / name).exists(), f'{name} declared exempt but not on disk'
+
     def test_domain_literature_leakage_flags_and_exempts(self) -> None:
         placeholder = next(iter(cc.PLACEHOLDER_BIBKEYS))      # allowlisted, fetched at runtime
-        leaked_a = _synthetic_bibkey('Corpus', '2099', 'AlphaAB')
-        leaked_b = _synthetic_bibkey('Corpus', '2098', 'BetaCD')
-        exempt_mem = _synthetic_bibkey('Corpus', '2096', 'DeltaGH')
+        leaked_a = _synthetic_bibkey(author='Corpus', year='2099', title='AlphaAB')
+        leaked_b = _synthetic_bibkey(author='Corpus', year='2098', title='BetaCD')
+        exempt_mem = _synthetic_bibkey(author='Corpus', year='2096', title='DeltaGH')
         # CLAUDE.md: a placeholder (ok) plus a leaked corpus citation (flag).
         (self.tmp / 'CLAUDE.md').write_text(
             f'Example source `{placeholder}` is fine.\n'

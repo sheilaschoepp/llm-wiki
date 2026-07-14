@@ -272,7 +272,7 @@ CHECK_MANIFEST = [
         'check_id': 'domain_literature_leakage',
         'packet': 'styles-files',
         'name': 'domain literature leakage',
-        'scope': "CLAUDE.md + .claude/skills/** text files including scripts; the structural exemptions are *-memory.md journals and the STANDALONE_SKILL_NAMES folders (mock-defence). Flags bibkey-pattern paper citations not in the placeholder allowlist (PLACEHOLDER_BIBKEYS); these leak a vault's research-corpus literature into generic infra. Legitimate citations in any other domain-specific skill are recorded as sanctioned exceptions in consistency-memory.md, not special-cased in the check. Domain terms and claims are left to the judgment-drift packet. Root-level proposals.",
+        'scope': "CLAUDE.md + .claude/skills/** text files including scripts; the structural exemptions are *-memory.md journals, the agent-writable curated data files in AGENT_DATA_FILES (hyphenation-lists / unlinked-mention-ignore / pagination-map — data, not logic, whose content is by construction the vault's own), and the STANDALONE_SKILL_NAMES folders. Flags bibkey-pattern paper citations not in the placeholder allowlist (PLACEHOLDER_BIBKEYS); these leak a vault's research-corpus literature into generic infra. Legitimate citations in any other domain-specific skill are recorded as sanctioned exceptions in consistency-memory.md, not special-cased in the check. Domain terms and claims are left to the judgment-drift packet. Root-level proposals.",
     },
     {
         'check_id': 'ai_writing_tells',
@@ -1144,9 +1144,15 @@ def check_identity_term_leakage(root: Path) -> list[dict[str, Any]]:
 # including their scripts) should illustrate the schema only with neutral
 # placeholder papers. Any other bibkey-pattern citation is presumed to be the
 # vault's own research-corpus literature, which leaks domain specifics into
-# reusable infra. The only structural exemption is the *-memory.md journals
+# reusable infra. The structural exemptions are the *-memory.md journals
 # (append-only correction logs that legitimately cite real papers from past
-# work). A domain-specific skill that genuinely needs to cite the research
+# work) and the agent-writable curated DATA files named in AGENT_DATA_FILES --
+# data, not skill logic (the checks load them at runtime), whose content is by
+# construction the vault's own (a suppression list of the vault's page paths, a
+# per-raw pagination map keyed on the vault's raw stems -- each carrying a corpus
+# bibkey in its filename), exactly like the memory journals; requiring
+# placeholder bibkeys there is incoherent and sanctioning each entry would never
+# converge. A domain-specific skill that genuinely needs to cite the research
 # literature is NOT special-cased here: keeping this check free of any one
 # vault's skill names is what makes it portable. Such a skill's citations are
 # recorded as sanctioned exceptions in consistency-memory.md, and the agent
@@ -1162,6 +1168,17 @@ PLACEHOLDER_BIBKEYS = {
     'Devlin2019BERTPO',        # BERT
 }
 BIBKEY_RE = re.compile(r'\b[A-Z][A-Za-z]+\d{4}[A-Z][A-Za-z]+\b')
+# The agent-writable curated DATA files under a skill folder (CLAUDE.md -> Stay
+# In Your Lane). These are data, not skill logic: the checks load them at
+# runtime, and their content is by construction this vault's own -- page paths,
+# per-raw pagination maps -- so a corpus bibkey in them is content, not leakage.
+# Same rationale as the `-memory.md` journals. Keep in step with CLAUDE.md when a
+# data file is added or renamed.
+AGENT_DATA_FILES = frozenset({
+    'hyphenation-lists.md',        # hyphenated_open_compound_noun (lint)
+    'unlinked-mention-ignore.md',  # unlinked_page_mention suppressions (lint)
+    'pagination-map.md',           # locator_page_mismatch / locator exemption (lint)
+})
 
 
 def check_domain_literature_leakage(root: Path) -> list[dict[str, Any]]:
@@ -1179,6 +1196,11 @@ def check_domain_literature_leakage(root: Path) -> list[dict[str, Any]]:
                 continue
             # Exempt append-only memory journals (they cite real past papers).
             if path.name.endswith('-memory.md'):
+                continue
+            # Exempt the agent-writable curated DATA files (data, not logic):
+            # their content is by construction this vault's own -- page paths,
+            # per-raw pagination maps -- exactly like the memory journals above.
+            if path.name in AGENT_DATA_FILES:
                 continue
             # Exempt the standalone skills (wiki-orthogonal, not corpus leakage).
             if _under_standalone_skill(path=path, root=root):

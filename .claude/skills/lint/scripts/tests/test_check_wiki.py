@@ -129,6 +129,16 @@ def fix_embeds(body: str) -> str:
     return '\n'.join(out)
 
 
+def fix_pipes(body: str) -> str:
+    """The documented wikilink_pipe_spacing auto-fix: within each PIPE_SPACING_RE
+    match, collapse the pipe-and-padding to a bare `|` (mirrors SKILL.md / the
+    fix_hint). Only padding adjacent to the `|` inside the matched wikilink span is
+    removed; a `|` outside `[[...]]` (a table cell) is never touched. This transform
+    is on the verification-neutral re-stamp allowlist, so it is pinned here."""
+    return cw.PIPE_SPACING_RE.sub(
+        lambda m: re.sub(r'[^\S\n]*\|[^\S\n]*', '|', m.group(0)), body)
+
+
 SOURCE_FM = ('type: paper\ntitle: "X"\nauthors: []\nyear: 2020\n'
              'file: "[[0-raw/papers/X.pdf]]"\nattachments: []\ntags: []\n'
              'frames: []\ncreated: 2026-01-01\nupdated: 2026-01-01\nstatus: draft')
@@ -319,6 +329,13 @@ class TestCheckWiki(unittest.TestCase):
                 '> ^sources')
         assert bracket_findings(body) == []
 
+    def test_square_inside_double_quote_is_masked(self) -> None:
+        # A `[[[…]]]`-shaped literal inside a verbatim quote is an example, not a
+        # citation; the auto-fix is on the re-stamp allowlist, so it must never
+        # rewrite (and re-stamp) a quoted span. Mirrors the code/Sources masking.
+        body = f'> - the old style read "{square(LOC1)}" before the fix.'
+        assert bracket_findings(body) == []
+
     # --- fix transform -----------------------------------------------------------
 
     def test_fix_basic_square_to_round_exact(self) -> None:
@@ -466,6 +483,162 @@ class TestCheckWiki(unittest.TestCase):
         assert any(f['check_id'] == 'unlinked_page_mention'
                    and 'host-bare' in f['file']
                    and 'gpt-3' in f['message'] for f in finds)
+
+    # --- unlinked_page_mention verified-ignore list ------------------------------
+    # Genuine-vs-generic is a judgement (CLAUDE.md -> Wikilink Format). audit makes
+    # it per occurrence and records a confirmed-generic one in
+    # .claude/skills/lint/unlinked-mention-ignore.md so it is not re-litigated. An
+    # entry is page-scoped (never suppresses elsewhere) and phrase-anchored (a
+    # reword re-flags it — the safe fallback).
+
+    def _ignore(self, *entries: str) -> list[dict[str, object]]:
+        f = self.tmp / 'ignore.md'
+        f.write_text('# x\n\n## verified-ignore\n'
+                     + ''.join(f'- {e}\n' for e in entries), encoding='utf-8')
+        return cw._load_unlinked_mention_ignore(f)
+
+    def test_unlinked_mention_verified_ignore_suppresses_generic_occurrence(self) -> None:
+        _write_page(self.tmp, 'concepts', 'adapter-tuning.md', _CON_FM,
+                    '> [!idea] Idea\n> - x.\n> ^idea')
+        _write_page(self.tmp, 'concepts', 'host.md', _CON_FM,
+                    '> [!idea] Idea\n> - Loosely, any adapter tuning story counts.\n'
+                    '> ^idea')
+        ign = self._ignore('1-wiki/concepts/host.md :: adapter-tuning :: '
+                           'any adapter tuning story')
+        with mock.patch.object(cw, 'UNLINKED_MENTION_IGNORE', ign):
+            finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
+        assert not any(f['check_id'] == 'unlinked_page_mention'
+                       and 'host.md' in f['file'] for f in finds)
+
+    def test_unlinked_mention_verified_ignore_leaves_other_occurrences(self) -> None:
+        # An entry suppresses ONE occurrence context, not the whole page: a second,
+        # genuine mention of the same target still flags.
+        _write_page(self.tmp, 'concepts', 'adapter-tuning.md', _CON_FM,
+                    '> [!idea] Idea\n> - x.\n> ^idea')
+        _write_page(self.tmp, 'concepts', 'host2.md', _CON_FM,
+                    '> [!idea] Idea\n> - Loosely, any adapter tuning story counts.\n'
+                    '> - Adapter tuning inserts small modules into a frozen model.\n'
+                    '> ^idea')
+        ign = self._ignore('1-wiki/concepts/host2.md :: adapter-tuning :: '
+                           'any adapter tuning story')
+        with mock.patch.object(cw, 'UNLINKED_MENTION_IGNORE', ign):
+            finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
+        hits = [f for f in finds if f['check_id'] == 'unlinked_page_mention'
+                and 'host2.md' in f['file']]
+        assert len(hits) == 1
+        assert '1×' in hits[0]['message']  # the generic one is gone, the genuine one stays
+
+    def test_unlinked_mention_verified_ignore_is_page_scoped(self) -> None:
+        # The same wording on a DIFFERENT page is judged again — an entry recorded
+        # for one page never silently suppresses a genuine reference on another.
+        _write_page(self.tmp, 'concepts', 'adapter-tuning.md', _CON_FM,
+                    '> [!idea] Idea\n> - x.\n> ^idea')
+        _write_page(self.tmp, 'concepts', 'other.md', _CON_FM,
+                    '> [!idea] Idea\n> - Loosely, any adapter tuning story counts.\n'
+                    '> ^idea')
+        ign = self._ignore('1-wiki/concepts/host.md :: adapter-tuning :: '
+                           'any adapter tuning story')
+        with mock.patch.object(cw, 'UNLINKED_MENTION_IGNORE', ign):
+            finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
+        assert any(f['check_id'] == 'unlinked_page_mention'
+                   and 'other.md' in f['file'] for f in finds)
+
+    def test_unlinked_mention_verified_ignore_reflags_when_phrase_reworded(self) -> None:
+        # Self-invalidating: the page's wording changed, so the entry no longer
+        # matches and the mention flags again rather than riding on a stale judgement.
+        _write_page(self.tmp, 'concepts', 'adapter-tuning.md', _CON_FM,
+                    '> [!idea] Idea\n> - x.\n> ^idea')
+        _write_page(self.tmp, 'concepts', 'host3.md', _CON_FM,
+                    '> [!idea] Idea\n> - Concretely, this adapter tuning result holds.\n'
+                    '> ^idea')
+        ign = self._ignore('1-wiki/concepts/host3.md :: adapter-tuning :: '
+                           'any adapter tuning story')
+        with mock.patch.object(cw, 'UNLINKED_MENTION_IGNORE', ign):
+            finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
+        assert any(f['check_id'] == 'unlinked_page_mention'
+                   and 'host3.md' in f['file'] for f in finds)
+
+    def test_unlinked_mention_ignore_loader_parses_and_skips_malformed(self) -> None:
+        ign = self._ignore('1-wiki/concepts/host.md :: adapter-tuning :: a b c',
+                           'missing the target field',
+                           '1-wiki/concepts/host.md ::  :: empty target')
+        assert [(e['page'], e['target'], e['phrase']) for e in ign] == [
+            ('1-wiki/concepts/host.md', 'adapter-tuning', 'a b c')]
+        assert ign[0]['line'] == 4  # reported at its own line in the data file
+
+    def test_unlinked_mention_ignore_loader_missing_file_is_empty_not_fatal(self) -> None:
+        # A missing file leaves the check fully unsuppressed — the safe direction.
+        assert cw._load_unlinked_mention_ignore(self.tmp / 'nope.md') == []
+
+    def test_unlinked_mention_ignore_real_data_file_loads(self) -> None:
+        # The shipped data file parses (it ships empty — only the example comment).
+        assert cw._load_unlinked_mention_ignore() == []
+
+    # --- stale_mention_ignore: an entry that suppresses nothing ------------------
+    # A stale entry is inert (phrase-anchored: it can only fail to match), so this
+    # is hygiene, not a correctness defect — but Warning-tier, because the tier says
+    # who acts: Warning is audit's authored worklist (audit owns the data file) and
+    # Info is explicitly not audit's to action. Without it, dead entries accumulate
+    # silently as pages are reworded, renamed, or removed.
+
+    def test_stale_mention_ignore_severity_registered(self) -> None:
+        # Warning, not Info: audit owns the file, and Info findings are not audit's
+        # to action — an Info-tier stale entry would be a finding nobody may clean up.
+        assert cw.CHECKS.get('stale_mention_ignore') == 'warning'
+
+    def test_stale_mention_ignore_flags_reworded_phrase(self) -> None:
+        # The page still mentions the target, but not inside the recorded phrase:
+        # the judgement no longer binds, so the entry is reported as dead.
+        _write_page(self.tmp, 'concepts', 'adapter-tuning.md', _CON_FM,
+                    '> [!idea] Idea\n> - x.\n> ^idea')
+        _write_page(self.tmp, 'concepts', 'host4.md', _CON_FM,
+                    '> [!idea] Idea\n> - Concretely, this adapter tuning result holds.\n'
+                    '> ^idea')
+        ign = self._ignore('1-wiki/concepts/host4.md :: adapter-tuning :: '
+                           'any adapter tuning story')
+        with mock.patch.object(cw, 'UNLINKED_MENTION_IGNORE', ign):
+            finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
+        stale = [f for f in finds if f['check_id'] == 'stale_mention_ignore']
+        assert len(stale) == 1
+        assert 'falls inside the recorded phrase' in stale[0]['message']
+
+    def test_stale_mention_ignore_flags_missing_host_page(self) -> None:
+        _write_page(self.tmp, 'concepts', 'adapter-tuning.md', _CON_FM,
+                    '> [!idea] Idea\n> - x.\n> ^idea')
+        ign = self._ignore('1-wiki/concepts/gone.md :: adapter-tuning :: '
+                           'any adapter tuning story')
+        with mock.patch.object(cw, 'UNLINKED_MENTION_IGNORE', ign):
+            finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
+        stale = [f for f in finds if f['check_id'] == 'stale_mention_ignore']
+        assert len(stale) == 1
+        assert 'no longer exists' in stale[0]['message']
+
+    def test_stale_mention_ignore_flags_missing_target_page(self) -> None:
+        _write_page(self.tmp, 'concepts', 'adapter-tuning.md', _CON_FM,
+                    '> [!idea] Idea\n> - x.\n> ^idea')
+        _write_page(self.tmp, 'concepts', 'host5.md', _CON_FM,
+                    '> [!idea] Idea\n> - Loosely, any adapter tuning story counts.\n'
+                    '> ^idea')
+        ign = self._ignore('1-wiki/concepts/host5.md :: dropped-concept :: '
+                           'any adapter tuning story')
+        with mock.patch.object(cw, 'UNLINKED_MENTION_IGNORE', ign):
+            finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
+        stale = [f for f in finds if f['check_id'] == 'stale_mention_ignore']
+        assert len(stale) == 1
+        assert 'dropped-concept' in stale[0]['message']
+
+    def test_stale_mention_ignore_silent_when_entry_still_suppresses(self) -> None:
+        # A live entry — one doing real work — is never reported as stale.
+        _write_page(self.tmp, 'concepts', 'adapter-tuning.md', _CON_FM,
+                    '> [!idea] Idea\n> - x.\n> ^idea')
+        _write_page(self.tmp, 'concepts', 'host6.md', _CON_FM,
+                    '> [!idea] Idea\n> - Loosely, any adapter tuning story counts.\n'
+                    '> ^idea')
+        ign = self._ignore('1-wiki/concepts/host6.md :: adapter-tuning :: '
+                           'any adapter tuning story')
+        with mock.patch.object(cw, 'UNLINKED_MENTION_IGNORE', ign):
+            finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
+        assert not any(f['check_id'] == 'stale_mention_ignore' for f in finds)
 
     # --- callout block IDs (kebab-case of the callout title) ---------------------
 
@@ -796,7 +969,11 @@ class TestCheckWiki(unittest.TestCase):
         assert loc_findings(f'> - a claim ({LOC_BOTH}).') == []
 
     def test_source_locator_each_anchor_kind_inside_not_flagged(self) -> None:
-        for disp in ('sec. 4', 'app. C', 'ch. 2', 'fig. 4', 'tab. 8', 'eq. 3'):
+        # Structural (sec./app./ch.), float (fig./tab./eq.), and theorem-environment
+        # (def./thm./lem./prop./cor./alg.) anchors are all valid (CLAUDE.md -> Source
+        # Support And Verification); a page paired with any of them is complete.
+        for disp in ('sec. 4', 'app. C', 'ch. 2', 'fig. 4', 'tab. 8', 'eq. 3',
+                     'def. 1', 'thm. 3.1', 'lem. 4.2', 'prop. 5', 'cor. 3.3', 'alg. 2'):
             link = f'[[0-raw/papers/X.pdf#page=5|{disp}, p. 5]]'
             assert loc_findings(f'> - claim ({link}).') == [], disp
 
@@ -808,6 +985,31 @@ class TestCheckWiki(unittest.TestCase):
         # case-insensitive, and only as the anchor token — `p. 1` alone still fails.
         assert loc_findings('> - a claim ([[0-raw/papers/X.pdf#page=1|Abstract, p. 1]]).') == []
         assert len(loc_findings('> - a claim ([[0-raw/papers/X.pdf#page=1|p. 1]]).')) == 1
+
+    def test_source_locator_unpaginated_appendix_anchor_alone_ok(self) -> None:
+        # The unpaginated-supplement exemption (CLAUDE.md -> Source Support And
+        # Verification): a published appendix often carries no printed page, so an
+        # `app.`-anchored display cites the anchor alone rather than fabricating a
+        # `p. M`. The exemption is `app.`-only and does not widen the anchor set.
+        assert loc_findings('> - a claim ([[0-raw/papers/X.pdf#page=16|app. D.1, tab. 8]]).') == []
+        assert loc_findings('> - a claim ([[0-raw/papers/X.pdf#page=16|app. C]]).') == []
+        # a paginated appendix keeps its page; the exemption does not require dropping it
+        assert loc_findings('> - a claim ([[0-raw/papers/X.pdf#page=16|app. C, p. 4186]]).') == []
+        # …and no other anchor kind may stand alone (theorem environments included)
+        for disp in ('sec. 4', 'ch. 2', 'fig. 4', 'tab. 8', 'eq. 3', 'abstract',
+                     'def. 1', 'thm. 3.1', 'lem. 4.2', 'prop. 5', 'cor. 3.3', 'alg. 2'):
+            link = f'[[0-raw/papers/X.pdf#page=5|{disp}]]'
+            assert len(loc_findings(f'> - claim ({link}).')) == 1, disp
+
+    def test_citation_locator_unpaginated_appendix_anchor_alone_ok(self) -> None:
+        # The concept/entity/synthesis counterpart: both checks share
+        # locator_display_complete, so the exemption cannot drift between them.
+        body = f'> - claim {SRC} ([[0-raw/papers/X.pdf#page=16|app. D.1, tab. 8]]).'
+        f = cw.check_citation_form(body=body, rel='1-wiki/concepts/c.md', end=0)
+        assert [x['check_id'] for x in f if x['check_id'] == 'citation_locator_incomplete'] == []
+        bare = f'> - claim {SRC} ([[0-raw/papers/X.pdf#page=16|sec. 4]]).'
+        f = cw.check_citation_form(body=bare, rel='1-wiki/concepts/c.md', end=0)
+        assert 'citation_locator_incomplete' in {x['check_id'] for x in f}
 
     def test_source_locator_inside_inline_code_is_masked(self) -> None:
         assert loc_findings(f'> - literally `{LOC_PAGE_ONLY}` in code.') == []
@@ -938,6 +1140,47 @@ class TestCheckWiki(unittest.TestCase):
         r = subprocess.run([sys.executable, str(SCRIPT), '--list-checks'],
                            capture_output=True, text=True)
         assert json.loads(r.stdout).get('verified_anchor_unaudited') == 'error'
+
+    def test_verified_hash_malformed_delimiter_is_flagged(self) -> None:
+        # A whitespace-padded closing `---` is accepted by parse_frontmatter
+        # (strip-based) but rejected by body_hash (exact `\n---\n`), which raises
+        # ValueError. check_verified_hash must SURFACE that as verified_hash_mismatch,
+        # not swallow it — else a `verified` page silently escapes the hash backstop
+        # (a self-concealing false green). Pins the ValueError-surfacing branch.
+        d = self.tmp / '1-wiki' / 'sources'
+        d.mkdir(parents=True, exist_ok=True)
+        p = d / 'X.md'
+        p.write_text('---\n' + SOURCE_FM + '\n--- \n\n'
+                     '> [!tldr] TL;DR\n> - a claim.\n> ^tldr\n', encoding='utf-8')
+        f = cw.check_verified_hash(
+            path=p, fm={'status': 'verified', 'verified_hash': 'deadbeef'},
+            rel='1-wiki/sources/X.md')
+        assert len(f) == 1 and f[0]['check_id'] == 'verified_hash_mismatch'
+
+    # --- wikilink_pipe_spacing transform (re-stamp-eligible, so pinned) ----------
+
+    def test_pipe_spacing_detects_padded_pipe(self) -> None:
+        _write_page(self.tmp, 'concepts', 'c.md', CONCEPT_FM,
+                    '> [!idea] Idea\n> - see [[1-wiki/concepts/y.md | y]].\n> ^idea')
+        finds = cw.check_wikilink_pipe_spacing(wiki_root=self.tmp / '1-wiki')
+        assert [f['check_id'] for f in finds] == ['wikilink_pipe_spacing']
+
+    def test_pipe_spacing_fix_collapses_all_padding_forms(self) -> None:
+        assert fix_pipes('[[a | b]]') == '[[a|b]]'
+        assert fix_pipes('[[a| b]]') == '[[a|b]]'
+        assert fix_pipes('[[a |b]]') == '[[a|b]]'
+
+    def test_pipe_spacing_fix_is_idempotent(self) -> None:
+        assert fix_pipes('[[a|b]]') == '[[a|b]]'
+
+    def test_pipe_spacing_fix_leaves_table_cells(self) -> None:
+        # A `|` outside `[[...]]` (a Markdown table row) must not be touched.
+        assert fix_pipes('| a | b |') == '| a | b |'
+
+    def test_pipe_spacing_fix_roundtrips_to_clean(self) -> None:
+        fixed = fix_pipes('x [[a | b]] and [[c|d]] y')
+        assert not cw.PIPE_SPACING_RE.search(fixed)
+        assert fixed == 'x [[a|b]] and [[c|d]] y'
 
     # --- bullet-initial wikilink capitalization (wikilink_display_uncapitalized) --
     #
@@ -1311,6 +1554,171 @@ class TestCheckWiki(unittest.TestCase):
 
     def test_never_match_regex_matches_nothing(self) -> None:
         assert cw._never_match().search('belief state tool use anything') is None
+
+
+class TestPaginationMap(unittest.TestCase):
+    """The pagination map: the loader/`_parse_page_span`, `printed_page`, the
+    map-aware locator exemption (`locator_display_complete`), and the two checks
+    `locator_page_mismatch` / `pagination_map_unregistered`. Uses only the
+    placeholder raw `0-raw/papers/X.pdf`; PAGINATION_MAP is a module global, so
+    tests patch it with `mock.patch.object` rather than reloading."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.tmp = Path(self._tmp.name)
+
+    def _mapfile(self, text: str) -> Path:
+        p = self.tmp / 'pagination-map.md'
+        p.write_text(text, encoding='utf-8')
+        return p
+
+    # --- loader + _parse_page_span ---
+    def test_parse_page_span(self) -> None:
+        assert cw._parse_page_span('5') == [5]
+        assert cw._parse_page_span('1-3') == [1, 2, 3]
+        assert cw._parse_page_span('x') is None
+        assert cw._parse_page_span('3-1') is None   # reversed span rejected
+
+    def test_load_map_arabic_span_none_and_comment(self) -> None:
+        m = cw._load_pagination_map(self._mapfile(
+            '## 0-raw/papers/X.pdf\n'
+            '- 1 = 4171          # proceedings offset\n'
+            '- 2-4 = 4172-4174\n'
+            '- 5 = none\n'))
+        assert m == {'0-raw/papers/X.pdf':
+                     {1: 4171, 2: 4172, 3: 4173, 4: 4174, 5: None}}
+
+    def test_load_map_skips_malformed(self) -> None:
+        m = cw._load_pagination_map(self._mapfile(
+            '## 0-raw/papers/X.pdf\n'
+            '- 1 = 4171\n'
+            '- 2-4 = 4172-4173\n'   # unequal span lengths -> skipped
+            '- garbage line\n'      # no '=' -> skipped
+            '- 9 = notanumber\n'))  # rhs not number/none/span -> skipped
+        assert m == {'0-raw/papers/X.pdf': {1: 4171}}
+
+    def test_load_map_missing_file_is_empty(self) -> None:
+        assert cw._load_pagination_map(self.tmp / 'nope.md') == {}
+
+    def test_load_map_ignores_non_raw_headings(self) -> None:
+        # Prose H2 headings and fenced examples must not become entries.
+        m = cw._load_pagination_map(self._mapfile(
+            '## Why this file exists\n- 1 = 5\n'   # not a 0-raw heading -> skipped
+            '## 0-raw/papers/X.pdf\n- 1 = 5\n'))
+        assert m == {'0-raw/papers/X.pdf': {1: 5}}
+
+    def test_shipped_template_parses_empty(self) -> None:
+        # The real data file ships with no entries; its example fence/comment
+        # must be inert to the parser.
+        assert cw._load_pagination_map() == {}
+
+    def test_printed_page_three_states(self) -> None:
+        with mock.patch.object(cw, 'PAGINATION_MAP',
+                               {'0-raw/papers/X.pdf': {5: 4175, 6: None}}):
+            assert cw.printed_page('0-raw/papers/X.pdf', 5) == ('paginated', 4175)
+            assert cw.printed_page('0-raw/papers/X.pdf', 6) == ('unpaginated', None)
+            assert cw.printed_page('0-raw/papers/X.pdf', 7) == ('unregistered', None)
+            assert cw.printed_page('0-raw/papers/Other.pdf', 1) == ('unregistered', None)
+
+    # --- map-aware exemption ---
+    def test_exemption_paginated_requires_page(self) -> None:
+        with mock.patch.object(cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {5: 5}}):
+            # page prints a number -> anchor alone (even `app.`) is incomplete
+            assert not cw.locator_display_complete(
+                display='sec. 3', raw='0-raw/papers/X.pdf', phys=5)
+            assert not cw.locator_display_complete(
+                display='app. A', raw='0-raw/papers/X.pdf', phys=5)
+            assert cw.locator_display_complete(
+                display='sec. 3, p. 5', raw='0-raw/papers/X.pdf', phys=5)
+
+    def test_exemption_unpaginated_allows_any_anchor_only(self) -> None:
+        with mock.patch.object(cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {20: None}}):
+            assert cw.locator_display_complete(
+                display='app. A', raw='0-raw/papers/X.pdf', phys=20)
+            assert cw.locator_display_complete(   # any anchor, not only `app.`
+                display='sec. 3', raw='0-raw/papers/X.pdf', phys=20)
+
+    def test_exemption_unregistered_falls_back_to_app_heuristic(self) -> None:
+        with mock.patch.object(cw, 'PAGINATION_MAP', {}):
+            assert cw.locator_display_complete(     # `app.`-only OK (fallback)
+                display='app. A', raw='0-raw/papers/X.pdf', phys=3)
+            assert not cw.locator_display_complete(  # `sec.`-only still incomplete
+                display='sec. 3', raw='0-raw/papers/X.pdf', phys=3)
+
+    def test_exemption_no_keys_is_pure_display_heuristic(self) -> None:
+        # Called without raw/phys (e.g. a caller with no deep-link keys): the
+        # original app.-only behaviour.
+        assert cw.locator_display_complete(display='app. A')
+        assert not cw.locator_display_complete(display='sec. 3')
+
+    # --- locator_page_mismatch ---
+    def _match(self, body: str) -> list[str]:
+        return [f['check_id'] for f in cw.check_locator_page_match(
+            body=body, rel='1-wiki/concepts/c.md', end=0)]
+
+    def test_mismatch_fires_on_wrong_printed_page(self) -> None:
+        with mock.patch.object(cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {5: 4175}}):
+            body = ('> - claim ([[1-wiki/sources/X.md|X]]; '
+                    '[[0-raw/papers/X.pdf#page=5|sec. 3, p. 99]]).')
+            assert self._match(body) == ['locator_page_mismatch']
+
+    def test_no_mismatch_when_page_matches(self) -> None:
+        with mock.patch.object(cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {5: 4175}}):
+            body = ('> - claim ([[1-wiki/sources/X.md|X]]; '
+                    '[[0-raw/papers/X.pdf#page=5|sec. 3, p. 4175]]).')
+            assert self._match(body) == []
+
+    def test_mismatch_fires_when_page_prints_nothing(self) -> None:
+        with mock.patch.object(cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {20: None}}):
+            body = ('> - claim ([[1-wiki/sources/X.md|X]]; '
+                    '[[0-raw/papers/X.pdf#page=20|app. A, p. 4]]).')
+            assert self._match(body) == ['locator_page_mismatch']
+
+    def test_no_mismatch_on_unregistered_raw(self) -> None:
+        with mock.patch.object(cw, 'PAGINATION_MAP', {}):
+            body = ('> - claim ([[1-wiki/sources/X.md|X]]; '
+                    '[[0-raw/papers/X.pdf#page=5|sec. 3, p. 99]]).')
+            assert self._match(body) == []
+
+    def test_mismatch_ignores_pp_ranges(self) -> None:
+        # Conservative for an error-severity check: `pp. M–N` ranges not matched.
+        with mock.patch.object(cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {5: 4175}}):
+            body = ('> - claim ([[1-wiki/sources/X.md|X]]; '
+                    '[[0-raw/papers/X.pdf#page=5|sec. 3, pp. 99-100]]).')
+            assert self._match(body) == []
+
+    def test_page_num_re_ignores_p_inside_app(self) -> None:
+        # The classic bug: the `p.` inside `app.` must not read as a page token.
+        assert cw.CITATION_PAGE_NUM_RE.search('app. D.1, tab. 8') is None
+        assert cw.CITATION_PAGE_NUM_RE.search('sec. 3, p. 5').group(1) == '5'
+
+    # --- pagination_map_unregistered ---
+    def test_registration_flags_unregistered_raw(self) -> None:
+        with mock.patch.object(cw, 'PAGINATION_MAP', {}):
+            _write_page(self.tmp, 'concepts', 'c.md', CONCEPT_FM,
+                        '> - claim ([[1-wiki/sources/X.md|X]]; '
+                        '[[0-raw/papers/X.pdf#page=5|sec. 3, p. 5]]).')
+            f = cw.check_pagination_registration(wiki_root=self.tmp / '1-wiki')
+            assert [x['check_id'] for x in f] == ['pagination_map_unregistered']
+            assert f[0]['file'] == '0-raw/papers/X.pdf'
+
+    def test_registration_silent_when_registered(self) -> None:
+        with mock.patch.object(cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {5: 5}}):
+            _write_page(self.tmp, 'concepts', 'c.md', CONCEPT_FM,
+                        '> - claim ([[1-wiki/sources/X.md|X]]; '
+                        '[[0-raw/papers/X.pdf#page=5|sec. 3, p. 5]]).')
+            assert cw.check_pagination_registration(wiki_root=self.tmp / '1-wiki') == []
+
+    def test_registration_one_finding_per_raw(self) -> None:
+        with mock.patch.object(cw, 'PAGINATION_MAP', {}):
+            _write_page(self.tmp, 'concepts', 'c.md', CONCEPT_FM,
+                        '> - a ([[1-wiki/sources/X.md|X]]; '
+                        '[[0-raw/papers/X.pdf#page=5|sec. 3, p. 5]]).\n'
+                        '> - b ([[1-wiki/sources/X.md|X]]; '
+                        '[[0-raw/papers/X.pdf#page=6|sec. 4, p. 6]]).')
+            f = cw.check_pagination_registration(wiki_root=self.tmp / '1-wiki')
+            assert len(f) == 1   # one per raw, not per citation
 
 
 if __name__ == '__main__':
