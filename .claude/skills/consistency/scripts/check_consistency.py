@@ -79,13 +79,14 @@ SKILL_COUNT_PROSE = re.compile(
 # are project-scoped meta-skills).
 META_SKILL_NAMES = {'consistency', 'skill-linter', 'skill-llm-council', 'checkup', 'cleanup'}
 
-# Standalone skills deliberately kept out of the project catalogues. They sit
-# outside the wiki workflow — `mock-defence` is a prep-only mock-defence drill —
-# so they are exempt from the Operations list, the directory tree, and the
-# output-kind naming registry. Their on-disk skill folders and `2-outputs/`
-# folders must not be flagged as missing from those catalogues (same exemption
-# shape as OUTPUT_ARCHIVE_DIRS).
-STANDALONE_SKILL_NAMES = {'mock-defence'}
+# Standalone skills deliberately kept out of the project catalogues: skills that
+# serve some out-of-band purpose rather than the wiki workflow, and so are exempt
+# from the Operations list, the directory tree, and the output-kind naming registry.
+# Their on-disk skill folders and `2-outputs/` folders must not be flagged as
+# missing from those catalogues (same exemption shape as OUTPUT_ARCHIVE_DIRS).
+# Currently empty — no standalone skill exists. Add a folder name here to exempt
+# a future one.
+STANDALONE_SKILL_NAMES: set[str] = set()
 
 EXPECTED_SECTIONS = {
     'source': ['tldr', 'contribution', 'key-claims', 'evidence', 'method',
@@ -259,13 +260,13 @@ CHECK_MANIFEST = [
         'check_id': 'personal_info_leakage',
         'packet': 'styles-files',
         'name': 'personal information leakage',
-        'scope': 'repo-wide except 0-raw/, a-archive/ (which contains about-me/), 2-outputs/, .git/, .obsidian/, and the STANDALONE_SKILL_NAMES folders (mock-defence)',
+        'scope': 'repo-wide except 0-raw/, a-archive/ (which contains about-me/), 2-outputs/, .git/, .obsidian/, and the STANDALONE_SKILL_NAMES folders',
     },
     {
         'check_id': 'identity_term_leakage',
         'packet': 'styles-files',
         'name': 'identity term leakage',
-        'scope': 'repo-wide except 0-raw/, a-archive/ (which contains about-me/), 2-outputs/, .git/, .obsidian/, and the STANDALONE_SKILL_NAMES folders (mock-defence)',
+        'scope': 'repo-wide except 0-raw/, a-archive/ (which contains about-me/), 2-outputs/, .git/, .obsidian/, and the STANDALONE_SKILL_NAMES folders',
     },
     {
         'check_id': 'domain_literature_leakage',
@@ -301,7 +302,7 @@ CHECK_MANIFEST = [
         'check_id': 'dir_tree_drift',
         'packet': 'styles-files',
         'name': 'CLAUDE.md directory tree drift',
-        'scope': "CLAUDE.md — parses the ASCII directory tree under 'Directory Structure' and compares it to the actual repo: tree entries that don't exist on disk are flagged stale; on-disk paths that should appear in the tree (top-level docs, top-level dirs, immediate children of 0-raw/, 2-outputs/, a-archive/, plus 1-wiki/'s hot/index/log files and child dirs, plus .claude/skills/) but are missing are flagged. STANDALONE_SKILL_NAMES output folders (mock-defence) are exempt — kept out of the tree by design; OUTPUT_EXEMPT_DIRS user-owned free-form folders are exempt the same way.",
+        'scope': "CLAUDE.md — parses the ASCII directory tree under 'Directory Structure' and compares it to the actual repo: tree entries that don't exist on disk are flagged stale; on-disk paths that should appear in the tree (top-level docs, top-level dirs, immediate children of 0-raw/, 2-outputs/, a-archive/, plus 1-wiki/'s hot/index/log files and child dirs, plus .claude/skills/) but are missing are flagged. STANDALONE_SKILL_NAMES output folders are exempt — kept out of the tree by design; OUTPUT_EXEMPT_DIRS user-owned free-form folders are exempt the same way.",
     },
     {
         'check_id': 'unbackticked_paths_resolve',
@@ -313,7 +314,7 @@ CHECK_MANIFEST = [
         'check_id': 'operations_list_matches_skills',
         'packet': 'schema-language',
         'name': 'CLAUDE.md Operations list matches skill folders',
-        'scope': "CLAUDE.md '## Operations' section vs '.claude/skills/*/'. Parses bulleted skill names in the Operations section and cross-checks both directions: skills listed in CLAUDE.md but missing on disk are flagged stale, and skill folders on disk that are missing from the Operations list are flagged. STANDALONE_SKILL_NAMES (mock-defence) are dropped from both sides — they are deliberately out of the catalogue.",
+        'scope': "CLAUDE.md '## Operations' section vs '.claude/skills/*/'. Parses bulleted skill names in the Operations section and cross-checks both directions: skills listed in CLAUDE.md but missing on disk are flagged stale, and skill folders on disk that are missing from the Operations list are flagged. STANDALONE_SKILL_NAMES skills are dropped from both sides — they are deliberately out of the catalogue.",
     },
     {
         'check_id': 'retired_skill_references',
@@ -331,7 +332,7 @@ CHECK_MANIFEST = [
         'check_id': 'output_kinds_match_disk',
         'packet': 'naming',
         'name': 'output kinds match disk',
-        'scope': "OUTPUT_KIND_DIRS in the script vs the on-disk 2-outputs/ subfolders (minus the quarantined/superseded archive folders, the OUTPUT_EXEMPT_DIRS free-form folders, and the STANDALONE_SKILL_NAMES output folders). Flags an output folder that exists but is absent from OUTPUT_KIND_DIRS (its files would escape file_naming_consistency) and a listed kind whose folder is missing while its owning skill still exists. Standalone skills (mock-defence) are exempt. Findings are root-level proposals (the constant lives in the script).",
+        'scope': "OUTPUT_KIND_DIRS in the script vs the on-disk 2-outputs/ subfolders (minus the quarantined/superseded archive folders, the OUTPUT_EXEMPT_DIRS free-form folders, and the STANDALONE_SKILL_NAMES output folders). Flags an output folder that exists but is absent from OUTPUT_KIND_DIRS (its files would escape file_naming_consistency) and a listed kind whose folder is missing while its owning skill still exists. Standalone skills are exempt. Findings are root-level proposals (the constant lives in the script).",
     },
     {
         'check_id': 'catalogue_matches_manifest',
@@ -916,9 +917,9 @@ EMAIL_ALLOWLIST_LOCALPARTS = {'noreply'}
 def _under_standalone_skill(path: Path, root: Path) -> bool:
     """True if path lies inside a STANDALONE_SKILL_NAMES skill folder.
 
-    The standalone skill (mock-defence) is wiki-orthogonal — it serves the
-    user's defence prep, not the wiki — so the leakage/privacy checks skip its
-    folder.
+    A standalone skill is wiki-orthogonal — it serves some out-of-band purpose,
+    not the wiki — so the leakage/privacy checks skip its folder. The set is
+    currently empty, so this returns False for every path.
     """
     parts = path.relative_to(root).parts
     return (len(parts) >= 3 and parts[0] == '.claude'
@@ -1276,8 +1277,8 @@ DATED_OUTPUT_RE = re.compile(
 # 2-outputs/synthesis/ folder to validate. output_kinds_match_disk asserts this
 # set stays equal to the on-disk 2-outputs/ subfolders (minus the archive
 # folders and the STANDALONE_SKILL_NAMES output folders), so a new output kind
-# cannot silently fall out of naming coverage. Standalone skills (mock-defence)
-# are exempt: their output files are not bound by the dated-naming registry.
+# cannot silently fall out of naming coverage. Standalone skills are exempt:
+# their output files are not bound by the dated-naming registry.
 OUTPUT_KIND_DIRS = {
     'query', 'ingest', 'brief', 'compare', 'reflect',
     'lint', 'audit', 'consistency', 'skill-linter', 'skill-llm-council',
@@ -1462,10 +1463,9 @@ def check_filename_references_resolve(root: Path) -> list[dict[str, Any]]:
     # smart-notes summaries) that legitimately quotes filenames from other
     # systems. Those filenames aren't expected to exist in this repo; scanning
     # them produces noise. Project documents (a-archive/style, a-archive/about-me)
-    # stay in scope. The standalone skill (mock-defence) is also excluded — it
-    # ships with placeholder/example filenames (fictional profiles, files the
-    # user creates on first use) that intentionally don't resolve, the same way
-    # the leakage and catalogue checks skip its folder.
+    # stay in scope. Standalone skills (STANDALONE_SKILL_NAMES) are also excluded
+    # — they may ship placeholder/example filenames that intentionally don't
+    # resolve, the same way the leakage and catalogue checks skip their folders.
     target_files = [p for p in target_files
                     if 'a-archive/reference' not in str(p.relative_to(root))
                     and not _under_standalone_skill(path=p, root=root)]

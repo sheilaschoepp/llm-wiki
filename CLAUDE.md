@@ -619,7 +619,7 @@ Meta skills:
 - `checkup` - autonomously run consistency, lint, and audit in one invocation, in the order that satisfies audit's preconditions.
 - `cleanup` - two jobs: graduate memory-file entries into their permanent home (MEMORY.md, CLAUDE.md, or a skill) and clear the absorbed ones, and prune unneeded `2-outputs/` files (junk, superseded check reports, subject-orphaned reports, aged artifacts). Every deletion is gated file by file.
 
-The standalone skill `mock-defence` lives under `.claude/skills/` but is intentionally **not** catalogued here, in the directory tree, or in the output-kind naming registry. It sits outside the wiki workflow — a prep-only mock-defence drill — so it is exempt from the project's cross-skill catalogues and should not be referenced by the other skills. `consistency` exempts it via `STANDALONE_SKILL_NAMES`; its omission is by design, not drift.
+A **standalone skill** is one that lives under `.claude/skills/` but sits outside the wiki workflow, so it is intentionally **not** catalogued here, in the directory tree, or in the output-kind naming registry, and should not be referenced by the other skills. `consistency` exempts any such skill via its `STANDALONE_SKILL_NAMES` set — its omission from the catalogues is by design, not drift. The set is currently empty (no standalone skill exists); add a folder name to it to register a future one.
 
 ## Skill Authoring
 

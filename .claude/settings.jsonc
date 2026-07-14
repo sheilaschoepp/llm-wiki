@@ -10,8 +10,8 @@
     //
     // What is optional: the "Protected directories" block at the end of the
     // deny list is NOT enabled in the active settings.json. Copy those rules
-    // into settings.json's deny list if you want to lock 0-raw/, a-archive/,
-    // and real-committee/profiles/ against agent edits and deletion.
+    // into settings.json's deny list if you want to lock 0-raw/ and a-archive/
+    // against agent edits and deletion.
     // Everything above that block mirrors the active settings.json.
     // ─────────────────────────────────────────────────────────────────
     "permissions": {
@@ -105,15 +105,7 @@
             "Bash(rm *a-archive*)",
             "Bash(rmdir *a-archive*)",
             "Bash(mv *a-archive*)",
-            "Bash(trash *a-archive*)",
-            // real-committee/profiles/ — protected wherever it sits in the
-            // tree (leading * matches any parent path).
-            "Edit(*real-committee/profiles/**)",
-            "Write(*real-committee/profiles/**)",
-            "Bash(rm *real-committee/profiles*)",
-            "Bash(rmdir *real-committee/profiles*)",
-            "Bash(mv *real-committee/profiles*)",
-            "Bash(trash *real-committee/profiles*)"
+            "Bash(trash *a-archive*)"
         ]
     }
 }
