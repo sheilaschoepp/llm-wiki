@@ -600,10 +600,11 @@ In chat output (not wiki content), build up to jargon: lead with the plain-langu
 
 ## Length
 
-- Concept/entity pages: soft cap 400 words.
-- Synthesis pages: soft cap 600 words.
+- Concept/entity pages: soft cap 400 words of prose.
+- Synthesis pages: soft cap 600 words of prose.
 - Source pages: no page cap, but prefer focused bullets.
 - Any single bullet over about 35 words should be reviewed.
+- **The cap measures prose, not citation machinery.** Inline citations — the source-page wikilink and located raw deep-link a non-obvious claim carries — inflate a page's raw word count without signalling the multi-idea drift the cap is a proxy for, so they do not count toward it: count the rendered prose (display text and body words), not the wikilink targets or deep-link paths. The cap is a soft atomicity hint, never a hard limit. A page over the prose cap is reviewed for whether it holds more than one idea; `audit` owns the split when it genuinely does, and **length alone never forces a split**. A single-idea page that runs long only because it carries many inline citations is not over the cap and is not a finding.
 
 ## Operations
 
