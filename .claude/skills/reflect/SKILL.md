@@ -73,6 +73,9 @@ sample_size: {N pages sampled}
 ## Suggested Next Moves
 - The smallest honest set of concrete moves.
 - Candidate synthesis pages only for clusters whose union of sources is ≥ 2 distinct works (chapter-splits and same-raw pages collapsed, per Step 2); otherwise name the missing-source gap instead.
+
+## Self-report
+- {a specific limitation that bit reflect this run — a blind spot in the sample, a signal it couldn't read, a call it couldn't make} → upgrade: {how the reflect skill should change} (or the single line: none noted this run; per `.claude/skills/multi-skill/references/self-report.md`)
 ```
 
 Write each section only where the sample genuinely supports it. Just past the floor, Current Direction and What Is Compounding may honestly be thin — "too early to call a direction; one page is starting to compound" is the correct content, not a manufactured trend. A healthy wiki legitimately has few or no Weak Spots — write "- None notable this pass" rather than inventing one; skip the One Question if no real organizing question emerged rather than manufacturing a profound-sounding one. Keep Suggested Next Moves to the smallest honest set, never padded to a quota.

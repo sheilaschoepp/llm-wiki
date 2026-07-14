@@ -110,6 +110,9 @@ Example of a finished TL;DR + Core ideas + Gaps block (topic: attention):
 ## Gaps
 - No concept page on additive (Bahdanau) attention — the corpus only covers the dot-product form.
 - [[1-wiki/syntheses/attention-vs-recurrence.md|Attention vs Recurrence]] rests on a single synthesis; long-sequence behaviour is single-source — ingest a second.
+
+## Self-report
+- {a specific limitation that bit the brief skill this run — coverage it couldn't reach, a scope call it couldn't make, a section it had to leave thin} → upgrade: {how the brief skill should change} (or the single line: none noted this run; per `.claude/skills/multi-skill/references/self-report.md`)
 ```
 
 A topic with draft-only coverage of one sub-area surfaces it honestly rather than dropping it:

@@ -119,6 +119,7 @@ Supersede Progress:
 - Preserved: [[2-outputs/superseded/superseded-YYYY-MM-DD-HHMM-{filename}.md|prior view]] (or "Prior view bullet, in-callout")
 - Updated: [[1-wiki/concepts/self-attention.md|self-attention]], [[1-wiki/concepts/positional-encoding.md|positional encoding]]
 - Marked needs-update: [[1-wiki/concepts/self-attention.md|self-attention]] (or "none — cosmetic")
+- Self-report: {a specific limitation that bit supersede this run → how the supersede skill should change, or "none noted this run"} (per `.claude/skills/multi-skill/references/self-report.md`)
 ```
 
 ## Worked Example: Small Replacement

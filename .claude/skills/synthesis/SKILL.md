@@ -167,6 +167,7 @@ Synthesis Progress:
 - Candidates considered: {N}
 - Verification: both packets clean (late-section detail re-read: {…}; #page=N spot-check: {physical page N + printed page seen, or n/a}; fixes: {…or none}) — page left `status: draft` for audit.
 - Notable: {why this topic is now a useful entry point}
+- Self-report: {a specific limitation that bit synthesis this run → how the synthesis skill should change, or "none noted this run"} (per `.claude/skills/multi-skill/references/self-report.md`)
 ```
 
 ## Edge Cases

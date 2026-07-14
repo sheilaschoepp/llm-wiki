@@ -103,6 +103,9 @@ Result: pass | fail
 
 ## Recommended next ingests
 - {author year — "Title" — the gap this ingest surfaced that it fills; "(verify exists)" if unsure}, grouped if several. Only papers you are confident exist. "none" when the ingest surfaced no specific next-source.
+
+## Self-report
+- {a specific limitation that bit ingest this run — a rule it lacked, a case it handled wrong (e.g. over-demoting a page on a single added claim), a step it couldn't complete} → upgrade: {how the ingest skill should change} (or the single line: none noted this run; per `.claude/skills/multi-skill/references/self-report.md`)
 ```
 
 Existing-source (reingest) report shape:
@@ -130,6 +133,9 @@ Existing-source (reingest) report shape:
 
 ### Recommended next ingests
 - {author year — "Title" — the gap this reingest surfaced that it fills; "(verify exists)" if unsure; "none" when none}. Only papers you are confident exist.
+
+### Self-report
+- {a specific limitation that bit ingest this run — a rule it lacked, a case it handled wrong (e.g. over-demoting a page on a single added claim), a step it couldn't complete} → upgrade: {how the ingest skill should change} (or the single line: none noted this run; per `.claude/skills/multi-skill/references/self-report.md`)
 ```
 
 Do not set any touched page to `status: verified`. Verification is a safety pass; new and still-draft pages remain `status: draft` until a later `audit`. Pages with a pre-existing status (existing-source mode) keep it unless the approved operation explicitly changes it.

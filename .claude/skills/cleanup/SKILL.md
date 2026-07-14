@@ -190,6 +190,9 @@ Cleanup Progress:
    ### protected (skipped, no action)
    - kept-latest: lint `<file>`, consistency `<file>` (clean), audit `<file>`, ...
    - preservation: `quarantined/`, `superseded/`
+
+   ## Self-report
+   - {a specific limitation that bit cleanup this run — a graduation call it couldn't make, a candidate it couldn't classify, a safety gate that slowed it} → upgrade: {how the cleanup skill should change} (or the single line: none noted this run; per `.claude/skills/multi-skill/references/self-report.md`)
    ```
 
 6. **Prepend log entry** to `1-wiki/log.md`. Use the schema's dated-and-timed heading (`## [YYYY-MM-DD HH:MM] verb | subject`, 24-hour UTC from the same `TZ='UTC' date` call as Step 5):

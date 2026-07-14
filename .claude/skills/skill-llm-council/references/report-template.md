@@ -80,3 +80,7 @@ Not applied — these touch shared files. Act on them by hand if you agree.
 - If a council ran with fewer than five advisors (a failed subagent that could not be re-run), say so in that council's section and note how it affected confidence.
 - The report does not carry a machine-readable `result:` gate field — nothing downstream consumes it.
 - This is a skill-facing operation: no `1-wiki/log.md` entry.
+
+## Self-report
+
+- A specific limitation that bit the council process *this run* — the two councils converged so the split under-earned its cost, the refuters over- or under-fired, an applied edit needed rework a later pass caught, a role that added no signal — paired with how the `skill-llm-council` skill should be upgraded. `none noted this run` when the process ran cleanly. (Per `.claude/skills/multi-skill/references/self-report.md`; this is the council's report on *itself*, distinct from its findings about the target skill and from the revisit-trigger memory note.)

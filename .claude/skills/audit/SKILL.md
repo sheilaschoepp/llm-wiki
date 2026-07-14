@@ -119,6 +119,9 @@ Report:
 
 ## Verification Candidates
 - Pages that look ready for `verified` but were not fact-checked against their raw source this run — flag for the next audit. (or "none")
+
+## Self-report
+- {a specific limitation that bit audit this run — a rule it lacked, a case it mishandled, a check it couldn't run} → upgrade: {how the audit skill should change} (or the single line: none noted this run; per `.claude/skills/multi-skill/references/self-report.md`)
 ```
 
 7. **Fix, then set status — autonomously.** For every page audit fact-checked in Step 5 — every non-verified page, and every otherwise-`verified` page whose `*[unverified]*` claims audit re-checked — act without asking the user. Audit also applies allowlisted verification-neutral worklist fixes to verified pages not otherwise in scope, re-stamping rather than demoting (the verification-neutral clause below).

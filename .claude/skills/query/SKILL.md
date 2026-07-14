@@ -119,6 +119,9 @@ The wiki is silent on whether Scaled Dot-Product Attention holds under condition
 
 - Press & Wolf 2017 — "Using the Output Embedding to Tie Word Embeddings" — would give [[1-wiki/concepts/scaled-dot-product-attention.md|Scaled Dot-Product Attention]] a second source on the scaling factor's effect, which currently rests on Vaswani2017 alone (single-source). (verify exists)
 - none beyond the above — the rest of the answer is multi-source.
+
+## Self-report
+- {a specific limitation that bit the query skill this run — a question it couldn't fully answer from the wiki, a check it couldn't complete, a call it had to soften} → upgrade: {how the query skill should change} (or the single line: none noted this run; per `.claude/skills/multi-skill/references/self-report.md`)
 ```
 
 6. **Verify the query output.** Before proposing any integration, run two independent verification packets over the saved query output and fix what they find. The packets may run as separate passes by one assistant or by separate assistants, but each returns its own result, and the query output is final only once both come back clean. One assistant in separate passes buys independence from self-circularity — the second pass re-checks the output against the wiki, not against the first pass — but not from a shared blind spot, since the same model can repeat one misreading; prefer separate assistants where the stakes justify it. Verification checks the query output, not the wiki pages themselves (`audit` checks those).

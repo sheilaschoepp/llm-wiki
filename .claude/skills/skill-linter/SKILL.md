@@ -172,6 +172,9 @@ Lint Progress:
    ## Cross-file proposals
 
    - {finding ID} — {target path}: {exact proposed edit}
+
+   ## Self-report
+   - {a specific limitation that bit skill-linter this run — a check it lacked, a false positive/negative, a fix it couldn't safely apply in-scope} → upgrade: {how the skill-linter skill should change} (or the single line: none noted this run; per `.claude/skills/multi-skill/references/self-report.md`)
    ```
 
    The `## Errors` / `## Warnings` / `## Suggestions` sections are the found-state record (written at Step 4, pre-fix). The `## Applied` / `## Skipped` / `## Cross-file proposals` sections carry the action taken on each finding by ID; write them as `_Pending — populated after Step 6 convergence._` at Step 4 and fill them once the loop converges (see Step 6). Write one report file per invocation and update it in place across loop iterations — do not re-derive the timestamp or write a new dated file each pass.

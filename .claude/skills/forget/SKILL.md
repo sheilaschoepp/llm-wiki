@@ -133,6 +133,7 @@ Forget Progress:
 - Removed support: {source} no longer cited by [[1-wiki/concepts/self-attention.md|self-attention]] (or "none")
 - Updated: [[1-wiki/concepts/self-attention.md|self-attention]], [[1-wiki/concepts/positional-encoding.md|positional encoding]]
 - Marked needs-update: [[1-wiki/concepts/layer-normalization.md|layer normalization]] (or "none")
+- Self-report: {a specific limitation that bit forget this run → how the forget skill should change, or "none noted this run"} (per `.claude/skills/multi-skill/references/self-report.md`)
 ```
 
 ## Edge Cases

@@ -626,6 +626,14 @@ Meta skills:
 
 A **standalone skill** is one that lives under `.claude/skills/` but sits outside the wiki workflow, so it is intentionally **not** catalogued here, in the directory tree, or in the output-kind naming registry, and should not be referenced by the other skills. `consistency` exempts any such skill via its `STANDALONE_SKILL_NAMES` set — its omission from the catalogues is by design, not drift. The set is currently empty (no standalone skill exists); add a folder name to it to register a future one.
 
+## Skill Self-Report
+
+Every skill run ends with a self-report: a short, honest account of the limitations it hit *this run* and how the skill itself should be upgraded. It appears in the skill's report — or, for a skill that writes only a log entry (`synthesis`, `supersede`, `forget`), in that entry — and is surfaced again in the chat summary. It is present on **every** run: when the run genuinely hit no limitation the self-report reads `none noted this run`, so a reader can always see the skill checked itself. This binds every skill, read-only and write alike; `checkup` aggregates its sub-skills' self-reports plus its own.
+
+The canonical, self-sufficient statement of this rule — the skills' runtime copy kept in the skill rules, so a skill produces its self-report without this schema file fresh in context (the Skill Authoring self-sufficiency principle) — is `.claude/skills/multi-skill/references/self-report.md`. This section summarizes it for project-level reference; that file is canonical.
+
+Each item is specific and genuine — a gap that actually bit this run (the two founding shapes: audit leaving a confirmed distortion it could not safely fix as a passive finding instead of setting `needs-update`; ingest marking a whole page `draft` after adding one bullet) — paired with the upgrade that would prevent it, and never invented or padded (that is the fabrication the wiki forbids; `none noted this run` is the correct clean-run content). A confirmed item graduates to the skill's memory file (which holds only provisional in-use corrections) or a skill fix via the ordinary user-gated path; the self-report never writes to memory or edits a skill. The `## Self-report` format and the full statement live in the reference above.
+
 ## Skill Authoring
 
 Conventions for the skills under `.claude/skills/`. These govern how skills are written, not what the wiki contains.

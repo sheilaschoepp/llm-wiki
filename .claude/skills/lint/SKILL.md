@@ -150,6 +150,9 @@ info: N
 
 ## Info
 - ... (includes user-owned findings lint and audit do not auto-fix: `filename_not_kebab`, `source_stem_mismatch`, `bare_basename_link`)
+
+## Self-report
+- {a specific limitation that bit lint this run — a check it lacked, a false positive/negative it produced, a fix it couldn't safely apply} → upgrade: {how the lint skill should change} (or the single line: none noted this run; per `.claude/skills/multi-skill/references/self-report.md`)
 ```
 
 5. **Prepend log entry.**

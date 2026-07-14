@@ -102,6 +102,9 @@ date: YYYY-MM-DD
 
 ## Next steps
 - None. (When a comparison surfaces a synthesis candidate, duplicate page, or contradiction, record the suggested `synthesis` / `supersede` / `audit` move here so it survives in the file.)
+
+## Self-report
+- {a specific limitation that bit the compare skill this run — a dimension it couldn't fill, a support call it couldn't make, a target mismatch it had to work around} → upgrade: {how the compare skill should change} (or the single line: none noted this run; per `.claude/skills/multi-skill/references/self-report.md`)
 ```
 
 Schema note: `target_type` is one of `source | concept | entity | synthesis` (a source target's `target_type` is `source`, not its `paper` / `article` / `media` sub-type); list 2-4 targets in `targets:` as wikilinks, one table value column per target.
