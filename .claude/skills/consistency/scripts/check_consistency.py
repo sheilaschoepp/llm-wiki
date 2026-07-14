@@ -353,6 +353,13 @@ MEMORY_FILE_ENTRY_CAP = 10
 # higher cap than the append-only journals and graduates only outward to CLAUDE.md.
 MEMORY_MD_ENTRY_CAP = 15
 
+# Display-truncation lengths (characters) for finding message snippets.
+MESSAGE_SNIPPET_LEN = 120
+MATCH_SNIPPET_LEN = 80
+# Shortest URL path segment treated as a personal handle; below this a segment
+# (a TLD, a short word) is too generic to identify a person.
+URL_TOKEN_MIN_LEN = 4
+
 PACKET_CHECKS: dict[str, list[str]] = {}
 for item in CHECK_MANIFEST:
     PACKET_CHECKS.setdefault(item['packet'], []).append(item['check_id'])
@@ -411,7 +418,7 @@ def check_retired_feature_mentions(root: Path) -> list[dict[str, Any]]:
         findings.append(finding(
             check_id='retired_feature_mentions',
             file=relstr,
-            message=f'Removed-feature mention: {content.strip()[:120]}',
+            message=f'Removed-feature mention: {content.strip()[:MESSAGE_SNIPPET_LEN]}',
             fix_hint='Remove the stale reference or migrate to the current schema.',
             line=line_no,
         ))
@@ -497,7 +504,7 @@ def check_old_schema_wording(root: Path) -> list[dict[str, Any]]:
                     findings.append(finding(
                         check_id='old_schema_wording',
                         file=relstr,
-                        message=f'Stale old-schema wording: {content.strip()[:120]}',
+                        message=f'Stale old-schema wording: {content.strip()[:MESSAGE_SNIPPET_LEN]}',
                         fix_hint='Update to the current schema.',
                         line=line_no,
                     ))
@@ -905,7 +912,9 @@ def check_orphan_skill_scripts(root: Path) -> list[dict[str, Any]]:
 # Conservative regexes — emails and clearly-formatted phone numbers — to keep
 # false-positive noise low. Skips immutable raw sources, generated outputs,
 # the archive folder, and the user's own about-me page.
-EMAIL_RE = re.compile(r'\b[\w.+-]+@[\w-]+\.[\w.-]+\b')
+# The final label must be alphabetic (a real TLD is letters), so metric
+# notation like `mAP@0.5` or `recall@0.95` is not read as an email.
+EMAIL_RE = re.compile(r'\b[\w.+-]+@[\w-]+(?:\.[\w-]+)*\.[A-Za-z]{2,}\b')
 PHONE_RE = re.compile(
     r'\(\d{3}\)\s*\d{3}[-.\s]\d{4}|\b\d{3}[-.]\d{3}[-.]\d{4}\b'
 )
@@ -1006,7 +1015,7 @@ def _extract_personal_url_tokens(text: str) -> set[str]:
         url = re.split(r'[?#)\]]', url)[0].rstrip('/.,;)')
         for part in re.split(r'[/.:]+', url):
             part = part.strip()
-            if len(part) < 4:
+            if len(part) < URL_TOKEN_MIN_LEN:
                 continue
             if part.lower() in GENERIC_URL_TOKENS:
                 continue
@@ -1279,7 +1288,7 @@ def check_ai_writing_tells(root: Path) -> list[dict[str, Any]]:
                     check_id='ai_writing_tells',
                     file=rel,
                     message=f'AI-writing tell ({label}, {severity}): '
-                    f'`{m.group(0)[:80]}`',
+                    f'`{m.group(0)[:MATCH_SNIPPET_LEN]}`',
                     fix_hint=fix_hint,
                     line=line_no,
                 ))
@@ -1313,7 +1322,7 @@ OUTPUT_ARCHIVE_DIRS = {'quarantined', 'superseded'}
 # filenames — exempt from the output-kind catalogue and the CLAUDE.md directory
 # tree, the same way STANDALONE_SKILL_NAMES output folders are. Empty by
 # default; add a folder name here to exempt a hand-authored output folder.
-OUTPUT_EXEMPT_DIRS = set()
+OUTPUT_EXEMPT_DIRS: set[str] = set()
 
 
 def _check_kebab(path: Path, root: Path,
@@ -1547,7 +1556,7 @@ def check_memory_file_graduation_prompt(root: Path) -> list[dict[str, Any]]:
     # drain into MEMORY.md or CLAUDE.md; MEMORY.md is itself the consolidation
     # tier, so it only graduates outward to CLAUDE.md and sits at a higher cap.
     journal_target = 'MEMORY.md (behavioural) or CLAUDE.md (schema)'
-    memory_md_target = "CLAUDE.md (schema or Behavioural defaults)"
+    memory_md_target = 'CLAUDE.md (schema or Behavioural defaults)'
 
     memory_files: list[tuple[Path, int, str]] = []
     memory_md = root / 'MEMORY.md'
@@ -2386,9 +2395,16 @@ def main() -> int:
         selected = PACKET_CHECKS[args.packet]
     elif args.checks:
         selected = parse_check_ids(raw=args.checks)
+        # A comma- or whitespace-only --checks parses to no ids. Without this
+        # guard the loop would run zero checks and exit 0 — a vacuous "clean"
+        # the audit gate (exit 0 => clean) would trust. Fail loud like the other
+        # invocation errors (exit 2, empty stdout). An empty-string --checks is
+        # falsy and never reaches here, so it correctly runs all checks.
+        if not selected:
+            parser.error('--checks resolved to an empty selection')
     unknown = sorted(set(selected) - set(CHECK_FUNCTIONS))
     if unknown:
-        sys.stderr.write(f'unknown check id(s): {", ".join(unknown)}\n')
+        sys.stderr.write(f"unknown check id(s): {', '.join(unknown)}\n")
         return 2
 
     all_findings: list[dict[str, Any]] = []

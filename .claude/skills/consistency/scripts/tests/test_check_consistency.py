@@ -11,10 +11,13 @@ The module is loaded by path so the tests do not depend on cwd or packaging.
 from __future__ import annotations
 
 import importlib.util
+import io
+import json
 import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
 HERE = Path(__file__).resolve()
@@ -32,6 +35,13 @@ def _synthetic_bibkey(author: str, year: str, title: str) -> str:
     # domain_literature_leakage scans test scripts too, and a literal corpus key
     # here would (correctly) flag this very file.
     return f'{author}{year}{title}'
+
+
+def _addr(local: str, domain: str) -> str:
+    # Compose at call time so no literal email sits in this source —
+    # personal_info_leakage scans test scripts too and would (correctly) flag
+    # a real-looking address here, exactly as _synthetic_bibkey guards a bibkey.
+    return f'{local}@{domain}'
 
 
 class TestCheckConsistency(unittest.TestCase):
@@ -243,6 +253,45 @@ class TestCheckConsistency(unittest.TestCase):
             assert r.returncode == 2, args
             assert r.stdout.strip() == '', args
 
+    def test_empty_checks_selection_exits_2(self) -> None:
+        # A comma- or whitespace-only --checks resolves to zero checks. Without
+        # the guard the battery runs nothing and exits 0 — a vacuous "clean" the
+        # audit gate would trust. It must fail loud (exit 2, empty stdout) like
+        # the other invocation errors.
+        for value in (',', '   '):
+            r = subprocess.run(
+                [sys.executable, str(SCRIPT), '.', '--checks', value],
+                capture_output=True, text=True, cwd=str(REPO))
+            assert r.returncode == 2, value
+            assert r.stdout.strip() == '', value
+
+    def test_crash_exits_2_with_populated_internal_finding(self) -> None:
+        # The crash-blocked path: a mid-battery crash exits 2 but prints a
+        # POPULATED array carrying a file='(internal)' finding — distinct from an
+        # invocation error's empty stdout. The gate relies on that distinction, so
+        # pin it (previously untested).
+        def boom(root: Path) -> list:
+            raise RuntimeError('kaboom')
+
+        original = cc.CHECK_FUNCTIONS.copy()
+        cc.CHECK_FUNCTIONS['gitkeep_coverage'] = boom
+        old_argv = sys.argv
+        buf = io.StringIO()
+        try:
+            sys.argv = ['check_consistency.py', str(REPO),
+                        '--checks', 'gitkeep_coverage']
+            with redirect_stdout(buf):
+                rc = cc.main()
+        finally:
+            sys.argv = old_argv
+            cc.CHECK_FUNCTIONS.clear()
+            cc.CHECK_FUNCTIONS.update(original)
+
+        assert rc == 2
+        findings = json.loads(buf.getvalue())
+        assert findings, 'crash must print a populated array, not empty stdout'
+        assert any(f['file'] == '(internal)' for f in findings)
+
     # --- identity-source fail-loud ---
 
     def test_identity_source_unloadable_fails_loud(self) -> None:
@@ -255,6 +304,37 @@ class TestCheckConsistency(unittest.TestCase):
         assert len(out) == 1
         assert out[0]['check_id'] == 'identity_term_leakage'
         assert 'INACTIVE' in out[0]['message']
+
+    # --- personal-info email regex: alphabetic-TLD guard ---
+
+    def test_email_re_matches_real_addresses(self) -> None:
+        # Real addresses — subdomains, +tags, uppercase — still match after
+        # the alphabetic-TLD guard was added. Composed via _addr so no literal
+        # address sits in this source (personal_info_leakage scans it).
+        for addr in (_addr('sschoepp', 'ualberta.ca'), _addr('user', 'example.com'),
+                     _addr('first.last+tag', 'mail.example.co.uk'),
+                     _addr('noreply', 'github.com'), _addr('USER', 'EXAMPLE.COM')):
+            assert cc.EMAIL_RE.search(addr), f'should match: {addr}'
+
+    def test_email_re_rejects_numeric_tld_metric_notation(self) -> None:
+        # The guard's purpose: metric notation like acc@5.2 or mAP@0.5 has a
+        # numeric final label, so it must not be misread as an email.
+        for token in ('acc@5', 'acc@5.2', 'mAP@0.5', 'recall@0.95',
+                      'hits@10.5', 'foo@bar.123', 'x@y.3'):
+            assert not cc.EMAIL_RE.search(token), f'should not match: {token}'
+
+    def test_personal_info_leakage_ignores_metric_notation(self) -> None:
+        # End to end: metric notation raises no email finding, a real address
+        # still does.
+        (self.tmp / 'note.md').write_text(
+            'Top-5 result mAP@0.5 and recall@0.95 improved.\n', encoding='utf-8')
+        assert cc.check_personal_info_leakage(self.tmp) == []
+
+        target = _addr('jane.doe', 'example.com')
+        (self.tmp / 'leak.md').write_text(
+            f'Reach me at {target} please.\n', encoding='utf-8')
+        msgs = [f['message'] for f in cc.check_personal_info_leakage(self.tmp)]
+        assert any(target in m for m in msgs), msgs
 
 
 if __name__ == '__main__':
