@@ -696,9 +696,6 @@ $RECYCLE.BIN/
 # Per-machine UI state — keep shared vault config (.obsidian/app.json, callout CSS, etc.) tracked.
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json
-# Community plugins carry third-party code and per-user state (data.json); each user installs
-# their own. Shared config (app.json, community-plugins.json, snippets/*.css) stays tracked.
-.obsidian/plugins/
 
 ### VS Code ###
 # Editor config is per-machine, so ignore the whole folder. This overrides the generated
