@@ -89,7 +89,7 @@ def sort_log(path: Path) -> str:
     # left untouched and the time must be added by hand first.
     for e in entries:
         if e[1] is None:
-            t = recover_time('\n'.join([e[2]] + e[3]), e[0])
+            t = recover_time(entry_text='\n'.join([e[2]] + e[3]), entry_date=e[0])
             if t is None:
                 raise ValueError(f'untimed entry not auto-recoverable: {e[2][:60]}')
             e[1] = t
@@ -150,7 +150,7 @@ def sort_hot(path: Path) -> str:
     # (determinate only); an entry with no recoverable link stays a manual finding.
     for e in entries:
         if e[1] is None:
-            t = recover_time('\n'.join([e[2]] + e[3]), e[0])
+            t = recover_time(entry_text='\n'.join([e[2]] + e[3]), entry_date=e[0])
             if t is None:
                 raise ValueError(
                     f'untimed Recent-activity entry not auto-recoverable: {e[2][:60]}')

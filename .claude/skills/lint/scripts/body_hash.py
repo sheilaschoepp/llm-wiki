@@ -28,7 +28,8 @@ the same pass, keeping the page `verified`. So adding allowlist handling does no
 touch this script — it only changes whether a skill re-stamps or demotes after a
 hash change.
 
-Requires Python 3.8+.
+Requires Python 3.10+ (the shared lint-script suite floor; this module alone uses
+only 3.8-compatible syntax, but the suite is pinned to 3.10+ by check_wiki.py).
 """
 import hashlib
 import re
