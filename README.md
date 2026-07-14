@@ -39,6 +39,8 @@ llm-wiki/
 │   └── style/
 │       ├── ai-writing-tells.md    # patterns to avoid in any output
 │       └── coding-best-practices.md  # design principles + Python style for any code Claude writes
+├── docs/
+│   └── examples/                 # rendered sample pages and answers (see "Examples" below)
 └── .claude/skills/                # operation skills
     ├── multi-skill/              # cross-skill shared materials
     │   ├── multi-skill-memory.md  # cross-skill corrections, read by every write skill
@@ -114,6 +116,24 @@ Nothing runs on its own — you invoke each skill yourself with `/<name>`. A few
 - **The everyday loop.** Ingest sources, query them, and run `/checkup` from time to time. That's the whole core cycle; the rest is there when you need finer control.
 - **One skill runs the others.** `/checkup` runs `consistency`, then `lint`, then `audit`, in that order, hands-off — so you rarely call those three directly. (`audit` needs a recent clean `lint` and `consistency` first; `checkup` handles that ordering for you.)
 - **Write vs. read.** Skills that change the wiki — `ingest`, `supersede`, `forget`, `synthesis` — always show you their plan and ask before writing. Read-only skills — `query`, `brief`, `compare`, `reflect` — never touch the wiki; they save their output under `2-outputs/` for you to keep or discard.
+
+## Examples
+
+This repo ships with an empty wiki — you fill it with your own sources. To show what the pages and answers actually look like once you do, here are a few real exports (Obsidian → PDF) from a working research vault. GitHub previews each inline; the callout colours, inline citations, and extracted figures are what the skills produce.
+
+**Concept and entity pages** — each one reusable idea in plain language, written and maintained by the agent:
+
+- [foundation-model.pdf](docs/examples/foundation-model.pdf) — a **concept page**. One idea, an extracted figure embedded in *Idea*, citations at the point of each non-obvious claim, and a *Disconfirming Evidence* box that names where the idea breaks down.
+- [role-prompting.pdf](docs/examples/role-prompting.pdf) — another **concept page**, this one carrying a dozen worked examples pulled from across the source corpus, with a *Disconfirming Evidence* section that cuts against its own central claim.
+
+**Synthesis pages** — durable cross-source argument pages that act as entry points into a topic:
+
+- [are-fm-mas-modelled-on-human-teams.pdf](docs/examples/are-fm-mas-modelled-on-human-teams.pdf) — a **synthesis page**. A yes-and-no answer across six sources, with *Scope* fencing where it applies, *Tensions* preserving the live disagreements, and *What Would Change This Answer* naming the evidence that would overturn it.
+
+**Query answers** — saved under `2-outputs/`, never folded into the wiki without your say-so:
+
+- [query-…-fm-debate-better-answers.pdf](docs/examples/query-2026-06-03-1106-fm-debate-better-answers.pdf) — a **query answer** that separates what the wiki supports from what it doesn't, and flags that the whole case rests on a single source.
+- [query-…-why-use-nasa-tlx.pdf](docs/examples/query-2026-06-22-1646-why-use-nasa-tlx.pdf) — a **query answer** built entirely on `draft` pages, marked *[from draft]* throughout and up front that it is unverified until `/audit` runs.
 
 ## Design notes
 

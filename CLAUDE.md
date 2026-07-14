@@ -22,6 +22,7 @@ llm-wiki/
 ├── CLAUDE.md
 ├── MEMORY.md
 ├── README.md
+├── setup.sh
 ├── 0-raw/
 │   ├── articles/
 │   ├── books/
@@ -56,10 +57,14 @@ llm-wiki/
 │   ├── palettes/
 │   ├── reference/
 │   └── style/
+├── docs/
+│   └── examples/
 └── .claude/skills/
 ```
 
 Folder prefixes (`0-`, `1-`, `2-`, `a-`) keep Obsidian sorted in workflow order.
+
+`setup.sh` provisions the `llm-wiki` conda env the skills run against — PyMuPDF, ImageMagick, and Poppler (the ingest figure-extraction toolchain; see [Attachments](#attachments)). Run once with `bash setup.sh`, then `conda activate llm-wiki`.
 
 ## Page Filenames
 
