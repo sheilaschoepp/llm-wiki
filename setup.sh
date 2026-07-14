@@ -46,11 +46,5 @@ echo 'Installing PyMuPDF (ingest figure extraction).'
 pip install \
     'PyMuPDF>=1.27.0'
 
-# Formatter and linter.
-echo 'Installing dev tools (black, ruff).'
-pip install \
-    'black>=26.3.1' \
-    'ruff>=0.15.10'
-
 echo ''
 echo "Done. Activate the env with: conda activate ${ENV_NAME}"
