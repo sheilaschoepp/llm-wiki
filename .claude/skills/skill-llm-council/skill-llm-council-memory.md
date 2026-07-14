@@ -1,7 +1,7 @@
 ---
 type: memory
 skill: skill-llm-council
-updated: 2026-07-05
+updated: 2026-07-14
 ---
 
 # Skill-llm-council memory

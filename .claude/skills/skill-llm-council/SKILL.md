@@ -64,13 +64,16 @@ Subagents are spawned with the Agent tool. The five calls of a Step-2 council go
    - The skill-relevant parts of `CLAUDE.md` (the schema and workflow rules the skill must obey).
    - Anthropic skill-authoring best practices, reused from `.claude/skills/skill-linter/references/checklist.md` and `.claude/skills/skill-linter/references/checks.md` — no need to restate them here.
    - `a-archive/style/ai-writing-tells.md` and `a-archive/style/coding-best-practices.md` (prose and Python rules the skill's body and any scripts must follow).
-   - The `a-archive/` reference library, treated as available context — pull in what bears on the skill under review. The core set:
-       - `a-archive/reference/prompting-best-practices.md` — for any skill whose body is, in effect, a prompt (most of them).
+   - The `a-archive/` reference library, treated as available context — pull in what bears on the skill under review. Three references are loaded on every run without exception, because they bear on every skill under review — each skill body is in effect a prompt, subject to token and context limits, judged against Anthropic's skill-authoring guidance:
+       - `a-archive/reference/skill-authoring-best-practices.md` — Anthropic's Agent Skills authoring guidance (conciseness, degrees of freedom, progressive disclosure, description discovery, workflows and feedback loops, anti-patterns, scripts).
+       - `a-archive/reference/claude-code-prompting-best-practices.md` — where a prompt lives across the CLAUDE.md / skill / subagent layers, and the durable prompting techniques.
+       - `a-archive/reference/claude-code-context-management-best-practices.md` — what each layer costs and how a skill keeps material out of the window (subagents, lazily-loaded references, narrow reads).
+     The rest of the core set is pulled in only when it bears on the skill under review:
        - `a-archive/reference/ai-assisted-reading-best-practices.md` — for skills that read or extract from sources (`ingest`, `query`).
        - `a-archive/reference/llm-wiki-best-practices.md` — for skills that write or maintain the wiki.
        - `a-archive/reference/smart-notes-llm-wiki-integration.md` and `a-archive/reference/smart-notes-summary.md` — for skills that touch note structure, atomicity, or linking.
        - `a-archive/reference/llm-council-best-practices.md` — this skill's own lineage; relevant when reviewing this skill or other multi-agent skills.
-     Do not load the whole archive blindly — select the references a reviewer would actually cite for this skill, and pass the relevant excerpts into the role prompts.
+     Do not load the whole archive blindly beyond those three always-loaded references — select the further references a reviewer would actually cite for this skill, and pass the relevant excerpts (or a bounded read-access grant) into the role prompts.
    - The most recent `2-outputs/skill-linter/skill-linter-*-{skill-name}.md` report, if one exists — so the council builds on the cheap structural pass instead of repeating it. If no such report exists, run `skill-linter`'s deterministic scanners once for a structural baseline (the five scripts named in Step 6) and fold their findings into the brief, so the councils spend their judgement on substance instead of re-finding mechanical drift the scripts catch for free.
 
    Build the task brief as a short, explicit set of fields, because a poorly framed council produces five polished versions of the wrong critique and the brief is the cheapest place to prevent that. Required fields:
