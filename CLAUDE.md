@@ -767,6 +767,8 @@ When uncertain whether a piece of context belongs in `MEMORY.md` or in a memory 
 
 The agent may update Recent activity, Open threads, and Watchlist. Active focus is user-owned unless explicitly requested. Recent activity entries are dated and timed and kept newest-first: each begins `- [YYYY-MM-DD HH:MM] verb | …` (24-hour UTC), so that entries from concurrently-merged sessions sort unambiguously.
 
+Recent activity is a rolling cache of the five newest entries: `lint` trims it to five, and because every entry is also recorded in `1-wiki/log.md` (the permanent, complete record of every operation), trimming the cache loses nothing. That five-entry count is the section's retention policy — owned here so one rule governs it; the whole-file soft cap of 200 lines (stated in hot.md's header) is a separate, consistent bound. Open threads and Watchlist are not caches — they hold unique orientation that is not duplicated in `log.md`, so they are never trimmed on a count, only pruned when a target page no longer exists.
+
 `1-wiki/index.md` catalogs all wiki pages under Sources, Entities, Concepts, and Syntheses.
 
 `1-wiki/log.md` is reverse-chronological, ordered by date and time (newest first). Each entry starts with:
