@@ -11,7 +11,7 @@ Run the cheap mechanical checks. Save a report to `2-outputs/lint/`.
 
 Lint keeps the vault structurally healthy without spending tokens on deep semantic judgement.
 
-The governing boundary: lint *detects* anything decidable by regex or structure without reading the raw source (a few prose-content checks included), but *auto-fixes* only what is uniquely determined and touches frontmatter or block-ID / section-callout structure — never callout body prose. Everything else is detected and handed to `audit`. The Step 3 fix test ((a) + (b)) is this principle applied; the prose-content checks that live in lint are detect-only for the same reason.
+The governing boundary: lint *detects* anything decidable by regex or structure without reading the raw source (a few prose-content checks included), but *auto-fixes* only what is uniquely determined and touches frontmatter or block-ID / section-callout structure — never callout body prose. Everything else is detected and handed to `audit`. The Step 3 fix test — auto-fix only when the correction is uniquely determined *and* touches frontmatter / block-ID / section-callout structure or determinate index/hot bookkeeping, never callout body prose — is this principle applied; the prose-content checks that live in lint are detect-only for the same reason.
 
 ## When To Invoke
 
@@ -171,12 +171,24 @@ The full check catalogue — every `check_id`, its severity, and what it means �
 
 `python3 .claude/skills/lint/scripts/check_wiki.py --list-checks` prints the script's `CHECKS` registry as JSON and is the source of truth for ids and severity; the Script-emitted half of `references/checks.md` must stay diffable against it (every id appears in both).
 
+## Optional: Cited-Figure Backstop (Opt-In, Reads Raws)
+
+`scripts/cited_figure_check.py` is a standalone, detect-only backstop for the cross-source mis-location defect (`CLAUDE.md` → Source Support And Verification, the multi-source-bullet rule): a true, well-formed claim carrying a distinctive figure cited to a raw `#page=N` deep-link whose page does not carry that figure — it passes every structural check, so only opening the cited page catches it. It is deliberately OUTSIDE `check_wiki.py`'s battery: `check_wiki.py` never opens a raw source (Limits), whereas this script opens the cited PDF at physical page N and confirms the figure is there. So it is a separate, opt-in tool — never part of the Step 1–3 structural pass, the Step 3 loop, or the audit-blocking gate.
+
+Run it deliberately (after a large ingest, or when checking cross-source citations), with the `llm-wiki` conda env active (it needs PyMuPDF):
+
+```bash
+python3 .claude/skills/lint/scripts/cited_figure_check.py "1-wiki"
+```
+
+It prints its own JSON findings (`check_id: cited_figure_off_page`, severity `warning`) to stdout, the same shape as `check_wiki.py` but a separate invocation. Policy: detect-only, never auto-fixed (like a mislabelled locator, it cannot tell which half is wrong — the figure, the page, or the source); decimals and percentages only (bare integers are skipped, where false positives would come from); a figure flags only when it is on none of a bullet's cited pages and every cited page was readable. It cannot catch a mislocated qualitative claim (no figure to match) — that stays ingest's and audit's job (the page-scoped citation check), so it is a backstop for the numeric subset, not a substitute. Exit code 3 means PyMuPDF is missing and the check could not run (not "zero findings"); surface that rather than reading empty output as clean. Findings are advisory: note them in the lint report or hand them to `audit` to open the cited page and settle which half is wrong.
+
 
 ## Tests
 
 The scripts require Python 3.10+ (they use `X | None` unions and built-in generics); the test suite uses Python's stdlib `unittest` (no extra dependency).
 
-Regression tests for `check_wiki.py` live in `scripts/tests/test_check_wiki.py` — they pin the `CHECKS` registry, the auto-fix transforms (callout block IDs, citation bracket style, embed isolation, pipe spacing), and the specific bug classes each check guards. Regression tests for `body_hash.py` live in `scripts/tests/test_body_hash.py` — they pin the `*[unverified]*` line-masking and the malformed-frontmatter error behaviour the verified-hash sweep depends on. After changing `check_wiki.py` or `body_hash.py`, run:
+Regression tests for `check_wiki.py` live in `scripts/tests/test_check_wiki.py` — they pin the `CHECKS` registry, the auto-fix transforms (callout block IDs, citation bracket style, embed isolation, pipe spacing), and the specific bug classes each check guards. Regression tests for `body_hash.py` live in `scripts/tests/test_body_hash.py` — they pin the `*[unverified]*` line-masking and the malformed-frontmatter error behaviour the verified-hash sweep depends on. Tests for the opt-in `cited_figure_check.py` backstop live in `scripts/tests/test_cited_figure_check.py` — they pin its figure/deep-link parsing, the version-string and bare-integer exclusions, and `check_page` over a fake page-text cache (no PDF opened). After changing `check_wiki.py`, `body_hash.py`, or `cited_figure_check.py`, run:
 
 ```bash
 python3 -m unittest discover -s .claude/skills/lint/scripts/tests
@@ -187,6 +199,6 @@ python3 -m unittest discover -s .claude/skills/lint/scripts/tests
 ## Limits
 
 - Lint does not decide whether a note is intellectually good. Use `audit`.
-- Lint does not read raw source content (out of scope and token-expensive; that is `audit`'s job).
+- Lint's core pass does not read raw source content (out of scope and token-expensive; that is `audit`'s job). The one exception is the opt-in `cited_figure_check.py` backstop (above), a separate script the user runs deliberately — never part of the structural pass, the Step 3 loop, or the audit-blocking gate.
 - Never modify `0-raw/`: raw sources are immutable evidence; mutations break the audit trail back to the original PDF/article.
 - Only mechanical fixes are automatic; anything requiring semantic judgement belongs in `audit`, where the user has opted into the deeper pass.

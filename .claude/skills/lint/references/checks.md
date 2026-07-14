@@ -2,6 +2,12 @@
 
 The full check roster for `lint`: every `check_id`, its severity, and what it means. Two provenances — **Script-emitted** (the canonical ids `check_wiki.py` prints; the script's `CHECKS` registry is the source of truth, `--list-checks` prints it as JSON) and **LLM-walk** (the Step 2 checks with no `check_id`). Cited from SKILL.md Step 2 (the walk) and Step 4 (report rows). Keep the Script-emitted half diffable against `--list-checks` — every id appears in both.
 
+## Contents
+
+- Script-emitted (`check_wiki.py`) — Critical / Warning / Info
+- LLM-walk (Step 2; not script-emitted)
+- Standalone (opt-in; not in the core battery)
+
 ## Checks
 
 Checks come in two provenances. **Script-emitted** checks are the canonical `check_id`s `check_wiki.py` prints — cite them verbatim in report rows. The script emits `severity: error | warning | info`; in the report these render as **Critical / Warning / Info** respectively (CLAUDE.md → Severity vocabulary: wiki-facing reports use critical/warning/info — never error/suggestion). The script's `CHECKS` registry is the single source of truth for each check's `check_id` and severity; `python3 .claude/skills/lint/scripts/check_wiki.py --list-checks` prints it as JSON, so the Script-emitted list below can be diffed against the registry mechanically rather than by eye. **LLM-walk** checks have no `check_id` in the script; the agent performs them in the Step 2 walk and cites them by short name. When the script changes, this split is the doc side that must stay in sync with the registry — every id under Script-emitted must appear in `--list-checks`, and vice versa.
@@ -94,3 +100,9 @@ These have no `check_id` in `check_wiki.py`; the agent runs them during the Step
 - `ai_writing_tells` (Warning): mechanical AI-writing tells in a wiki page body (banned vocabulary, em-dash density, curly-quote leakage, citation-markup leakage, placeholder leakage, UTM parameters). Source list: `a-archive/style/ai-writing-tells.md`.
 - `hot_log_stale` (Info): hot/log stale or approaching cap.
 - `schema_drift` (Info): schema layer (`CLAUDE.md`, `README.md`, `.claude/skills/`) changed since the last consistency report; re-run `consistency`.
+
+### Standalone (opt-in; not in the core battery)
+
+Emitted by a dedicated script, run deliberately and separately from `check_wiki.py` — NOT part of the structural pass, the Step 3 loop, or the audit-blocking gate, and NOT among the Script-emitted ids `--list-checks` prints (so it is exempt from the Script-emitted ↔ registry diff). Listed here for a complete roster.
+
+- `cited_figure_off_page` (Warning; `scripts/cited_figure_check.py`): a distinctive numeric figure (decimal or percentage) on a bullet that appears on NONE of that bullet's cited raw `#page=N` pages, when every cited page was readable. The backstop for the cross-source mis-location defect — a true claim cited to a page that does not carry it (CLAUDE.md → Source Support And Verification, the multi-source-bullet rule): the claim reads correctly and passes every structural check, so only opening the cited raw catches it. Detect-only, never auto-fixed — like a mislabelled locator it cannot tell which half is wrong (the figure, the page, or the source). Scope: decimals and percentages only (bare integers skipped, the false-positive source); locator machinery inside `[[…]]` spans is masked before figures are read; the presence test is whitespace-tolerant and errs toward "present" so a false finding is rare. Reads the raw PDF (PyMuPDF), so it sits OUTSIDE `check_wiki.py`'s no-raw-reading battery and runs deliberately with the `llm-wiki` conda env active; exit code 3 means PyMuPDF is absent and the check could not run (not "zero findings"). It cannot catch a mislocated qualitative claim (no figure to match) — that stays ingest's and audit's page-scoped citation check, so it is a backstop for the numeric subset, not a substitute. Logic and tests: `cited_figure_check.py` and `tests/test_cited_figure_check.py`. Rule: CLAUDE.md → Source Support And Verification.

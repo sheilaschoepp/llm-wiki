@@ -30,8 +30,9 @@ Run at least two independent verification packets over the raw source and every 
   - Load-bearing anchor: each load-bearing Key Claim is anchored to a short verbatim quote (in quote marks) plus a locator in Evidence so it can be re-checked against the raw cheaply; paraphrase elsewhere and reserve verbatim for the anchor.
   - Paraphrase versus extraction: bullets outside the quote-marked anchors are re-voiced in the user's words, not lifted near-verbatim from the raw. An accurate copy-paste still fails — verbatim text belongs only inside quote marks paired with a locator. This is the verify-side defence of the translation discipline; the page is LLM-drafted and not human-re-voiced, so nothing else catches a lifted-but-accurate bullet.
   - Cross-source merge: no detail (a number, method, hyperparameter, result, or attribution) from a different source has been imported into this one and presented as this source's own — multi-source context and the sibling sweep make silent merging a live risk, distinct from cross-source contradiction.
+  - Cross-source mis-location: on a bullet naming two or more sources, each clause is cited to the source that states it — the claim's origin — not to the source the bullet is framed about. The failure is a true, well-formed claim from source A pinned to a locator in source B where it does not appear; it passes every structural check and reads correctly, so only opening the cited page catches it. Concentrated in the cross-source callouts (`Contradictions`, `Tensions`, `Not This`, `Disconfirming Evidence`), where a contrast sentence has two origins and needs two locators (cite each clause to its own source). Two variants: the whole claim landing on the wrong page, and the softer case where the criticism is genuinely at the cited page but a specific named detail within it (a model name, a figure, a method) is the wiki's own inference attributed to the source. This is the opposite direction from Cross-source merge above — mis-location keeps the claim's true origin but points the citation at the wrong source (CLAUDE.md → Source Support And Verification, the multi-source-bullet rule).
   - Niche-subfield fabrication: where the source sits in a narrow or data-poor area, background and terminology the raw does not state are left as `> - None noted` rather than filled with a confident guess.
-  - Located deep-links (PDF raws): spot-check at least one `#page=N` link per distinct raw a touched page cites — open the raw at physical page N, confirm the cited content is there, and record the printed page number visible at N (proof the page was opened, not just offset-computed). Verify the structural anchor too, not only the page: a `sec. 3.2` or `fig. 4` that names a section or figure the content does not sit in is a fabricated locator, as wrong as a bad offset. A guessed zero offset on a non-1-paginated source (proceedings, article pagination), or an invented anchor, is a silent-wrong link — not a pass. A locator that cannot be confirmed in the raw is dropped, corrected, or its claim marked `*[unverified]*`, never written as if confirmed.
+  - Located deep-links (PDF raws): open the raw at physical page N, confirm the cited content is there, and record the printed page number visible at N (proof the page was opened, not just offset-computed). Sampling differs by bullet type. For ordinary within-source locators, spot-check at least one `#page=N` link per distinct raw a touched page cites. But **for every locator on a cross-source bullet — one naming two or more sources (`Contradictions`, `Tensions`, `Not This`, `Disconfirming Evidence`) — open all of them, no sampling.** These are the small, high-risk population where a mis-located citation (Cross-source mis-location above) hides behind a good sibling when only one link per raw is sampled, so verify each clause at the exact page it is cited to, never the document at large — a distinctive figure or name often appears elsewhere in the same document, so a document-wide search would falsely confirm a bad citation. Verify the structural anchor too, not only the page: a `sec.` or `fig.` locator that names a section or figure the content does not sit in is a fabricated locator, as wrong as a bad offset. A guessed zero offset on a non-1-paginated source (proceedings, article pagination), or an invented anchor, is a silent-wrong link — not a pass. A locator that cannot be confirmed in the raw is dropped, corrected, or its claim marked `*[unverified]*`, never written as if confirmed.
 
 ## Note-Quality and Coverage Packet
 
@@ -56,6 +57,8 @@ Cross-page support and honesty: the source page's `Concepts and Entities` callou
 ## Fix, Rerun, Report
 
 Fix clear mistakes in the just-created or touched pages before finalizing. If a fix requires judgement beyond this operation's scope, report it instead of silently changing the wiki. Rerun affected packets after fixes.
+
+**Repeated-literal sweep after any citation fix.** When a citation is corrected mid-run — a mis-located claim moved to its true source, a wrong locator or restated number fixed — the same distinctive claim is usually restated on several other pages, so a fix at one site leaves the siblings standing. Before finalizing, grep the distinctive literal across the wiki (`grep -rn "{literal}" 1-wiki/` for a figure or percentage; the distinctive phrase for a qualitative claim) and re-check every occurrence, applying the same fix wherever the claim recurs. Record the sweep — the literal searched and the sites checked and fixed — in the report. A single-site correction that leaves an identical error a few bullets or a few pages away is the half-repair this sweep exists to close.
 
 One report per operation, in the calling skill's own output folder — never a second file, and never another skill's folder.
 
@@ -100,6 +103,7 @@ Result: pass | fail
 
 ## Fixes applied
 - Short bullet per fix made before finalizing (or "none").
+- Repeated-literal sweep (after any citation fix): the literal(s) searched and the occurrences re-checked and fixed across the wiki (or "no citation fix this run").
 
 ## Recommended next ingests
 - {author year — "Title" — the gap this ingest surfaced that it fills; "(verify exists)" if unsure}, grouped if several. Only papers you are confident exist. "none" when the ingest surfaced no specific next-source.
@@ -130,6 +134,7 @@ Existing-source (reingest) report shape:
   - ...
 - Findings: {short list, or "none"}
 - Fixes applied: {short list, or "none"}
+- Repeated-literal sweep (after any citation fix): the literal(s) searched and the occurrences re-checked and fixed across the wiki (or "no citation fix this run").
 
 ### Recommended next ingests
 - {author year — "Title" — the gap this reingest surfaced that it fills; "(verify exists)" if unsure; "none" when none}. Only papers you are confident exist.
