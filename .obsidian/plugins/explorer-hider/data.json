@@ -1,0 +1,27 @@
+{
+  "useSnippets": false,
+  "compatSpf": false,
+  "showAll": false,
+  "snippets": [
+    {
+      "path": "CLAUDE.md",
+      "type": "file",
+      "hiddenInNav": true,
+      "hiddenInBookmarks": false
+    },
+    {
+      "path": "MEMORY.md",
+      "type": "file",
+      "hiddenInNav": true,
+      "hiddenInBookmarks": false
+    },
+    {
+      "path": "README.md",
+      "type": "file",
+      "hiddenInNav": true,
+      "hiddenInBookmarks": false
+    }
+  ],
+  "alwaysHideInBookmarks": false,
+  "buttonInContextBookmark": false
+}
