@@ -332,7 +332,7 @@ CHECK_MANIFEST = [
         'check_id': 'output_kinds_match_disk',
         'packet': 'naming',
         'name': 'output kinds match disk',
-        'scope': "OUTPUT_KIND_DIRS in the script vs the on-disk 2-outputs/ subfolders (minus the quarantined/superseded archive folders, the OUTPUT_EXEMPT_DIRS free-form folders, and the STANDALONE_SKILL_NAMES output folders). Flags an output folder that exists but is absent from OUTPUT_KIND_DIRS (its files would escape file_naming_consistency) and a listed kind whose folder is missing while its owning skill still exists. Standalone skills are exempt. Findings are root-level proposals (the constant lives in the script).",
+        'scope': "OUTPUT_KIND_DIRS in the script vs the on-disk 2-outputs/ subfolders (minus the OUTPUT_EXEMPT_DIRS free-form folders and the STANDALONE_SKILL_NAMES output folders; the quarantine/preserve preservation subfolders now nest under forget/ and supersede/, so they are not immediate children). Flags an output folder that exists but is absent from OUTPUT_KIND_DIRS (its files would escape file_naming_consistency) and a listed kind whose folder is missing while its owning skill still exists. Standalone skills are exempt. Findings are root-level proposals (the constant lives in the script).",
     },
     {
         'check_id': 'catalogue_matches_manifest',
@@ -1302,22 +1302,28 @@ KEBAB_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
 DATED_OUTPUT_RE = re.compile(
     r'^(?P<kind>[a-z][a-z-]*)-\d{4}-\d{2}-\d{2}(?:-\d{4})?(?:-[a-z0-9-]+)?$'
 )
-# Output kinds whose files follow the dated naming convention. `synthesis` is
-# intentionally absent: the synthesis skill writes durable pages to
-# 1-wiki/syntheses/, not dated 2-outputs/ files, so there is no
-# 2-outputs/synthesis/ folder to validate. output_kinds_match_disk asserts this
-# set stays equal to the on-disk 2-outputs/ subfolders (minus the archive
-# folders and the STANDALONE_SKILL_NAMES output folders), so a new output kind
-# cannot silently fall out of naming coverage. Standalone skills are exempt:
-# their output files are not bound by the dated-naming registry.
+# Output kinds whose files follow the dated naming convention. Every wiki-workflow
+# skill that writes a dated 2-outputs/ report is listed here, including `forget`,
+# `supersede`, and `synthesis` — each writes an operation report alongside its
+# durable artifacts (the quarantine/preserve preservation copies, now nested under
+# forget/ and supersede/, or the
+# synthesis page itself). output_kinds_match_disk asserts this set stays equal to
+# the on-disk 2-outputs/ subfolders (minus the archive folders and the
+# STANDALONE_SKILL_NAMES output folders), so a new output kind cannot silently
+# fall out of naming coverage. Standalone skills are exempt: their output files
+# are not bound by the dated-naming registry.
 OUTPUT_KIND_DIRS = {
     'query', 'ingest', 'brief', 'compare', 'reflect',
     'lint', 'audit', 'consistency', 'skill-linter', 'skill-llm-council',
-    'cleanup',
+    'cleanup', 'forget', 'supersede', 'synthesis',
 }
-# Archive folders under 2-outputs/ that preserve original filenames and are not
-# output kinds.
-OUTPUT_ARCHIVE_DIRS = {'quarantined', 'superseded'}
+# Preservation subfolders that keep original filenames and are not output kinds.
+# They now nest under their owning skill's folder — 2-outputs/forget/quarantine/
+# and 2-outputs/supersede/preserve/ — so they are no longer immediate children of
+# 2-outputs/ and never appear in output_kinds_match_disk's on-disk scan. The set
+# is kept (by basename) as a guard so a preservation folder mistakenly created at
+# the top level is still exempted from the output-kind catalogue.
+OUTPUT_ARCHIVE_DIRS = {'quarantine', 'preserve'}
 # User-owned 2-outputs/ folders with no owning skill and free-form (non-dated)
 # filenames — exempt from the output-kind catalogue and the CLAUDE.md directory
 # tree, the same way STANDALONE_SKILL_NAMES output folders are. Empty by
@@ -1405,9 +1411,10 @@ def check_file_naming_consistency(root: Path) -> list[dict[str, Any]]:
     # `{kind}-YYYY-MM-DD-HHMM(-extra)?.md`. The suffix after the date is
     # normally lowercase kebab-case, but outputs that reference a source
     # by its raw stem (e.g., `ingest-2026-05-20-1430-Vaswani2017AttentionIA.md`)
-    # preserve the raw case. Other subfolders (quarantined, superseded)
-    # are exempt
-    # — they hold archived files keeping their original names.
+    # preserve the raw case. The preservation subfolders (forget/quarantine/,
+    # supersede/preserve/) are never reached — this globs '*.md' non-recursively
+    # under each immediate kind folder — so their archived files, which keep
+    # their original names, are exempt from this naming check.
     outputs_root = root / '2-outputs'
     if outputs_root.exists():
         for sub in outputs_root.iterdir():
@@ -2080,7 +2087,8 @@ def check_section_lists_match_schema(root: Path) -> list[dict[str, Any]]:
 
 
 # output_kinds_match_disk: OUTPUT_KIND_DIRS (the dated-naming kinds) must equal
-# the on-disk 2-outputs/ subfolders minus the archive folders, so a newly added
+# the on-disk 2-outputs/ subfolders (preservation subfolders nest under a kind
+# folder, so they are not immediate children here), so a newly added
 # output kind cannot silently escape file_naming_consistency.
 def check_output_kinds_match_disk(root: Path) -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
@@ -2100,7 +2108,8 @@ def check_output_kinds_match_disk(root: Path) -> list[dict[str, Any]]:
             message=f'`2-outputs/{missing}/` exists but `{missing}` is not in '
             'OUTPUT_KIND_DIRS, so its files escape the naming check.',
             fix_hint=f"Add '{missing}' to OUTPUT_KIND_DIRS (and the SKILL.md "
-            'naming list), or move the folder under quarantined/superseded.',
+            'naming list), or move it under forget/quarantine or '
+            'supersede/preserve.',
         ))
     # Stale direction: only a real drift when the kind's skill still exists but
     # its output folder vanished. Output folders are created lazily by their

@@ -106,7 +106,7 @@ Implemented as `ai_writing_tells`: scans project-documentation prose for mechani
 python3 .claude/skills/consistency/scripts/check_consistency.py . --packet naming
 ```
 
-Implemented as `file_naming_consistency` (plus `output_kinds_match_disk`): verifies kebab-case wiki pages, attachments, and skill folders, and the `{kind}-YYYY-MM-DD-HHMM(-extra)?.md` output-file convention. See `references/checks.md` for the exact patterns, the `OUTPUT_KIND_DIRS` roster, and the `synthesis` / `quarantined` / `superseded` / `STANDALONE_SKILL_NAMES` exemptions. Raw sources under `0-raw/` are user-curated and exempt.
+Implemented as `file_naming_consistency` (plus `output_kinds_match_disk`): verifies kebab-case wiki pages, attachments, and skill folders, and the `{kind}-YYYY-MM-DD-HHMM(-extra)?.md` output-file convention. See `references/checks.md` for the exact patterns, the `OUTPUT_KIND_DIRS` roster, and the `quarantine` / `preserve` / `STANDALONE_SKILL_NAMES` exemptions. Raw sources under `0-raw/` are user-curated and exempt.
 
 ### Packet: judgment-drift
 
