@@ -6,7 +6,7 @@ This is the catalogue of checks performed by `scripts/check_structure.py` and th
 
 - Frontmatter checks (errors)
 - Body length and paths (warnings)
-- Reference depth and TOC (warnings / suggestions)
+- Reference depth, inline refs, and TOC (warnings / suggestions)
 - Heavy-handed imperative candidate scan (separate script)
 - Synonym candidate scan (separate script)
 - H2 title-case scan (separate script)
@@ -31,18 +31,19 @@ This is the catalogue of checks performed by `scripts/check_structure.py` and th
 
 | `check_id` | Severity | Triggers when |
 |---|---|---|
-| `body_over_length` | warning | SKILL.md body (after frontmatter) exceeds 500 lines (see `scripts/check_structure.py` `SKILL_MD_MAX_LINES`). Long bodies eat context and signal that detail should move into reference files. |
+| `body_over_length` | warning | SKILL.md body (after frontmatter) exceeds the word budget (`SKILL_MD_MAX_WORDS`, ~6500 — the primary signal) or the line budget (`SKILL_MD_MAX_LINES`, 500); both in `scripts/check_structure.py`. Word count leads because this repo writes one paragraph per physical line (no hard wrap), so the line count under-measures a dense body — the guide's real concern is token cost, which words track and physical lines don't here. Long bodies eat context and signal that detail should move into reference files. |
 | `html_tag` | warning | SKILL.md or a reference file contains a raw HTML tag outside a fenced code block or inline-code span. Skill text should stay portable Markdown. |
 | `process_substitution` | error | A line outside a code fence contains bash process substitution `<(...)`, which some skill-upload pipelines reject as a malformed HTML tag (upload-breaking). Replace with a temp file or a pipe. |
 | `windows_path` | warning | A line contains a backslash-separated path with a typical extension (`.md`, `.py`, `.json`, etc.). Windows paths break on Unix; use forward slashes. |
 
-## Reference Depth And Table Of Contents
+## Reference Depth, Inline Refs, And Table Of Contents
 
 | `check_id` | Severity | Triggers when |
 |---|---|---|
 | `broken_md_link` | warning | SKILL.md links to a `.md` file that doesn't exist in the skill directory. Broken links waste tokens and confuse the model. |
 | `nested_reference` | warning | A reference file (linked from SKILL.md) itself links to another `.md` file. Claude may only partially read deeply-nested files; keep references one level deep. |
 | `missing_toc` | suggestion | A reference file is longer than 100 lines but has no `## Contents` / `## Table of contents` / `## TOC` heading within the first 100 lines (see `scripts/check_structure.py` `REFERENCE_TOC_THRESHOLD`, which the TOC search window now matches). Without a TOC, Claude may preview with `head -100` and miss content below. |
+| `broken_inline_ref` | warning | An inline-code path to a skill file resolves nowhere on disk (checked repo root, `.claude/skills/`, and the skill dir). Recognized forms: a `.claude/`-prefixed path, a `references/`- or `scripts/`-prefixed path, any path containing a `/references/` or `/scripts/` segment, a path whose last segment is `SKILL.md`, and — disk-gated on the leading segment naming a real skill dir — the bare abbreviated `<skill>/<file>.md` form that drops the `references/`/`scripts/` segment (e.g. a broken `<skill>/removal-mechanics.md` for `<skill>/references/removal-mechanics.md`, the shape that once shipped uncaught). `broken_md_link` only sees Markdown-hyperlink references; this covers the inline-code path syntax these skills actually use. Runs in directory mode only and needs a CLAUDE.md-rooted repo (`find_repo_root`); it is skipped, with no finding, in single-file mode and for an out-of-repo or `.skill`-bundle target with no repo root. Scanned across SKILL.md and every `references/*.md`; fenced code blocks, `{…}`/`<…>` templates, and wiki/raw/output/archive paths are excluded (they carry legitimate examples). |
 
 ## Heavy-Handed Imperative Candidate Scan (Separate Script)
 
@@ -63,6 +64,8 @@ The agent reading these findings must decide whether the imperative genuinely ne
 | `terminology_candidate` | suggestion | Two or more synonyms from the same group each appear ≥2 times in the body. |
 
 These are *candidates*, not confirmed findings. The agent reading this output must decide whether the terms genuinely refer to the same concept (keep as a finding) or are intentionally distinct (drop). The script's job is to surface candidates so judgement-only review can't miss them; the agent's job is the disambiguation.
+
+A per-skill confirmed-distinct allow-list, `synonym-ignore.md` in the skill-linter folder, suppresses groups a prior run already adjudicated as distinct *for that skill*, so the same false positives don't re-surface every run (they used to, since the check has no memory) — mirroring lint's verified-ignore data files. The parser suppresses a finding whose present terms are a subset of a listed group under the target skill's `## <skill-name>` section. When a run confirms a candidate is a genuine domain distinction, append it there (agent-writable curated data); never record a genuine inconsistency, and removing an entry re-surfaces its candidate.
 
 ## H2 Title-Case Scan (Separate Script)
 

@@ -41,6 +41,16 @@ from typing import Any
 # SKILL.md body length budget; longer bodies eat context and signal that
 # detail should move into references/.
 SKILL_MD_MAX_LINES = 500
+# Word-count budget, the primary length signal. The guide's stated rule is
+# "SKILL.md body under 500 lines" (skill-authoring-best-practices.md ->
+# Token budgets), and its real concern is token/context cost — "every token
+# competes with conversation history". This repo writes each paragraph as one
+# physical line (no hard wrap), so the physical-line count under-measures that
+# cost (a 200-line SKILL.md can carry 11k words). The word budget approximates
+# the guide's 500 *normally-wrapped* lines (~13 words/line) — the repo-specific
+# proxy for the token concern the line rule stands in for. Flag when either
+# measure is exceeded.
+SKILL_MD_MAX_WORDS = 6500
 # Reference files longer than this should have a table of contents so a
 # `head`-style preview surfaces the section list.
 REFERENCE_TOC_THRESHOLD = 100
@@ -292,24 +302,56 @@ def check_body_length(
     frontmatter_end_line: int,
     skill_md_rel: str,
 ) -> list[dict[str, Any]]:
-    """Flag SKILL.md bodies that exceed the 500-line guidance."""
-    n = len(body_lines)
-    if n > SKILL_MD_MAX_LINES:
-        return [{
-            'severity': 'warning',
-            'check_id': 'body_over_length',
-            'file': skill_md_rel,
-            'line': frontmatter_end_line + SKILL_MD_MAX_LINES,
-            'message': (
-                f'SKILL.md body is {n} lines; the recommended maximum '
-                f'is {SKILL_MD_MAX_LINES} for context efficiency.'
-            ),
-            'fix_hint': (
-                'Move detail into separate files under references/ '
-                'and link from SKILL.md.'
-            ),
-        }]
-    return []
+    """Flag SKILL.md bodies that exceed the length budget.
+
+    Two measures because this repo writes each paragraph as one physical
+    line (no hard wrap): the physical-line count under-counts a dense body,
+    so a word count is the primary signal and the line count is a backstop
+    for a genuinely many-lined file. Flag when either budget is exceeded.
+
+    The word count deliberately includes fenced code and tables, unlike the
+    prose-hunting sibling checks: the budget is a token-cost proxy, and code
+    and tables cost context tokens on load just as prose does, so stripping
+    them would under-count the real load.
+    """
+    n_lines = len(body_lines)
+    n_words = sum(len(line.split()) for line in body_lines)
+    over_words = n_words > SKILL_MD_MAX_WORDS
+    over_lines = n_lines > SKILL_MD_MAX_LINES
+    if not (over_words or over_lines):
+        return []
+    parts: list[str] = []
+    if over_words:
+        parts.append(f'{n_words} words (budget {SKILL_MD_MAX_WORDS})')
+    if over_lines:
+        parts.append(f'{n_lines} lines (budget {SKILL_MD_MAX_LINES})')
+    # The explanatory tail depends on which budget tripped. Word count is
+    # the primary signal, and because this repo writes each paragraph as one
+    # physical line the line count alone under-measures a dense body; but on
+    # a line-only trip the word count is within budget, so do not claim the
+    # line count under-measures there.
+    if over_words:
+        tail = (
+            ' Word count is the primary signal; because this repo writes '
+            'each paragraph as one physical line, the line count alone '
+            'under-measures a dense body.'
+        )
+    else:
+        tail = ' The word count is within budget; the line budget tripped.'
+    return [{
+        'severity': 'warning',
+        'check_id': 'body_over_length',
+        'file': skill_md_rel,
+        'line': frontmatter_end_line + n_lines,
+        'message': (
+            f'SKILL.md body is {"; ".join(parts)}; a dense body eats '
+            f'context.{tail}'
+        ),
+        'fix_hint': (
+            'Move detail into separate files under references/ '
+            'and link from SKILL.md.'
+        ),
+    }]
 
 
 # Match Markdown links of the form [text](target) where target is a
@@ -560,6 +602,147 @@ def check_reference_depth_and_toc(
     return findings
 
 
+# Inline-code path references. `check_reference_depth_and_toc` above only sees
+# Markdown-hyperlink references `[text](path)`; these skills cite references
+# and scripts as inline-code paths (`.claude/skills/forget/references/foo.md`,
+# the abbreviated `forget/references/foo.md`, or the skill-relative
+# `references/foo.md`), which that check misses. This scan verifies those
+# skill-infrastructure paths resolve on disk. It also catches the bare
+# abbreviated form that drops the `references/`/`scripts/` segment (a broken
+# `forget/removal-mechanics.md` for `forget/references/removal-mechanics.md`),
+# disk-gated on the leading segment naming a real skill dir (see
+# `_is_bare_skill_ref`), which is the gap that let such a path ship before.
+# Scoped to `.md`/`.py` skill files; wiki/raw/output/archive paths are excluded
+# because they carry legitimate template examples that need not exist on disk.
+INLINE_CODE_RE = re.compile(r'`([^`]+)`')
+_SKILL_REF_EXCLUDE_PREFIXES = ('1-wiki/', '0-raw/', '2-outputs/', 'a-archive/')
+_SKILL_REF_TEMPLATE_CHARS = set('{}<>*$…')
+
+
+def _looks_like_skill_ref(token: str) -> bool:
+    """True if `token` is a concrete skill-infra path worth resolving."""
+    if not (token.endswith('.md') or token.endswith('.py')):
+        return False
+    if '/' not in token:
+        return False
+    if any(c in token for c in _SKILL_REF_TEMPLATE_CHARS):
+        return False
+    if token.startswith(_SKILL_REF_EXCLUDE_PREFIXES):
+        return False
+    return (
+        token.startswith('.claude/')
+        or token.startswith(('references/', 'scripts/'))
+        or '/references/' in token
+        or '/scripts/' in token
+        or token.endswith('/SKILL.md')
+    )
+
+
+def _is_bare_skill_ref(token: str, repo_root: Path) -> bool:
+    """True if `token` is a bare `<skill>/<file>.md|.py` reference.
+
+    The abbreviated citation form drops the `references/`/`scripts/`
+    segment, so `_looks_like_skill_ref` misses it. Disk-gate on the leading
+    segment naming a real skill directory, so only a genuine skill
+    reference (not an arbitrary two-segment path in prose) is a candidate.
+    """
+    if not (token.endswith('.md') or token.endswith('.py')):
+        return False
+    if token.count('/') != 1:
+        return False
+    if any(c in token for c in _SKILL_REF_TEMPLATE_CHARS):
+        return False
+    if token.startswith(_SKILL_REF_EXCLUDE_PREFIXES):
+        return False
+    first_segment = token.split('/', 1)[0]
+    return (repo_root / '.claude' / 'skills' / first_segment).is_dir()
+
+
+def _skill_ref_resolves(
+    token: str, skill_dir: Path, repo_root: Path
+) -> bool:
+    """True if `token` resolves under the repo root, .claude/skills/,
+    or the skill dir.
+    """
+    bases = (repo_root, repo_root / '.claude' / 'skills', skill_dir)
+    return any((base / token).exists() for base in bases)
+
+
+def check_inline_code_refs(
+    skill_dir: Path,
+    repo_root: Path,
+    files: list[tuple[str, list[str], int]],
+) -> list[dict[str, Any]]:
+    """Flag inline-code skill-infra paths (.md/.py) that resolve nowhere.
+
+    `files` is a list of (file_rel, lines, line_offset) to scan — SKILL.md
+    (body lines, offset = frontmatter end) plus each reference file (full
+    lines, offset 0). Fenced code blocks are skipped: a path inside a bash
+    example is illustrative, not a reference. One finding per distinct
+    broken token.
+    """
+    findings: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for file_rel, lines, line_offset in files:
+        in_code_fence = False
+        for i, line in enumerate(lines):
+            if line.strip().startswith('```'):
+                in_code_fence = not in_code_fence
+                continue
+            if in_code_fence:
+                continue
+            for span in INLINE_CODE_RE.findall(line):
+                for raw in span.split():
+                    # Drop an anchor, leading brackets, and trailing
+                    # sentence punctuation — but NOT a leading '.', which is
+                    # part of `.claude/…` paths.
+                    token = (
+                        raw.split('#', 1)[0].lstrip('([').rstrip('.,;:)]')
+                    )
+                    if not (
+                        _looks_like_skill_ref(token=token)
+                        or _is_bare_skill_ref(
+                            token=token, repo_root=repo_root
+                        )
+                    ):
+                        continue
+                    if _skill_ref_resolves(
+                        token=token, skill_dir=skill_dir, repo_root=repo_root
+                    ):
+                        continue
+                    if token in seen:
+                        continue
+                    seen.add(token)
+                    findings.append({
+                        'severity': 'warning',
+                        'check_id': 'broken_inline_ref',
+                        'file': file_rel,
+                        'line': line_offset + i + 1,
+                        'message': (
+                            f"Inline-code path '{token}' references a skill "
+                            'file that resolves nowhere on disk (checked repo '
+                            'root, .claude/skills/, and the skill dir).'
+                        ),
+                        'fix_hint': (
+                            f"Fix the path to an existing file, or if "
+                            f"'{token}' is illustrative, put it in a fenced "
+                            'code block.'
+                        ),
+                    })
+    return findings
+
+
+def find_repo_root(skill_dir: Path) -> Path | None:
+    """Walk up from the skill dir to the repo root.
+
+    The repo root is the ancestor holding both `.claude/` and `CLAUDE.md`.
+    """
+    for anc in [skill_dir, *skill_dir.parents]:
+        if (anc / '.claude').is_dir() and (anc / 'CLAUDE.md').exists():
+            return anc
+    return None
+
+
 def main() -> int:
     args = sys.argv[1:]
     single_file = False
@@ -628,6 +811,28 @@ def main() -> int:
             skill_dir=skill_dir,
             body_text=body_text,
         )
+        # Inline-code path references (the syntax this repo's skills use to
+        # cite refs/scripts) — resolve them across SKILL.md and every
+        # reference file. Needs the repo root to resolve `.claude/…` and
+        # abbreviated `<skill>/references/…` paths; skip if not found.
+        repo_root = find_repo_root(skill_dir=skill_dir)
+        if repo_root is not None:
+            scan_files: list[tuple[str, list[str], int]] = [
+                ('SKILL.md', body_lines, fm_end),
+            ]
+            for ref in sorted(skill_dir.glob('references/*.md')):
+                try:
+                    ref_lines = ref.read_text(encoding='utf-8').splitlines()
+                except (OSError, UnicodeDecodeError):
+                    continue
+                scan_files.append(
+                    (ref.relative_to(skill_dir).as_posix(), ref_lines, 0)
+                )
+            findings += check_inline_code_refs(
+                skill_dir=skill_dir,
+                repo_root=repo_root,
+                files=scan_files,
+            )
 
     print(json.dumps(findings, indent=2))
     return 0

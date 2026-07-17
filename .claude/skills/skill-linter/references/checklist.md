@@ -45,6 +45,8 @@ These sit in `SKILL.md` frontmatter, between the `---` markers.
 
 When you read the body, mentally underline every noun phrase that names a thing the skill operates on, and every verb for what the skill does. If two or more variants appear for the same referent, that's a finding. Pick the most concrete or domain-appropriate term, note where the variants appear, and suggest standardizing.
 
+When the variants genuinely name *different* things (a log **entry** vs a memory **record**; **route** the verb vs a filesystem **path**), that is not a finding — and if `check_synonyms.py` flagged the pair as a `terminology_candidate`, record the confirmed distinction in `synonym-ignore.md` (under the target skill's section) so later runs auto-suppress it instead of re-adjudicating the same false positive every pass (see `references/checks.md` → Synonym Candidate Scan).
+
 **`heavy_handed_musts`** (suggestion). The body is full of all-caps `MUST` / `NEVER` / `ALWAYS` directives without explaining *why*. Models do better with explanation than with rules. Flag the worst offenders and suggest reframing as "<directive> because <reason>". Don't flag every MUST — only the ones that read as scolding rather than safety-critical.
 
 **`punts_to_claude`** (suggestion). The body says things like "use your best judgement", "do whatever is appropriate", "Claude knows what to do" in places where the user clearly wants a specific behaviour. The whole point of a skill is to provide context Claude doesn't already have; if the skill doesn't add anything, why does it exist? Suggest replacing each punt with concrete guidance.

@@ -63,6 +63,50 @@ SYNONYM_GROUPS: list[list[str]] = [
 # vocabulary rather than a one-off reference.
 MIN_OCCURRENCES = 2
 
+# Per-skill confirmed-distinct allow-list. A terminology_candidate is a
+# suggestion the calling agent must adjudicate every run; without a memory,
+# the same domain-distinct pairs (a log 'entry' vs a memory 'record';
+# 'route' the verb vs a filesystem 'path') get re-reasoned each pass. This
+# data file records the groups a run confirmed distinct for a given skill so
+# later runs auto-suppress them, mirroring lint's verified-ignore data files.
+SYNONYM_IGNORE_FILE = (
+    Path(__file__).resolve().parent.parent / 'synonym-ignore.md'
+)
+
+
+def load_synonym_ignore(skill_name: str) -> list[frozenset[str]]:
+    """Return the confirmed-distinct term groups recorded for `skill_name`.
+
+    The data file is a Markdown doc with a `## <skill-name>` section per
+    skill; each bullet lists slash-separated terms confirmed distinct (an
+    optional ' — rationale' tail is ignored). A finding is suppressed when
+    its present terms are a subset of any listed group for that skill.
+    """
+    try:
+        text = SYNONYM_IGNORE_FILE.read_text(encoding='utf-8')
+    except (OSError, UnicodeDecodeError):
+        return []
+    groups: list[frozenset[str]] = []
+    current: str | None = None
+    for line in text.splitlines():
+        heading = re.match(r'^##\s+(.+?)\s*$', line)
+        if heading:
+            current = heading.group(1).strip().lower()
+            continue
+        if current != skill_name.lower():
+            continue
+        bullet = re.match(r'^\s*-\s+(.+)$', line)
+        if not bullet:
+            continue
+        # Drop a trailing ' — rationale' or ' - rationale' tail.
+        terms_part = re.split(r'\s+[—-]\s+', bullet.group(1), maxsplit=1)[0]
+        terms = {
+            t.strip().lower() for t in terms_part.split('/') if t.strip()
+        }
+        if len(terms) >= 2:
+            groups.append(frozenset(terms))
+    return groups
+
 
 def count_term(body_lower: str, term: str) -> int:
     """Count occurrences of `term` allowing simple inflections.
@@ -73,8 +117,16 @@ def count_term(body_lower: str, term: str) -> int:
     return len(re.findall(pattern, body_lower))
 
 
-def find_synonym_clashes(body: str) -> list[dict]:
-    """Return a list of finding dicts for groups where 2+ terms appear."""
+def find_synonym_clashes(
+    body: str,
+    ignore_groups: list[frozenset[str]] | None = None,
+) -> list[dict]:
+    """Return a list of finding dicts for groups where 2+ terms appear.
+
+    A group whose present terms are a subset of a confirmed-distinct entry
+    in `ignore_groups` (from the per-skill allow-list) is suppressed.
+    """
+    ignore_groups = ignore_groups or []
     body_lower = body.lower()
     findings = []
     for group in SYNONYM_GROUPS:
@@ -84,6 +136,9 @@ def find_synonym_clashes(body: str) -> list[dict]:
             if n >= MIN_OCCURRENCES:
                 present.append((term, n))
         if len(present) >= 2:
+            present_terms = frozenset(t for t, _ in present)
+            if any(present_terms <= ig for ig in ignore_groups):
+                continue  # confirmed distinct for this skill
             terms_str = ', '.join(f"'{t}' ({n}x)" for t, n in present)
             # Arbitrary choice; the agent should make the real call.
             primary = present[0][0]
@@ -135,8 +190,10 @@ def main() -> int:
 
     if target.is_dir():
         skill_md = target / 'SKILL.md'
+        skill_name = target.name
     elif target.name == 'SKILL.md':
         skill_md = target
+        skill_name = target.parent.name
     else:
         print(
             f'Error: input must be a skill directory or a SKILL.md '
@@ -154,7 +211,8 @@ def main() -> int:
     except (OSError, UnicodeDecodeError) as exc:
         print(f'Error: cannot read {skill_md}: {exc}', file=sys.stderr)
         return 2
-    findings = find_synonym_clashes(body=body)
+    ignore_groups = load_synonym_ignore(skill_name=skill_name)
+    findings = find_synonym_clashes(body=body, ignore_groups=ignore_groups)
     print(json.dumps(findings, indent=2))
     return 0
 
