@@ -10,10 +10,13 @@ edits (`updated:`, `status:`, `verified_hash:` itself) do not change the hash.
 The hash also excludes any bullet line carrying the `*[unverified]*` claim marker
 (CLAUDE.md -> Page Status, Bullet Markers): verification is claim-level, so a
 claim still pending a raw fact-check must not count toward the page's checked
-content. This is what lets a `verified` page accept an incremental edit (a new
-citation, a refined bullet) marked `*[unverified]*` without tripping the hash and
-demoting the whole page; editing or adding an UNMARKED claim still changes the
-hash and demotes the page (the involuntary backstop). A page with no markers
+content. This is what lets a `verified` page accept an incremental ADDITION (a new claim
+bullet, a new citation on its own bullet) marked `*[unverified]*` without tripping
+the hash and demoting the whole page: a masked new line was never in the hash.
+Changing an existing claim is different — altering its text, or newly marking a
+previously-unmarked (already-hashed) claim, moves the hash and demotes the page;
+editing or adding an UNMARKED claim likewise changes the hash and demotes it (the
+involuntary backstop). A page with no markers
 hashes exactly as it did before this masking existed, so existing stamps stay
 valid. Keep a marked claim to its single bullet line — only the line carrying the
 marker is masked, so a multi-line marked bullet's continuation still counts.

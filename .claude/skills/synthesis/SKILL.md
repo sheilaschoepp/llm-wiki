@@ -49,7 +49,7 @@ Synthesis Progress:
 - [ ] Step 7: Apply approved wiki edits
 - [ ] Step 8: Read back the synthesis and verify
 - [ ] Step 9: Update hot.md (index entry is written in Step 7)
-- [ ] Step 10: Prepend log.md entry
+- [ ] Step 10: Write synthesis report and prepend log.md entry
 ```
 
 1. **Load orientation.** Read `1-wiki/hot.md`, `1-wiki/index.md`, `.claude/skills/synthesis/synthesis-memory.md`, and `.claude/skills/multi-skill/multi-skill-memory.md`. Note existing synthesis pages so you update entry points instead of duplicating them. Use both memory files to apply prior corrections about scope, framing, and source-supportedness before drafting any synthesis content; both files may be empty, in which case the procedure below applies unchanged.
@@ -93,7 +93,7 @@ Synthesis Progress:
    Then the questions (one `AskUserQuestion` call each):
    1. In discovery mode: one question per candidate, e.g., "Draft synthesis on `{topic}`?" Options: draft (Recommended) / skip / other — a candidate surfaced by Step 3 is one the scan already judged worth drafting.
    2. In focused mode: one question on creating-or-updating, e.g., "Create new synthesis for `{topic}`?" or "Update existing synthesis `{slug}`?" Options: create / update existing / skip / other — order the option the Step 3 cross-check indicates first and mark it `(Recommended)`: update when a matching synthesis exists, create when none does.
-   2a. When two existing syntheses overlap, one question on the merge, e.g., "Merge `{slug-a}` and `{slug-b}` into a single synthesis?" Options: merge into A / merge into B / keep separate / other — order the stronger-survivor option first and mark it `(Recommended)` (stronger = the `verified` page, else the higher `source_count`, else ask). On a keep-separate answer, cross-link the two syntheses in each other's `Connections` and stop. On a merge answer, invoke the `supersede` skill on the merge (do not absorb-then-delete inline) and let it run its full Merge procedure; supersede owns the mechanics — survivor kept, absorbed content moved in and preserved under `2-outputs/superseded/`, inbound `1-wiki/` wikilinks re-pointed at the survivor, absorbed page deleted. When it returns, resume at Step 6 to finish what supersede does not own:
+   2a. When two existing syntheses overlap, one question on the merge, e.g., "Merge `{slug-a}` and `{slug-b}` into a single synthesis?" Options: merge into A / merge into B / keep separate / other — order the stronger-survivor option first and mark it `(Recommended)` (stronger = the `verified` page, else the higher `source_count`, else ask). On a keep-separate answer, cross-link the two syntheses in each other's `Connections` and stop. On a merge answer, invoke the `supersede` skill on the merge (do not absorb-then-delete inline) and let it run its full Merge procedure; supersede owns the mechanics — survivor kept, absorbed content moved in and preserved under `2-outputs/supersede/preserve/`, inbound `1-wiki/` wikilinks re-pointed at the survivor, absorbed page deleted. When it returns, resume at Step 6 to finish what supersede does not own:
       - Distinct-works `source_count`: supersede syncs the survivor's `source_count` to its merged `sources:` list, but it counts list entries, not distinct works. Re-derive `source_count` as the count of distinct works in that union (see Conventions), then subtract any source dropped in items 3-4 of this run, which supersede did not see.
       - Two-source floor: if that distinct-works count lands at one, fire the single_source_stub drop-to-one question (Step 6) before writing — the merge path is not exempt.
       - Survivor status: supersede keeps a `verified` survivor `verified` with the moved-in claims marked `*[unverified]*` (it demotes to `draft` only on a whole-page replacement, not a merge). So if your own Step 6 edits then change unmarked verified content — dropping an Evidence-map line, dropping a source — demote the survivor to `draft` and strip `verified_hash:` yourself, since Step 8's scoped lint does not re-check the hash.
@@ -130,7 +130,7 @@ Synthesis Progress:
    - Non-obvious factual claims in `Answer`, `Scope`, and `Tensions` carry an inline citation to the specific source they draw from, in one of the two canonical forms (the source-page wikilink paired with the located raw deep-link; see the citation note above and CLAUDE.md → Source Support And Verification), and each is faithful to that source. Obvious or definitional bullets and the user's own marked judgement need none; a cross-source generalization in `Answer` cites each source it rests on and keeps its scope within the union of those sources — citing each source is necessary but not sufficient, since a claim faithful to every source severally can still over-generalize their composition, which is exactly where over-generalization hides.
    - `Connections` should link related synthesis pages where they exist (`[[1-wiki/syntheses/other-topic.md|Other Topic]]`), not only concept/entity pages — syntheses are topic entry points, and cross-linking them is how a reader navigates between developed topics.
    - Length: keep the page under the 600-word soft cap (CLAUDE.md → Length) — a synthesis over 600 words is usually doing topic-dump work that belongs in the underlying concept/entity pages. Review any single bullet over ~35 words.
-   - New and updated synthesis pages stay `status: draft`; the Step 8 verification is a safety pass, not a status promotion to `verified` — only a later `audit` sets `verified` (per `verification.md`, verification never sets `verified`; audit is the independent second layer). Editing a `verified` synthesis is claim-level (CLAUDE.md → Page Status): mark each new or changed non-obvious claim `*[unverified]*` and the page stays `verified` with that claim as the pending delta; an unmarked change to checked content resets it to `draft`.
+   - New and updated synthesis pages stay `status: draft`; the Step 8 verification is a safety pass, not a status promotion to `verified` — only a later `audit` sets `verified` (per `verification.md`, verification never sets `verified`; audit is the independent second layer). Editing a `verified` synthesis is claim-level for additions (CLAUDE.md → Page Status): mark each newly-added non-obvious claim `*[unverified]*` and the page stays `verified` with that added claim as the pending delta; a change to an existing claim moves the hash and resets the page to `draft` (marking does not hold it `verified`).
    - No bold and no italic in the page body. For technical terms the page introduces (jargon a reader might not recognize), wikilink inline in pipe-rendered form with a short gloss: `the [[1-wiki/concepts/multi-head-attention.md|Multi-Head Attention]] — runs several attention functions in parallel over different learned projections of queries, keys, and values`, or embed the gloss in the sentence. Subsequent uses on the same page need no gloss.
 
 7. **Apply only approved substantive edits.** Mechanical fields do not need separate approval:
@@ -158,16 +158,36 @@ Synthesis Progress:
    - Add remaining high-value synthesis candidates to Open threads.
    - Never edit Active focus unless explicitly asked; it is user-owned and the agent's edits there feel intrusive.
 
-10. **Prepend `1-wiki/log.md`.**
+10. **Write the synthesis report, then prepend `1-wiki/log.md`.** First save the operation report to `2-outputs/synthesis/synthesis-YYYY-MM-DD-HHMM-{topic}.md` (create the folder if needed; timestamp from `TZ='UTC' date '+%Y-%m-%d-%H%M'`, the same stamp as the log heading; `{topic}` is a short kebab slug of the topic). The report carries the operation summary and the `## Self-report` section (per `.claude/skills/multi-skill/references/self-report.md`); the log entry then links it. Report shape:
 
 ```markdown
-## [YYYY-MM-DD HH:MM] synthesis | {topic}
+---
+kind: synthesis
+date: YYYY-MM-DD
+topic: {topic}
+---
+# Synthesis: {topic}
+
 - Created: [[1-wiki/syntheses/new-synthesis.md|new synthesis]] (or "none")
 - Updated: [[1-wiki/syntheses/existing-synthesis.md|existing synthesis]] (or "none")
 - Candidates considered: {N}
 - Verification: both packets clean (late-section detail re-read: {…}; #page=N spot-check: {physical page N + printed page seen, or n/a}; fixes: {…or none}) — page left `status: draft` for audit.
 - Notable: {why this topic is now a useful entry point}
-- Self-report: {a specific limitation that bit synthesis this run → how the synthesis skill should change, or "none noted this run"} (per `.claude/skills/multi-skill/references/self-report.md`)
+
+## Self-report
+- {a specific limitation that bit synthesis this run — a topic it couldn't scope, a cross-source tension it flattened, a candidate it had to stop at} → upgrade: {how the synthesis skill should change} (or the single line: none noted this run; per `.claude/skills/multi-skill/references/self-report.md`)
+```
+
+Then prepend the `log.md` entry, which links the report:
+
+```markdown
+## [YYYY-MM-DD HH:MM] synthesis | {topic}
+- Report: [[2-outputs/synthesis/synthesis-YYYY-MM-DD-HHMM-{topic}.md|synthesis-YYYY-MM-DD-HHMM-{topic}]]
+- Created: [[1-wiki/syntheses/new-synthesis.md|new synthesis]] (or "none")
+- Updated: [[1-wiki/syntheses/existing-synthesis.md|existing synthesis]] (or "none")
+- Candidates considered: {N}
+- Verification: both packets clean (late-section detail re-read: {…}; #page=N spot-check: {physical page N + printed page seen, or n/a}; fixes: {…or none}) — page left `status: draft` for audit.
+- Notable: {why this topic is now a useful entry point}
 ```
 
 ## Edge Cases

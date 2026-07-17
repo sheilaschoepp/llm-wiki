@@ -71,7 +71,7 @@ Checks come in two provenances. **Script-emitted** checks are the canonical `che
 #### Info (script `info`)
 
 - `status_draft`: applies to every draft page; complements `stale_draft` below which catches *stale* drafts specifically.
-- `unverified_claim`: a concept/entity/synthesis page carries one or more bullets marked `*[unverified]*` — non-obvious claims added or changed since the last raw fact-check, awaiting re-check (CLAUDE.md → Page Status, Bullet Markers). Reported per page with the count. A normal transient state, not drift: lint does not clear it (audit does, after a raw fact-check; partial mode re-checks just these claims on otherwise-`verified` pages). One finding per page.
+- `unverified_claim`: a concept/entity/synthesis page carries one or more bullets marked `*[unverified]*` — non-obvious claims added since the last raw fact-check (a changed claim demotes the page instead), awaiting re-check (CLAUDE.md → Page Status, Bullet Markers). Reported per page with the count. A normal transient state, not drift: lint does not clear it (audit does, after a raw fact-check; partial mode re-checks just these claims on otherwise-`verified` pages). One finding per page.
 - `orphan_page`: pages in `sources/`, `entities/`, `concepts/`, or `syntheses/` not reachable from `1-wiki/index.md` via wikilinks. Implemented via BFS over the wikilink graph in `check_wiki.py`. Design rationale: D 9.12.
 - `placeholder_only_page`: every required callout on the page is the empty placeholder (`> - None noted` or `> - None yet`); the page is a stub with no genuine content yet. Design rationale: D X.4.
 - `attachment_orphan`: Orphan attachment file: present in `1-wiki/attachments/{stem}/` but not embedded by any wiki page.
