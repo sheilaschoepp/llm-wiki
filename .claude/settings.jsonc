@@ -107,5 +107,29 @@
             "Bash(mv *a-archive*)",
             "Bash(trash *a-archive*)"
         ]
+    },
+    // ── HOOKS ─────────────────────────────────────────────────────────
+    // Stop fires at the end of every assistant turn. This hook stamps a
+    // "Context and usage (this run)" footer onto any 2-outputs/ report a
+    // skill wrote during the turn: main context-window occupancy, deduped
+    // output tokens, tool-call breakdown, duration/model, web-tool counts,
+    // and a per-subagent peak-context footprint (the checkup / council /
+    // refuter cost the main /context can't see). It only touches files
+    // modified during the just-finished turn, replaces its own prior
+    // footer (never stacks), skips quarantined/ and superseded/, and
+    // fail-soft exits 0 on any error so it can never disrupt a turn.
+    // Override the percentage denominator with the env var
+    // CLAUDE_CONTEXT_WINDOW_TOKENS if the active model's window is not 200K.
+    "hooks": {
+        "Stop": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/context_usage_footer.py\""
+                    }
+                ]
+            }
+        ]
     }
 }

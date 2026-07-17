@@ -56,5 +56,17 @@
       "Bash(git restore .:*)",
       "Bash(sudo:*)"
     ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/context_usage_footer.py\""
+          }
+        ]
+      }
+    ]
   }
 }
