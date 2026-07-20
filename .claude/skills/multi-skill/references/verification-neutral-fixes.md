@@ -1,6 +1,6 @@
 # Verification-neutral fixes
 
-The shared operational spec for the verification-neutral fix allowlist — the closed set of determinate, meaning-preserving edits that a skill may apply to a `status: verified` page and then **re-stamp** `verified_hash:` for, instead of demoting the page to `draft`. Run by `lint` (Step 3, its own format fixes) and `audit` (Step 7, the de-hyphenation / spelling / link-wrap fixes), so the logic lives in one place rather than drifting across both copies.
+The shared operational spec for the verification-neutral fix allowlist — the closed set of determinate, meaning-preserving edits that a skill may apply to a `status: verified` page and then **re-stamp** `verified_hash:` for, instead of demoting the page to `draft`. Run by `lint` (Step 3, its own format fixes) and `audit` (Step 7, the de-hyphenation / spelling / link wrap and unwrap fixes), so the logic lives in one place rather than drifting across both copies.
 
 This file is the skills' shared runtime copy. `CLAUDE.md` → Page Status is the canonical schema statement of the same rule; this reference exists because a skill must be runnable from its own folder plus `multi-skill/` without reading `CLAUDE.md` at runtime (CLAUDE.md → Skill Authoring). It is the verification-neutral companion to `verification.md`, the same way that file is the runtime copy of the ingest-verification spec. `consistency`'s `shared_reference_integrity` guards it as a genuine ≥ 2-skill shared reference.
 
@@ -34,6 +34,7 @@ The allowlist is partitioned by which skill applies each edit; each re-stamps un
 - Open-compound de-hyphenation, two published mappings: the always-open mapping (`reinforcement-learning` → `reinforcement learning`, opened in every position; lint's `hyphenated_open_compound`) and the slug-derived noun-only mapping (`the belief-state evolves` → `the belief state`; lint's `hyphenated_open_compound_noun`, bidirectional — opens a hyphenated bare noun, and inversely re-hyphenates an open compound used as a modifier before a curated head noun). The noun-vs-modifier call is a context judgement against the page's own prose, not a raw fact-check.
 - Canadian/US spelling normalization (`behavior` → `behaviour`).
 - Wrapping an existing plain-text genuine reference in a wikilink to an existing page (`unlinked_page_mention`), where the rendered display is byte-identical to the plain text it replaces and the target page exists.
+- Unwrapping an existing wikilink to plain text inside a reciprocity callout (`Contradictions` / `Tensions`) where the linked page is an incidental (non-party) mention and the rendered display stays byte-identical — the symmetric inverse of the wrap above, and the cure for a `missing_reciprocal_contradiction` over-count (the reciprocity check treats every callout wikilink as a party, so it cannot tell an incidental link from a real one). `audit` unwraps only a confirmed non-party, records the now-unlinked occurrence in `unlinked-mention-ignore.md`, and authors the reciprocal instead whenever the party-versus-incidental call is uncertain (erasing a genuine contradiction relationship is worse than completing one).
 
 A stale-path repair — rewriting an existing inbound wikilink to the *same* page under its new path or name (display unchanged) — is applied by whichever skill runs the rename cascade (`forget` / `supersede` / `ingest`).
 
@@ -41,7 +42,7 @@ A content-identical claim relocation — moving a bullet whose text stays byte-i
 
 ## Re-stamp Vs Demote
 
-- Allowlisted edit on a `verified` page → apply it, recompute the hash with `.claude/skills/lint/scripts/body_hash.py`, write the fresh `verified_hash:` in the same pass, keep `status: verified`. No raw re-read.
+- Allowlisted edit on a `verified` page → apply it, recompute the hash with `.claude/skills/multi-skill/scripts/body_hash.py`, write the fresh `verified_hash:` in the same pass, keep `status: verified`. No raw re-read.
 - Any other unmarked body change (a new or changed non-obvious claim, a reworded bullet even when "it means the same thing", a citation whose source-page target or locator changes, an embed whose target image changes, an edited number or quote) → reset `status: verified → draft` and strip the now-stale `verified_hash:` in the same edit. A prose reword you *judge* faithful is not a string transform you can *prove* claim-neutral — it demotes, and a later `audit` re-verifies.
 - When in doubt whether a fix is claim-neutral, treat it as not — demote, don't re-stamp.
 

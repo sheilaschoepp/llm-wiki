@@ -8,7 +8,7 @@ integration glue over PyMuPDF and is not unit-tested here.
 
 Run from anywhere:
 
-    python3 -m unittest discover -s .claude/skills/lint/scripts/tests
+    python3 -m unittest discover -s .claude/skills/multi-skill/scripts/tests
 
 The module is loaded by path so the tests do not depend on cwd or packaging.
 """

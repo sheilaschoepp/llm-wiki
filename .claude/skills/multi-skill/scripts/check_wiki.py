@@ -515,7 +515,7 @@ HYPHENATED_OPEN_COMPOUND = re.compile(
 #     direction-2 gate, so a following verb never triggers a hyphen.
 #   VERIFIED-IGNORE (HYPHENATION_VERIFIED_IGNORE): confirmed-correct phrases,
 #     skipped both directions.
-# Data file: .claude/skills/lint/hyphenation-lists.md.
+# Data file: .claude/skills/multi-skill/hyphenation-lists.md.
 HYPHENATION_LISTS_FILE = Path(__file__).resolve().parent.parent / 'hyphenation-lists.md'
 
 
@@ -579,7 +579,7 @@ def _load_hyphenation_lists(
 # sentence and the entry stops matching, so the mention re-flags. The failure
 # mode of a stale entry is therefore a re-flag (safe), never a silently swallowed
 # genuine reference. A stale entry suppresses nothing and is inert.
-# Data file: .claude/skills/lint/unlinked-mention-ignore.md.
+# Data file: .claude/skills/multi-skill/unlinked-mention-ignore.md.
 UNLINKED_MENTION_IGNORE_FILE = (
     Path(__file__).resolve().parent.parent / 'unlinked-mention-ignore.md'
 )
@@ -641,7 +641,7 @@ UNLINKED_MENTION_IGNORE = _load_unlinked_mention_ignore()
 # page — proceedings that start at a high number, an appendix that restarts or
 # continues, a page that prints no number at all — and the printed number is a
 # fact about the raw, not derivable by rule. It is recorded once per raw in
-# `.claude/skills/lint/pagination-map.md`, whose header carries the rationale;
+# `.claude/skills/multi-skill/pagination-map.md`, whose header carries the rationale;
 # `scripts/pagination_map.py` proposes entries from the PDF and a human confirms
 # each against a rendered footer. check_wiki.py never opens a PDF — it reads only
 # this map — so lint stays cheap and dependency-free. The map drives the
@@ -3445,7 +3445,7 @@ def check_unlinked_page_mentions(wiki_root: Path) -> list[dict[str, Any]]:
                               f'`[[{tgt_rel}|{target.replace("-", " ")}]]`; '
                               f'skip generic non-reference usage and quoted text. '
                               f'Record an occurrence confirmed generic in '
-                              f'`.claude/skills/lint/unlinked-mention-ignore.md` '
+                              f'`.claude/skills/multi-skill/unlinked-mention-ignore.md` '
                               f'(`{rel} :: {target} :: <phrase>`) so it is not '
                               f're-flagged.'),
                 ))
@@ -3477,7 +3477,7 @@ def _stale_mention_ignore_findings(
     mention has since been wikilinked — either way the judgement no longer binds).
     """
     findings: list[dict[str, Any]] = []
-    ignore_rel = '.claude/skills/lint/unlinked-mention-ignore.md'
+    ignore_rel = '.claude/skills/multi-skill/unlinked-mention-ignore.md'
     for idx, e in enumerate(UNLINKED_MENTION_IGNORE):
         if idx in used:
             continue
@@ -3615,10 +3615,10 @@ def check_pagination_registration(wiki_root: Path) -> list[dict[str, Any]]:
                              f'`p. M` locators cannot be verified against what '
                              f'each physical page prints.'),
                     fix_hint=('Propose entries with `python3 '
-                              '.claude/skills/lint/scripts/pagination_map.py '
+                              '.claude/skills/multi-skill/scripts/pagination_map.py '
                               f'{raw_path}`, confirm each against a rendered '
                               f'footer, then add the `## {raw_path}` section to '
-                              '`.claude/skills/lint/pagination-map.md`.'),
+                              '`.claude/skills/multi-skill/pagination-map.md`.'),
                 ))
     return findings
 

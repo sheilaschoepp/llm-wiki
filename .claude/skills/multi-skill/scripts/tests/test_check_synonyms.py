@@ -6,7 +6,7 @@ subset, but a newly-appearing term re-surfaces the candidate), and the
 ` — rationale` tail split that must NOT mis-split a hyphenated term such as
 `belief-state`. Run from anywhere:
 
-    python3 -m unittest discover -s .claude/skills/skill-linter/scripts/tests
+    python3 -m unittest discover -s .claude/skills/multi-skill/scripts/tests
 
 The module is loaded by path so the tests do not depend on cwd or packaging.
 """

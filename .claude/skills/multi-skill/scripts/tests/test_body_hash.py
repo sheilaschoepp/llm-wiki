@@ -15,7 +15,7 @@ These pin the load-bearing behaviour the module docstring promises:
 
 Run from anywhere:
 
-    python3 -m unittest discover -s .claude/skills/lint/scripts/tests
+    python3 -m unittest discover -s .claude/skills/multi-skill/scripts/tests
 
 The module is loaded by path so the tests do not depend on cwd or packaging.
 """

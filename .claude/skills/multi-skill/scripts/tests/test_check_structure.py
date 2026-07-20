@@ -8,7 +8,7 @@ deliberately counts fenced code and tables (a token-cost proxy, not a prose
 count) and its explanatory message tail must match the budget that tripped.
 Run from anywhere:
 
-    python3 -m unittest discover -s .claude/skills/skill-linter/scripts/tests
+    python3 -m unittest discover -s .claude/skills/multi-skill/scripts/tests
 
 The module is loaded by path so the tests do not depend on cwd or packaging.
 """
@@ -21,7 +21,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve()
 SCRIPT = HERE.parents[1] / 'check_structure.py'
 REPO = HERE.parents[5]                                   # repo root
-SKILL_DIR = REPO / '.claude' / 'skills' / 'skill-linter'
+SKILL_DIR = REPO / '.claude' / 'skills' / 'multi-skill'
 
 spec = importlib.util.spec_from_file_location('check_structure', SCRIPT)
 cs = importlib.util.module_from_spec(spec)
@@ -80,7 +80,7 @@ class TestBrokenInlineRefIntegration(unittest.TestCase):
         assert any('forget/removal-mechanics.md' in m for m in msgs), found
 
     def test_does_not_flag_resolvable_ref(self) -> None:
-        found = self._scan(['see `references/checks.md` for detail'])
+        found = self._scan(['see `references/verification.md` for detail'])
         assert found == [], found
 
     def test_does_not_flag_fenced_illustrative_path(self) -> None:

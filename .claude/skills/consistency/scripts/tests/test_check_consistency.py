@@ -154,10 +154,12 @@ class TestCheckConsistency(unittest.TestCase):
     def test_agent_data_files_constant_matches_disk(self) -> None:
         # The constant is the script's copy of a CLAUDE.md declaration; if a data
         # file is renamed or added without updating it, the exemption silently
-        # stops applying (or applies to nothing). Pin it to what ships.
-        lint_dir = REPO / '.claude' / 'skills' / 'lint'
+        # stops applying (or applies to nothing). Pin it to what ships. The three
+        # curated data files now live in multi-skill/ (shared with the sibling
+        # skills that read check_wiki.py), not lint/.
+        data_dir = REPO / '.claude' / 'skills' / 'multi-skill'
         for name in cc.AGENT_DATA_FILES:
-            assert (lint_dir / name).exists(), f'{name} declared exempt but not on disk'
+            assert (data_dir / name).exists(), f'{name} declared exempt but not on disk'
 
     def test_domain_literature_leakage_flags_and_exempts(self) -> None:
         placeholder = next(iter(cc.PLACEHOLDER_BIBKEYS))      # allowlisted, fetched at runtime

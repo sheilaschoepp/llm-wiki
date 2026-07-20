@@ -2,7 +2,7 @@
 """Propose a pagination-map section for a raw PDF: what printed page number each
 physical page shows, read from the page footer.
 
-The pagination map (`.claude/skills/lint/pagination-map.md`) records a fact the
+The pagination map (`.claude/skills/multi-skill/pagination-map.md`) records a fact the
 locator checks depend on — what each physical page PRINTS — that is not
 derivable by rule (proceedings offsets, appendices that restart, unpaginated
 pages). This script PROPOSES that map from the PDF's footers; it does not write

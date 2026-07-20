@@ -14,7 +14,7 @@ idempotent, and round-trips to a clean re-scan.
 
 Run from anywhere:
 
-    python3 -m unittest discover -s .claude/skills/lint/scripts/tests
+    python3 -m unittest discover -s .claude/skills/multi-skill/scripts/tests
 
 The module is loaded by path so the tests do not depend on cwd or packaging.
 """
@@ -174,7 +174,7 @@ def caps_findings(body: str, end: int = 0):
     return cw.check_wikilink_display_caps(body=body, rel='1-wiki/concepts/x.md', end=end)
 
 
-SORT_SCRIPT = HERE.parents[1] / 'sort_chronology.py'
+SORT_SCRIPT = HERE.parents[5] / '.claude' / 'skills' / 'lint' / 'scripts' / 'sort_chronology.py'
 _ss = importlib.util.spec_from_file_location('sort_chronology', SORT_SCRIPT)
 sc = importlib.util.module_from_spec(_ss)
 _ss.loader.exec_module(sc)
@@ -487,7 +487,7 @@ class TestCheckWiki(unittest.TestCase):
     # --- unlinked_page_mention verified-ignore list ------------------------------
     # Genuine-vs-generic is a judgement (CLAUDE.md -> Wikilink Format). audit makes
     # it per occurrence and records a confirmed-generic one in
-    # .claude/skills/lint/unlinked-mention-ignore.md so it is not re-litigated. An
+    # .claude/skills/multi-skill/unlinked-mention-ignore.md so it is not re-litigated. An
     # entry is page-scoped (never suppresses elsewhere) and phrase-anchored (a
     # reword re-flags it — the safe fallback).
 
@@ -1526,7 +1526,7 @@ class TestCheckWiki(unittest.TestCase):
         assert f == []
 
     # --- hyphenation lists loaded from the agent-writable data file ----------------
-    # The four lists live in .claude/skills/lint/hyphenation-lists.md (audit grows
+    # The four lists live in .claude/skills/multi-skill/hyphenation-lists.md (audit grows
     # them autonomously). The loader must parse the sections and degrade safely.
 
     def test_hyphenation_lists_load_from_real_data_file(self) -> None:

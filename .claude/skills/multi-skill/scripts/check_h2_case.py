@@ -3,7 +3,7 @@
 check_h2_case.py — flag sentence-case H2 headings in SKILL.md and refs.
 
 Why a separate script? The H2 title-case rule
-(references/checklist.md `h2_heading_case`) is meant to apply to SKILL.md
+(.claude/skills/multi-skill/references/skill-authoring-checklist.md `h2_heading_case`) is meant to apply to SKILL.md
 AND every references/*.md sibling. As a judgement check, it depended on
 the agent remembering to scan every reference file every pass — and the
 agent kept forgetting, fixing SKILL.md while leaving sentence-case H2s in
@@ -103,7 +103,7 @@ def find_h2_case_issues(file_path: Path) -> list[dict]:
                 f"Rewrite as title case (capitalize the first letter "
                 f"of every word except short articles, prepositions, "
                 f"and conjunctions). See "
-                f"references/checklist.md `h2_heading_case`."
+                f".claude/skills/multi-skill/references/skill-authoring-checklist.md `h2_heading_case`."
             ),
         })
     return findings
