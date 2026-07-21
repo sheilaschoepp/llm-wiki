@@ -700,4 +700,4 @@ $RECYCLE.BIN/
 ### VS Code ###
 # Editor config is per-machine, so ignore the whole folder. This overrides the generated
 # VisualStudioCode block above, which re-includes .vscode/settings.json and friends.
-.vscode/
+.vscode/*
