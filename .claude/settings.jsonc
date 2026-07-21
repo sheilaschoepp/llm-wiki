@@ -14,6 +14,17 @@
     // against agent edits and deletion.
     // Everything above that block mirrors the active settings.json.
     // ─────────────────────────────────────────────────────────────────
+    // ── MODEL ─────────────────────────────────────────────────────────
+    // Default model for this project. "opus[1m]" selects Claude Opus with
+    // the 1M-token extended context window.
+    "model": "opus[1m]",
+    // ── ENV ───────────────────────────────────────────────────────────
+    // Environment variables exported for every command Claude runs in this
+    // project. CLAUDE_CODE_EFFORT_LEVEL=max runs the agent at its highest
+    // reasoning effort (slower, more thorough) by default.
+    "env": {
+        "CLAUDE_CODE_EFFORT_LEVEL": "max"
+    },
     "permissions": {
         // ── ALLOW: run without prompting ──────────────────────────────
         "allow": [
@@ -34,7 +45,19 @@
             "Bash(python3 -m pip install:*)",
             "Bash(python3 -m pip uninstall:*)",
             "Bash(conda install:*)",
-            "Bash(conda update:*)"
+            "Bash(conda update:*)",
+            // apt / apt-get install and update on Linux hosts (apt-get for
+            // install/upgrade, apt for update-checks), including the sudo
+            // forms. Package removal (apt remove/purge/autoremove) stays
+            // denied below.
+            "Bash(apt update:*)",
+            "Bash(apt-get update:*)",
+            "Bash(apt-get install:*)",
+            "Bash(apt-get upgrade:*)",
+            "Bash(sudo apt update:*)",
+            "Bash(sudo apt-get update:*)",
+            "Bash(sudo apt-get install:*)",
+            "Bash(sudo apt-get upgrade:*)"
         ],
         // ── DENY: always blocked ──────────────────────────────────────
         "deny": [
@@ -71,7 +94,8 @@
             "Bash(npm rm:*)",
             "Bash(npm r:*)",
             // apt / apt-get package removal on Linux hosts, including the sudo
-            // forms — no uninstalling system packages unprompted.
+            // forms — no uninstalling system packages unprompted. (Install and
+            // update are allowed above.)
             "Bash(apt remove:*)",
             "Bash(apt purge:*)",
             "Bash(apt autoremove:*)",
