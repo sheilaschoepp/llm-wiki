@@ -2,7 +2,7 @@
 
 A working guide to applying Anthropic's prompt-engineering advice inside the VS Code extension rather than through the API.
 
-> **What this is derived from.** The technique in this guide comes from two sources in `../sources/`: `claude-prompt-engineering.md` (Anthropic's prompt-engineering documentation) and `prompting-best-practices.md` (the earlier synthesis of that documentation plus the guardrail pages and the interactive tutorial). Both are written for people calling the API. The translation onto the extension's actual surface — which files, which commands, which settings — was verified against Claude Code's current documentation on 2026-07-12 and is marked where it matters. Context-window management is deliberately **not** covered here; it lives in `references/context-management/`, whose deliverable `claude-code-context-management-best-practices.md` is the companion to this one.
+> **What this is derived from.** The technique in this guide comes from two sources: Anthropic's prompt-engineering documentation, and an earlier synthesis of that documentation plus the guardrail pages and the interactive tutorial. Both are written for people calling the API. The translation onto the extension's actual surface — which files, which commands, which settings — was verified against Claude Code's current documentation on 2026-07-12 and is marked where it matters. Context-window management is deliberately **not** covered here; the companion to this guide is `claude-code-context-management-best-practices.md`.
 >
 > **Terminology.** The VS Code extension is Claude Code in a VS Code wrapper. Same engine as the terminal CLI, different chrome. Almost everything below applies to both; the handful of genuinely VS Code–only points are flagged as such.
 
@@ -35,11 +35,11 @@ Choosing the layer is the part the source documents cannot help you with. It is 
 
 Two facts drive most of the placement decisions, and both are verified. Skills are lazy: the body enters context only when the skill fires, and then stays for the session. Subagents run in a genuinely isolated context window and return only their final message to you, so anything a subagent reads is a cost you never pay.
 
-Skills are the currently preferred form for anything reusable. `.claude/commands/` still works — this workspace uses it for `cp` — but skills carry richer frontmatter (`model`, `effort`, `allowed-tools`, `argument-hint`, and more) and are the direction the tooling is moving.
+Skills are the currently preferred form for anything reusable. `.claude/commands/` still works — the `cp` commit-and-push command shipped alongside this guide is one — but skills carry richer frontmatter (`model`, `effort`, `allowed-tools`, `argument-hint`, and more) and are the direction the tooling is moving.
 
 ### Anthropic's ten-element prompt, relocated
 
-The capstone of `prompting-best-practices.md` is a ten-element skeleton for building a complex prompt from scratch. It is still the right checklist. In Claude Code the elements scatter across layers instead of stacking in one string, and this table is the translation:
+The capstone of the source synthesis is a ten-element skeleton for building a complex prompt from scratch. It is still the right checklist. In Claude Code the elements scatter across layers instead of stacking in one string, and this table is the translation:
 
 | Element | Where it goes in Claude Code |
 |---|---|
@@ -78,7 +78,7 @@ These are the techniques from both sources that pay off most, and they work here
 
 **Say what to do, not what to avoid.** "Compose your response in flowing prose paragraphs" beats "do not use markdown." Positive examples of the behaviour you want outperform prohibitions, and matching your own prompt's style to the output style you want nudges in the same direction.
 
-**Ask for action when you want action.** "Can you suggest some changes to improve this function" will sometimes get you suggestions when you wanted edits. "Change this function to improve its performance" gets you edits. In an IDE this is the difference between a paragraph and a diff, and it is worth being deliberate about. You can set the default posture in `CLAUDE.md` in either direction — act by default, or research and recommend by default and only act when asked. This workspace's `CLAUDE.md` already takes the second position for anything non-trivial.
+**Ask for action when you want action.** "Can you suggest some changes to improve this function" will sometimes get you suggestions when you wanted edits. "Change this function to improve its performance" gets you edits. In an IDE this is the difference between a paragraph and a diff, and it is worth being deliberate about. You can set the default posture in `CLAUDE.md` in either direction — act by default, or research and recommend by default and only act when asked. The `CLAUDE.md` shipped alongside this guide already takes the second position for anything non-trivial.
 
 **Small details matter.** Typos, sloppy grammar, and disorganized structure in the prompt measurably degrade the output. Proofread instructions to a model for the same reason you would proofread instructions to a person.
 
@@ -92,7 +92,7 @@ These are the techniques from both sources that pay off most, and they work here
 
 The API controls reasoning depth with the `effort` parameter and turns thinking on with `thinking: {type: "adaptive"}`. Neither is a per-message control in the extension, and this is the translation people get wrong most often.
 
-There is no `/effort` slash command — verified absent. Effort is set three ways: the `CLAUDE_CODE_EFFORT_LEVEL` environment variable in `settings.json`, an `effort` field in a skill's frontmatter, or an `effort` field in a subagent's frontmatter. This workspace sets it globally to `max` in `.claude/settings.json`, alongside `model: opus[1m]`.
+There is no `/effort` slash command — verified absent. Effort is set three ways: the `CLAUDE_CODE_EFFORT_LEVEL` environment variable in `settings.json`, an `effort` field in a skill's frontmatter, or an `effort` field in a subagent's frontmatter. Check what yours is set to before assuming; the `settings.json` shipped alongside this guide pins neither, leaving both to the session.
 
 The calibration ladder from the source, worth knowing even though you are pinned at the top of it:
 
@@ -122,7 +122,7 @@ This is where the two sources are richest, because it is where current models ac
 
 **Guard against claims about unopened code.** This is the one to actually write down if you write down nothing else, given how much of research work is reading unfamiliar repositories. The source's snippet: never speculate about code you have not opened; if the user references a file, read it before answering; investigate before making claims about the codebase.
 
-**Be explicit about reversibility.** Without guidance, models will take actions that are hard to undo — deleting files, force-pushing, posting to external services. The documented instruction asks Claude to weigh reversibility and impact, to freely take local reversible actions like editing files and running tests, and to check first for anything destructive, hard to reverse, or visible to others. This workspace enforces the same posture structurally through the `permissions.deny` list in `settings.json`, which is stronger than a prompt, because a prompt can be reasoned around and a deny rule cannot.
+**Be explicit about reversibility.** Without guidance, models will take actions that are hard to undo — deleting files, force-pushing, posting to external services. The documented instruction asks Claude to weigh reversibility and impact, to freely take local reversible actions like editing files and running tests, and to check first for anything destructive, hard to reverse, or visible to others. The `settings.json` shipped alongside this guide enforces the same posture structurally through its `permissions.deny` list, which is stronger than a prompt, because a prompt can be reasoned around and a deny rule cannot.
 
 **Steer subagents deliberately.** Opus 4.8 spawns fewer subagents than its predecessors by default, and the behaviour is promptable in either direction. Delegation is warranted for parallelizable work, isolated context, and independent workstreams; it is not warranted for simple sequential work, single-file edits, or anything where context needs to carry across steps. Ask for parallel tool calls when the calls are independent, and never let the model guess a missing parameter.
 
@@ -144,7 +144,7 @@ This is where the two sources are richest, because it is where current models ac
 
 ## Part 6 — Claude Opus 4.8 specifics
 
-> This section is tied to the model this workspace currently pins (`opus[1m]`) and will date faster than everything above. Re-check it against the live documentation on any model upgrade.
+> This section is tied to whichever model your session is running, and will date faster than everything above. Check which model you are on, and re-check this section against the live documentation on any model change.
 
 **It follows instructions literally.** Opus 4.8 interprets prompts explicitly and does not silently generalize an instruction from one item to the next, especially at lower effort. This is a feature for structured extraction and pipelines and a trap for casual phrasing: if you want a rule applied broadly, say so. "Apply this to every section, not just the first" is not redundant with this model.
 
@@ -181,7 +181,7 @@ Everything in this table is confirmed unavailable in the extension. When a sourc
 
 ## Part 8 — The short version
 
-1. Put durable rules in `CLAUDE.md`, and keep it under about 200 lines — the current guidance, and this workspace's 158-line file is comfortably inside it.
+1. Put durable rules in `CLAUDE.md`, and keep it under about 200 lines — the current guidance. Run `/context` to see what yours actually costs.
 2. Put examples, procedures, and long instruction blocks in skills, where they cost nothing until they fire.
 3. Delegate to subagents when work is parallel, isolated, or independent — their reading never enters your context.
 4. In the chat box, material first, question last.
@@ -196,6 +196,6 @@ Everything in this table is confirmed unavailable in the extension. When a sourc
 
 ## Sources
 
-- `../sources/claude-prompt-engineering.md` — Anthropic, prompt-engineering documentation: the overview (when prompt engineering is the right tool at all), general principles, output and formatting, tool use, thinking and reasoning, agentic systems, the model-specific pages for Claude Opus 4.8, Claude Fable 5, and Claude Sonnet 5, and migration considerations.
-- `../sources/prompting-best-practices.md` — the general synthesis of Anthropic's prompt-engineering docs, the guardrail pages (hallucination, consistency, prompt leak, jailbreaks, latency), and the interactive tutorial, including the ten-element complex-prompt skeleton relocated in Part 1.
+- Anthropic, prompt-engineering documentation: the overview (when prompt engineering is the right tool at all), general principles, output and formatting, tool use, thinking and reasoning, agentic systems, the model-specific pages for Claude Opus 4.8, Claude Fable 5, and Claude Sonnet 5, and migration considerations.
+- A general synthesis of Anthropic's prompt-engineering docs, the guardrail pages (hallucination, consistency, prompt leak, jailbreaks, latency), and the interactive tutorial, including the ten-element complex-prompt skeleton relocated in Part 1.
 - Claude Code documentation, consulted 2026-07-12 for the extension surface: instruction-file scopes and precedence, `@`-reference behaviour, slash commands, plan mode, skill and subagent frontmatter, settings keys, and confirmation of the absences listed in Part 7.
