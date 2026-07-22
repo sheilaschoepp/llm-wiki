@@ -1721,5 +1721,191 @@ class TestPaginationMap(unittest.TestCase):
             assert len(f) == 1   # one per raw, not per citation
 
 
+# --- book source type + unknown_source_type guard + invariants --------------
+
+_SRC_SLUGS = ['tldr', 'contribution', 'key-claims', 'evidence', 'method',
+              'assumptions', 'limitations', 'appraisal', 'concepts-entities',
+              'contradictions', 'open-questions', 'connections']
+_SLUG_TITLES = {'tldr': 'TL;DR', 'concepts-entities': 'Concepts and Entities',
+                'key-claims': 'Key Claims', 'open-questions': 'Open Questions'}
+
+
+def _src_callout(slug: str) -> str:
+    """A single placeholder source callout with its block ID (== slug for all
+    source callouts; no BLOCK_ID_OVERRIDES apply to source pages)."""
+    title = _SLUG_TITLES.get(slug, slug.replace('-', ' ').title())
+    return f'> [!{slug}] {title}\n>\n> - None noted\n> ^{slug}'
+
+
+def _src_body(slugs: list[str] | None = None) -> str:
+    return '\n\n'.join(_src_callout(s) for s in (slugs if slugs is not None
+                                                 else _SRC_SLUGS))
+
+
+def _typed_fm(type_value: str, authored: bool = True) -> str:
+    """Source-page frontmatter with the given `type:`. `authored=True` mirrors a
+    paper/article/book (authors+venue+year); False mirrors a media/other."""
+    fm = f'type: {type_value}\ntitle: "X"\n'
+    if authored:
+        fm += 'authors: []\nvenue: "Pub"\nyear: 2020\n'
+    fm += ('file: "[[0-raw/books/X.pdf]]"\nattachments: []\ntags: []\n'
+           'frames: []\ncreated: 2026-01-01\nupdated: 2026-01-01\nstatus: draft')
+    return fm
+
+
+class BookSourceTypeTests(unittest.TestCase):
+    """`book` is a first-class source type (CLAUDE.md documents 0-raw/books/)."""
+
+    def test_book_registered_in_all_source_tables(self) -> None:
+        self.assertIn('book', cw.SOURCE_KINDS)
+        self.assertIn('book', cw.REQUIRED_FIELDS)
+        self.assertIn('book', cw.REQUIRED_SECTIONS)
+
+    def test_book_mirrors_paper_fields_and_sections(self) -> None:
+        # A book has a paper's author-and-year identity (CLAUDE.md).
+        self.assertEqual(cw.REQUIRED_FIELDS['book'], cw.REQUIRED_FIELDS['paper'])
+        self.assertEqual(cw.REQUIRED_SECTIONS['book'],
+                         cw.REQUIRED_SECTIONS['paper'])
+
+    def test_complete_book_page_has_no_structural_findings(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            p = _write_page(Path(td), 'sources', 'B.md', _typed_fm('book'),
+                            _src_body())
+            ids = {f['check_id']
+                   for f in cw.check_page(path=p, wiki_root=Path(td) / '1-wiki')}
+        for cid in ('unknown_source_type', 'section_order',
+                    'frontmatter_missing_field', 'callout_block_id'):
+            self.assertNotIn(cid, ids)
+
+
+class UnknownSourceTypeTests(unittest.TestCase):
+    """A source page whose `type:` is not a recognized kind must be flagged and
+    still checked against the common source schema — never silently skipped."""
+
+    def _ids(self, td: str, fm: str, slugs: list[str] | None = None):
+        p = _write_page(Path(td), 'sources', 'S.md', fm, _src_body(slugs))
+        return [f for f in cw.check_page(path=p, wiki_root=Path(td) / '1-wiki')]
+
+    def test_unknown_type_is_flagged(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            ids = {f['check_id'] for f in self._ids(td, _typed_fm('bok'))}
+        self.assertIn('unknown_source_type', ids)
+
+    def test_unknown_type_still_runs_section_order(self) -> None:
+        # The core of the bug: before the fix, REQUIRED_SECTIONS.get('bok', [])
+        # was empty so section_order never fired — a missing Method callout on a
+        # typo'd page passed lint clean. The fallback must still catch it.
+        with tempfile.TemporaryDirectory() as td:
+            missing_method = [s for s in _SRC_SLUGS if s != 'method']
+            findings = self._ids(td, _typed_fm('bok'), missing_method)
+        ids = {f['check_id'] for f in findings}
+        self.assertIn('unknown_source_type', ids)
+        self.assertIn('section_order', ids)
+        so = next(f for f in findings if f['check_id'] == 'section_order')
+        self.assertIn('method', so['message'])
+
+    def test_missing_type_on_source_page_is_flagged(self) -> None:
+        # type: absent entirely -> kind == '' -> also caught (not treated as an
+        # out-of-scope non-page file, because it lives under sources/).
+        fm = ('title: "X"\nfile: "[[0-raw/books/X.pdf]]"\nattachments: []\n'
+              'tags: []\nframes: []\ncreated: 2026-01-01\nupdated: 2026-01-01\n'
+              'status: draft')
+        with tempfile.TemporaryDirectory() as td:
+            ids = {f['check_id'] for f in self._ids(td, fm)}
+        self.assertIn('unknown_source_type', ids)
+
+    def test_fallback_does_not_invent_subtype_fields(self) -> None:
+        # A mistyped media-shaped page (no authors/venue/year) must fall back to
+        # the fields COMMON to every source kind — never be told it needs
+        # `authors`, which only paper/article/book owe.
+        with tempfile.TemporaryDirectory() as td:
+            findings = self._ids(td, _typed_fm('medai', authored=False))
+        missing = [f['message'] for f in findings
+                   if f['check_id'] == 'frontmatter_missing_field']
+        self.assertFalse(any('authors' in m for m in missing), missing)
+
+    def test_known_source_type_not_flagged(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            ids = {f['check_id'] for f in self._ids(td, _typed_fm('paper'))}
+        self.assertNotIn('unknown_source_type', ids)
+
+    def test_list_checks_cli_exposes_it(self) -> None:
+        r = subprocess.run([sys.executable, str(SCRIPT), '--list-checks'],
+                           capture_output=True, text=True)
+        self.assertEqual(cw.CHECKS['unknown_source_type'], 'error')
+        self.assertEqual(json.loads(r.stdout)['unknown_source_type'], 'error')
+
+
+class SourceSchemaInvariantTests(unittest.TestCase):
+    """The two import-time invariants: a malformed schema TABLE is a script bug
+    (wiki content can never reach it), so it raises rather than degrading."""
+
+    def test_invariant1_kind_missing_from_required_tables_raises(self) -> None:
+        with self.assertRaises(AssertionError) as ctx:
+            cw._derive_source_common_schema({'book'}, {}, {})
+        msg = str(ctx.exception)
+        self.assertIn('book', msg)
+        self.assertIn('REQUIRED_FIELDS', msg)
+
+    def test_invariant2_divergent_section_rosters_raise(self) -> None:
+        with self.assertRaises(AssertionError) as ctx:
+            cw._derive_source_common_schema(
+                {'a', 'b'}, {'a': ['type'], 'b': ['type']},
+                {'a': ['s1'], 'b': ['s2']})
+        self.assertIn('roster', str(ctx.exception))
+
+    def test_control_real_tables_derive_cleanly(self) -> None:
+        cf, cs = cw._derive_source_common_schema(
+            cw.SOURCE_KINDS, cw.REQUIRED_FIELDS, cw.REQUIRED_SECTIONS)
+        self.assertEqual(cf, cw.SOURCE_COMMON_FIELDS)
+        self.assertEqual(cs, cw.SOURCE_COMMON_SECTIONS)
+
+    def test_common_fields_is_the_intersection(self) -> None:
+        # No subtype-only field (authors/venue/year) leaks into the common set.
+        for f in ('authors', 'venue', 'year'):
+            self.assertNotIn(f, cw.SOURCE_COMMON_FIELDS)
+        for f in ('type', 'title', 'file', 'status'):
+            self.assertIn(f, cw.SOURCE_COMMON_FIELDS)
+
+    def test_common_sections_is_the_shared_roster(self) -> None:
+        self.assertEqual(cw.SOURCE_COMMON_SECTIONS,
+                         cw.REQUIRED_SECTIONS['paper'])
+
+
+class RawIntegrityBooksTests(unittest.TestCase):
+    """The raw index must scan 0-raw/books/ (CLAUDE.md documents the folder)."""
+
+    def _setup_raw(self, td: str):
+        d = Path(td)
+        (d / '0-raw' / 'books').mkdir(parents=True)
+        (d / '1-wiki' / 'sources').mkdir(parents=True)
+        return d
+
+    def test_uningested_book_is_flagged(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            d = self._setup_raw(td)
+            (d / '0-raw' / 'books' / 'Uningested.pdf').write_bytes(b'%PDF-1.4')
+            pairs = {(f['check_id'], f['file'])
+                     for f in cw.check_raw_integrity(wiki_root=d / '1-wiki')}
+        self.assertIn(('raw_without_source_page', '0-raw/books/Uningested.pdf'),
+                      pairs)
+
+    def test_ingested_book_raw_resolves(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            d = self._setup_raw(td)
+            (d / '0-raw' / 'books' / 'Jh2019.pdf').write_bytes(b'%PDF-1.4')
+            (d / '1-wiki' / 'sources' / 'Jh2019.md').write_text(
+                '---\ntype: book\ntitle: "R"\nauthors: []\nvenue: "Pub"\n'
+                'year: 2019\nfile: "[[0-raw/books/Jh2019.pdf]]"\n'
+                'attachments: []\ntags: []\nframes: []\ncreated: 2026-01-01\n'
+                'updated: 2026-01-01\nstatus: draft\n---\n\n> x\n',
+                encoding='utf-8')
+            ids = {f['check_id']
+                   for f in cw.check_raw_integrity(wiki_root=d / '1-wiki')}
+        # The book raw is found, so no false "unresolved file" and no "uningested".
+        self.assertNotIn('file_field_unresolved', ids)
+        self.assertNotIn('raw_without_source_page', ids)
+
+
 if __name__ == '__main__':
     unittest.main()

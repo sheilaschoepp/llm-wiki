@@ -124,6 +124,11 @@ REQUIRED_FIELDS: dict[str, list[str]] = {
               'frames', 'created', 'updated', 'status'],
     'article': ['type', 'title', 'authors', 'venue', 'year', 'file', 'tags',
                 'frames', 'created', 'updated', 'status'],
+    # A book has a paper's author-and-year identity (the thing `other` lacks),
+    # so it carries the same required fields as paper/article — `venue:` holds
+    # the publisher (CLAUDE.md -> Source Pages).
+    'book': ['type', 'title', 'authors', 'venue', 'year', 'file', 'tags',
+             'frames', 'created', 'updated', 'status'],
     'media': ['type', 'title', 'file', 'tags', 'frames', 'created', 'updated',
               'status'],
     'other': ['type', 'title', 'file', 'tags', 'frames', 'created', 'updated',
@@ -146,6 +151,9 @@ REQUIRED_SECTIONS: dict[str, list[str]] = {
                 'assumptions', 'limitations', 'appraisal',
                 'concepts-entities', 'contradictions', 'open-questions',
                 'connections'],
+    'book': ['tldr', 'contribution', 'key-claims', 'evidence', 'method',
+             'assumptions', 'limitations', 'appraisal', 'concepts-entities',
+             'contradictions', 'open-questions', 'connections'],
     'media': ['tldr', 'contribution', 'key-claims', 'evidence', 'method',
               'assumptions', 'limitations', 'appraisal', 'concepts-entities',
               'contradictions', 'open-questions', 'connections'],
@@ -182,10 +190,73 @@ def expected_block_id(slug: str) -> str:
 VALID_STATUSES = {'draft', 'verified', 'needs-update'}
 
 # Source-page kinds (detect_page_kind returns the `type:` value for source
-# pages: paper/article/media/other). Checks that apply only to source pages —
-# whose locator/citation form differs from concept/entity/synthesis pages —
-# gate on this set.
-SOURCE_KINDS = {'paper', 'article', 'media', 'other'}
+# pages: paper/article/book/media/other). Checks that apply only to source
+# pages — whose locator/citation form differs from concept/entity/synthesis
+# pages — gate on this set.
+SOURCE_KINDS = {'paper', 'article', 'book', 'media', 'other'}
+
+
+def _derive_source_common_schema(
+    source_kinds: set[str],
+    required_fields: dict[str, list[str]],
+    required_sections: dict[str, list[str]],
+) -> tuple[list[str], list[str]]:
+    """Validate the source-schema tables and derive the common-denominator field
+    and section lists the `unknown_source_type` fallback checks an unrecognized
+    source page against (see `check_page`).
+
+    check_wiki.py prints its findings as JSON that the `lint` skill parses, and a
+    hard exception mid-run yields no JSON at all — so one malformed page must not
+    raise, or a single bad `type:` would take down lint for the whole vault (a
+    worse failure than the page it flags). That is why a bad `type:` on a page
+    degrades to an `unknown_source_type` finding. A violation *here*, by contrast,
+    is a SCRIPT bug: these tables are code, not wiki data, so wiki content can
+    never trigger it, and a hard raise at import is the right, loud failure.
+
+    Invariant 1 — every source kind has an entry in BOTH REQUIRED_* tables. This
+    is exactly what catches a half-added kind (a `SOURCE_KINDS` member with no
+    `REQUIRED_FIELDS` / `REQUIRED_SECTIONS` row) the moment the kind is added,
+    rather than letting its pages silently fall back at runtime.
+
+    Invariant 2 — all source kinds share one callout roster. The fallback checks
+    an unknown type's section order against that single shared roster, so a future
+    kind needing a different roster must revise the fallback deliberately instead
+    of having it mis-check silently.
+    """
+    for kind in sorted(source_kinds):
+        absent = [name for name, table in
+                  (('REQUIRED_FIELDS', required_fields),
+                   ('REQUIRED_SECTIONS', required_sections))
+                  if kind not in table]
+        if absent:
+            raise AssertionError(
+                f'source kind {kind!r} is in SOURCE_KINDS but missing from '
+                f'{" and ".join(absent)}; every source kind needs an entry in '
+                f'both required-schema tables.')
+    rosters = {tuple(required_sections[kind]) for kind in source_kinds}
+    if len(rosters) != 1:
+        raise AssertionError(
+            f'source kinds must share one callout roster, but REQUIRED_SECTIONS '
+            f'defines {len(rosters)} distinct rosters across SOURCE_KINDS; the '
+            f'unknown_source_type fallback assumes a single shared roster.')
+    common_sections = list(next(iter(rosters)))
+    # Common fields = the intersection across every source kind, so the fallback
+    # never asserts a subtype-specific field: a mistyped `media` page must not be
+    # told it needs `authors`. Order follows one kind's list for stable output.
+    ref = sorted(source_kinds)[0]
+    common_fields = [f for f in required_fields[ref]
+                     if all(f in required_fields[kind] for kind in source_kinds)]
+    return common_fields, common_sections
+
+
+# The common-denominator field/section lists an `unknown_source_type` page falls
+# back to (see check_page). Computed once at import; the two invariants above
+# raise loudly here if the source-schema tables are internally inconsistent.
+SOURCE_COMMON_FIELDS, SOURCE_COMMON_SECTIONS = _derive_source_common_schema(
+    source_kinds=SOURCE_KINDS,
+    required_fields=REQUIRED_FIELDS,
+    required_sections=REQUIRED_SECTIONS,
+)
 
 # Standing repo-state findings that lint emits at `error` (report Critical) but
 # that are NOT audit-blocking and do NOT fail the script exit code: a
@@ -263,6 +334,7 @@ CHECKS: dict[str, str | None] = {
     'status_invalid': 'warning',
     'status_needs_update': 'error',
     'synthesis_under_supported': 'warning',
+    'unknown_source_type': 'error',
     'unlinked_page_mention': 'warning',
     'unverified_claim': 'info',
     'vague_source_referent': 'warning',
@@ -977,7 +1049,7 @@ def detect_page_kind(path: Path, fm: dict[str, Any]) -> str:
     """Return the schema key for REQUIRED_FIELDS / REQUIRED_SECTIONS lookup."""
     parts = path.parts
     if 'sources' in parts:
-        return str(fm.get('type', '')).lower()  # paper/article/media/other
+        return str(fm.get('type', '')).lower()  # paper/article/book/media/other
     if 'entities' in parts:
         return 'entity'
     if 'concepts' in parts:
@@ -1202,11 +1274,41 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
         return findings
 
     kind = detect_page_kind(path=path, fm=fm)
-    if not kind:
-        return findings  # hot/index/log/etc — out of scope here
+    if not kind and 'sources' not in path.parts:
+        return findings  # non-page file (hot/index/log/etc) — out of scope here
 
-    # Frontmatter completeness (check_id: frontmatter_missing_field).
-    required = REQUIRED_FIELDS.get(kind, [])
+    # A source page's schema kind is its `type:` value verbatim (detect_page_kind
+    # returns it for pages under sources/), so an empty or unrecognized value is a
+    # source page with a bad `type:` — missing, a typo (`bok`), or an un-schema'd
+    # type. Left untreated, REQUIRED_FIELDS.get(kind, []) / REQUIRED_SECTIONS
+    # .get(kind, []) would return empty and every structural check would silently
+    # no-op — the page would pass lint completely clean. Flag it and fall back to
+    # the schema every source kind shares, so the page is still checked, without
+    # inventing a subtype-specific requirement (a mistyped `media` page must not
+    # suddenly be told it needs `authors`). This degrades a bad `type:` to a
+    # finding rather than raising, because raising would suppress lint's JSON for
+    # the whole vault; an inconsistent schema TABLE is caught at import instead
+    # (_derive_source_common_schema). concept/entity/synthesis kinds come from the
+    # directory, so this only ever fires for a source page.
+    unknown_source_type = kind not in REQUIRED_FIELDS
+    if unknown_source_type:
+        shown = kind if kind else '(missing)'
+        findings.append(finding(
+            check='unknown_source_type',
+            file=rel,
+            message=(f'Source page `type: {shown}` is not a recognized source '
+                     f'type {sorted(SOURCE_KINDS)}. Structural checks fell back '
+                     f'to the schema common to all source kinds; without this the '
+                     f'page would pass lint with every check silently disabled.'),
+            fix_hint=(f'Set `type:` to one of {sorted(SOURCE_KINDS)}. If '
+                      f'`{shown}` is a genuinely new source type, add it to '
+                      f"CLAUDE.md and the script's SOURCE_KINDS / REQUIRED_FIELDS "
+                      f'/ REQUIRED_SECTIONS.'),
+        ))
+
+    # Frontmatter completeness (check_id: frontmatter_missing_field). An unknown
+    # source type falls back to the fields common to every source kind.
+    required = SOURCE_COMMON_FIELDS if unknown_source_type else REQUIRED_FIELDS[kind]
     for field in required:
         if field not in fm:
             findings.append(finding(
@@ -1283,10 +1385,13 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
                     ),
                 ))
 
-    # Body section order (check_id: section_order).
+    # Body section order (check_id: section_order). An unknown source type falls
+    # back to the callout roster every source kind shares, so a mistyped source
+    # page is still checked for missing/mis-ordered sections.
     body = '\n'.join(text.split('\n')[end + 1:])
     actual_slugs = extract_section_slugs(body=body)
-    expected_slugs = REQUIRED_SECTIONS.get(kind, [])
+    expected_slugs = (SOURCE_COMMON_SECTIONS if unknown_source_type
+                      else REQUIRED_SECTIONS[kind])
     if expected_slugs and actual_slugs != expected_slugs:
         # Distinguish missing-section vs wrong-order for a more useful message.
         missing = set(expected_slugs) - set(actual_slugs)
@@ -2787,7 +2892,7 @@ def check_raw_integrity(wiki_root: Path) -> list[dict[str, Any]]:
     that actually exists under `0-raw/`. A source page pointing at a deleted
     or renamed raw file silently breaks the audit trail back to evidence.
 
-    Check 4: every raw file under `0-raw/{papers,articles,media,other}/`
+    Check 4: every raw file under `0-raw/{papers,books,articles,media,other}/`
     should have a matching source page that references it via `file:`. A
     raw file with no source page is uningested — flag at Critical so the
     user notices the gap.
@@ -2803,7 +2908,7 @@ def check_raw_integrity(wiki_root: Path) -> list[dict[str, Any]]:
     # Build map: raw-file basename -> raw file path
     raw_files_by_basename: dict[str, Path] = {}
     if raw_root.exists():
-        for sub in ('papers', 'articles', 'media', 'other'):
+        for sub in ('papers', 'books', 'articles', 'media', 'other'):
             sub_path = raw_root / sub
             if not sub_path.exists():
                 continue
