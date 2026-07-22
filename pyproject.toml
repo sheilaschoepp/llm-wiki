@@ -1,0 +1,40 @@
+# Tooling config for the skill scripts under .claude/skills/.
+#
+# There is no package to build here. This file makes ruff both the
+# formatter and the linter of record, so that format-on-save
+# (.vscode/settings.json) and `ruff check` agree on one style.
+#
+# The style is documented in a-archive/style/coding-best-practices.md
+# (Part 2): PEP 8 + PEP 257 + NumPy-style docstrings, single-quoted
+# strings, 79-column code.
+
+[tool.ruff]
+# PEP 8 sets 79 for code and 72 for comments and docstrings. The house
+# style states both (Line length) and pins this value directly:
+# "Configure with line-length = 79". The formatter and E501 enforce the
+# 79 code limit; the 72-char comment limit is a writing rule no tool
+# checks here.
+line-length = 79
+target-version = "py312"  # matches PYTHON_VERSION in setup.sh
+
+[tool.ruff.format]
+# Single quotes are the house style (String quotes). Triple-quoted
+# literals keep """ regardless, per PEP 257. Ruff does NOT do this by
+# default -- left unset it normalizes to double quotes.
+quote-style = "single"
+
+[tool.ruff.lint]
+# Ruff's default rule set plus E501 (line-too-long), so `ruff check`
+# enforces the 79-column limit the formatter targets. Pinned explicitly
+# so a ruff upgrade cannot silently widen the set. E4 import, E5 line
+# length, E7 statement, E9 syntax/IO; F pyflakes.
+select = ["E4", "E501", "E7", "E9", "F"]
+
+[tool.black]
+line-length = 79
+target-version = ["py312"]
+# Black is not run here; ruff format is the formatter. Black is pinned
+# only so that if it is ever run it stays harmless:
+# skip-string-normalization keeps it from converting the single quotes
+# to double.
+skip-string-normalization = true
