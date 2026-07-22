@@ -1,14 +1,13 @@
 # Attachment extraction and page-offset reference
 
-Read this when Step 4 extracts an image or Step 5 writes a page locator. The load-bearing one-liners (the offset formula, the rename rule) live in the steps themselves; this file holds the worked examples and the crop-tuning loop, which are needed only when an extraction actually happens.
+Read this when Step 4 extracts an image or Step 5 writes a page locator. The load-bearing methods (the Step-2 pagination map for what each page prints, the Step-5 rename rule) live in the steps themselves; this file holds the worked examples and the crop-tuning loop, which are needed only when an extraction actually happens.
 
 ## Physical-Page Offset (for `#page=N` Deep-Links)
 
-Every page locator on a source page deep-links the raw file at its physical PDF page: `[[0-raw/papers/{stem}.pdf#page=N|p. 525]]`. `N` is the physical page (the Nth page of the file), not the printed page number on the paper.
+Every page locator on a source page deep-links the raw file at its physical PDF page, with the structural anchor and printed page together inside the display: `[[0-raw/papers/{stem}.pdf#page=14|sec. 5, p. 525]]`. `N` (here `14`) is the physical page (the Nth page of the file), not the printed page number; the display carries both an anchor (`sec.`/`fig.`/`app.`/…) and the printed page `p. M` — a page-only display (`|p. 525]]`) is what lint `source_locator_incomplete` flags.
 
-- Compute it: open the PDF, read the printed page number on its first physical page, then `N = printed − (first_printed − 1)`.
-- A paper printed from page 1 has `N = printed`. A proceedings paper printed from p. 512 has offset 511, so printed p. 525 is physical `N = 14`.
-- Do not infer the offset from the cited range — the cited range need not start at the paper's first page.
+- Printed page `p. M` comes off the Step-2 pagination map (`.claude/skills/multi-skill/pagination-map.md`), the per-physical-page record of what each page prints — not a re-derived offset, which a restarting appendix would defeat (`CLAUDE.md` → Source Support And Verification). Where the map says a page prints nothing, drop `p. M` and cite the structural anchor alone.
+- Physical page `N`: open the PDF, read the printed number on its first physical page, then `N = printed − (first_printed − 1)` (a paper printed from page 1 has `N = printed`; a proceedings paper printed from p. 512 has offset 511, so printed p. 525 is physical `N = 14`). Do not infer the offset from the cited range — it need not start at the paper's first page. This offset is the fallback only for an unregistered raw with no pagination-map entry; the map is authoritative wherever it exists.
 
 ## Crop-Tuning Loop (Figures, Tables, Equation Renders)
 
