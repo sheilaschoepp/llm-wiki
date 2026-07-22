@@ -34,11 +34,12 @@ hash change.
 Requires Python 3.10+ (the shared lint-script suite floor; this module alone uses
 only 3.8-compatible syntax, but the suite is pinned to 3.10+ by check_wiki.py).
 """
+
 import hashlib
 import re
 import sys
 
-_FM_OPEN = '---\n'     # frontmatter opening delimiter
+_FM_OPEN = '---\n'  # frontmatter opening delimiter
 _FM_CLOSE = '\n---\n'  # frontmatter closing delimiter
 # The claim-level "awaiting a raw fact-check" marker (literal asterisks are part
 # of the token, not Markdown emphasis). Lines carrying it are excluded from the
@@ -85,7 +86,7 @@ def body_hash(path: str) -> str:
                 f'{path}: frontmatter opened with "---" but has no closing "---" '
                 'delimiter line; refusing to hash the whole file as the body'
             )
-        body = text[end + len(_FM_CLOSE):]
+        body = text[end + len(_FM_CLOSE) :]
     else:
         body = text
     # Exclude `*[unverified]*` claim lines from the hashed content (claim-level
@@ -93,7 +94,8 @@ def body_hash(path: str) -> str:
     # freely while marked; clearing the marker re-includes it, changing the hash
     # so audit re-stamps. A page with no markers is unchanged.
     body = '\n'.join(
-        line for line in body.split('\n')
+        line
+        for line in body.split('\n')
         if not _UNVERIFIED_RE.search(_CODE_SPAN_RE.sub('', line))
     )
     return hashlib.sha256(body.encode('utf-8')).hexdigest()

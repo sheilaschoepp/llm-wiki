@@ -12,6 +12,7 @@ Run from anywhere:
 
 The module is loaded by path so the tests do not depend on cwd or packaging.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -20,7 +21,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve()
 SCRIPT = HERE.parents[1] / 'check_structure.py'
-REPO = HERE.parents[5]                                   # repo root
+REPO = HERE.parents[5]  # repo root
 SKILL_DIR = REPO / '.claude' / 'skills' / 'multi-skill'
 
 spec = importlib.util.spec_from_file_location('check_structure', SCRIPT)
@@ -45,9 +46,9 @@ class TestSkillRefRecognizers(unittest.TestCase):
         # the blind spot _is_bare_skill_ref was added to cover.
         looks = cs._looks_like_skill_ref
         assert not looks(token='forget/removal-mechanics.md')
-        assert not looks(token='<skill>/x.md')      # template char
-        assert not looks(token='1-wiki/foo.md')     # excluded prefix
-        assert not looks(token='plain.md')          # no slash
+        assert not looks(token='<skill>/x.md')  # template char
+        assert not looks(token='1-wiki/foo.md')  # excluded prefix
+        assert not looks(token='plain.md')  # no slash
 
     def test_is_bare_skill_ref_disk_gated(self) -> None:
         # The founding-bug shape: real skill dir, dropped segment.
@@ -61,8 +62,8 @@ class TestSkillRefRecognizers(unittest.TestCase):
         bare = cs._is_bare_skill_ref
         assert not bare(token='notaskill/foo.md', repo_root=REPO)
         assert not bare(token='<skill>/x.md', repo_root=REPO)  # template
-        assert not bare(token='a/b/c.md', repo_root=REPO)      # two slashes
-        assert not bare(token='SKILL.md', repo_root=REPO)      # no slash
+        assert not bare(token='a/b/c.md', repo_root=REPO)  # two slashes
+        assert not bare(token='SKILL.md', repo_root=REPO)  # no slash
 
 
 class TestBrokenInlineRefIntegration(unittest.TestCase):

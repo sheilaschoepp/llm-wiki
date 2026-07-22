@@ -18,6 +18,7 @@ Run from anywhere:
 
 The module is loaded by path so the tests do not depend on cwd or packaging.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -31,8 +32,8 @@ from pathlib import Path
 from unittest import mock
 
 HERE = Path(__file__).resolve()
-SCRIPT = HERE.parents[1] / 'check_wiki.py'              # scripts/check_wiki.py
-REPO = HERE.parents[5]                                  # repo root
+SCRIPT = HERE.parents[1] / 'check_wiki.py'  # scripts/check_wiki.py
+REPO = HERE.parents[5]  # repo root
 WIKI = REPO / '1-wiki'
 
 spec = importlib.util.spec_from_file_location('check_wiki', SCRIPT)
@@ -40,7 +41,7 @@ cw = importlib.util.module_from_spec(spec)
 assert spec and spec.loader
 spec.loader.exec_module(cw)
 
-BODY_HASH = HERE.parents[1] / 'body_hash.py'           # scripts/body_hash.py
+BODY_HASH = HERE.parents[1] / 'body_hash.py'  # scripts/body_hash.py
 bh_spec = importlib.util.spec_from_file_location('body_hash', BODY_HASH)
 bh = importlib.util.module_from_spec(bh_spec)
 assert bh_spec and bh_spec.loader
@@ -70,7 +71,9 @@ def fix(body: str) -> str:
 
 
 def bracket_findings(body: str, end: int = 0):
-    return cw.check_citation_bracket_style(body=body, rel='1-wiki/concepts/x.md', end=end)
+    return cw.check_citation_bracket_style(
+        body=body, rel='1-wiki/concepts/x.md', end=end
+    )
 
 
 def lineno(find):
@@ -90,24 +93,32 @@ def _write_page(tmp_path, folder, name, frontmatter, body):
     return p
 
 
-CONCEPT_FM = ('type: concept\naliases: []\nsources:\n'
-              '  - "[[1-wiki/sources/X.md|X]]"\nsource_count: 1\n'
-              'tags: []\ncreated: 2026-01-01\nupdated: 2026-01-01\nstatus: draft')
+CONCEPT_FM = (
+    'type: concept\naliases: []\nsources:\n'
+    '  - "[[1-wiki/sources/X.md|X]]"\nsource_count: 1\n'
+    'tags: []\ncreated: 2026-01-01\nupdated: 2026-01-01\nstatus: draft'
+)
 
 
-_SRC_FM = ('type: paper\ntitle: "Adapters"\nauthors: []\nyear: 2019\n'
-           'file: "[[0-raw/papers/Houlsby2019.pdf]]"\nattachments: []\ntags: []\n'
-           'frames: []\ncreated: 2026-01-01\nupdated: 2026-01-01\nstatus: draft')
-_CON_FM = ('type: concept\naliases: []\nsources:\n'
-           '  - "[[1-wiki/sources/Houlsby2019.md|Houlsby2019]]"\nsource_count: 1\n'
-           'tags: []\ncreated: 2026-01-01\nupdated: 2026-01-01\nstatus: draft')
+_SRC_FM = (
+    'type: paper\ntitle: "Adapters"\nauthors: []\nyear: 2019\n'
+    'file: "[[0-raw/papers/Houlsby2019.pdf]]"\nattachments: []\ntags: []\n'
+    'frames: []\ncreated: 2026-01-01\nupdated: 2026-01-01\nstatus: draft'
+)
+_CON_FM = (
+    'type: concept\naliases: []\nsources:\n'
+    '  - "[[1-wiki/sources/Houlsby2019.md|Houlsby2019]]"\nsource_count: 1\n'
+    'tags: []\ncreated: 2026-01-01\nupdated: 2026-01-01\nstatus: draft'
+)
 
 
 EMB = '![[1-wiki/attachments/X/fig.png]]'
 
 
 def embed_findings(body: str, end: int = 0):
-    return cw.check_embed_isolated(body=body, rel='1-wiki/concepts/x.md', end=end)
+    return cw.check_embed_isolated(
+        body=body, rel='1-wiki/concepts/x.md', end=end
+    )
 
 
 def fix_embeds(body: str) -> str:
@@ -136,45 +147,70 @@ def fix_pipes(body: str) -> str:
     removed; a `|` outside `[[...]]` (a table cell) is never touched. This transform
     is on the verification-neutral re-stamp allowlist, so it is pinned here."""
     return cw.PIPE_SPACING_RE.sub(
-        lambda m: re.sub(r'[^\S\n]*\|[^\S\n]*', '|', m.group(0)), body)
+        lambda m: re.sub(r'[^\S\n]*\|[^\S\n]*', '|', m.group(0)), body
+    )
 
 
-SOURCE_FM = ('type: paper\ntitle: "X"\nauthors: []\nyear: 2020\n'
-             'file: "[[0-raw/papers/X.pdf]]"\nattachments: []\ntags: []\n'
-             'frames: []\ncreated: 2026-01-01\nupdated: 2026-01-01\nstatus: draft')
+SOURCE_FM = (
+    'type: paper\ntitle: "X"\nauthors: []\nyear: 2020\n'
+    'file: "[[0-raw/papers/X.pdf]]"\nattachments: []\ntags: []\n'
+    'frames: []\ncreated: 2026-01-01\nupdated: 2026-01-01\nstatus: draft'
+)
 
 
 def hyphen_findings(tmp_path, folder, name, fm, body):
     p = _write_page(tmp_path, folder, name, fm, body)
     wiki = tmp_path / '1-wiki'
-    return [f for f in cw.check_page(path=p, wiki_root=wiki)
-            if f['check_id'] == 'hyphenated_open_compound']
+    return [
+        f
+        for f in cw.check_page(path=p, wiki_root=wiki)
+        if f['check_id'] == 'hyphenated_open_compound'
+    ]
 
 
-LOC_BOTH = '[[0-raw/papers/X.pdf#page=1|sec. 1, p. 1]]'      # anchor+page inside: OK
-LOC_SPLIT = 'sec. 1, [[0-raw/papers/X.pdf#page=1|p. 1]]'     # anchor outside: drift
-LOC_PAGE_ONLY = '[[0-raw/papers/X.pdf#page=1|p. 1]]'         # page only: drift
-LOC_ANCHOR_ONLY = '[[0-raw/papers/X.pdf#page=1|sec. 1]]'     # anchor only: drift
+LOC_BOTH = (
+    '[[0-raw/papers/X.pdf#page=1|sec. 1, p. 1]]'  # anchor+page inside: OK
+)
+LOC_SPLIT = (
+    'sec. 1, [[0-raw/papers/X.pdf#page=1|p. 1]]'  # anchor outside: drift
+)
+LOC_PAGE_ONLY = '[[0-raw/papers/X.pdf#page=1|p. 1]]'  # page only: drift
+LOC_ANCHOR_ONLY = '[[0-raw/papers/X.pdf#page=1|sec. 1]]'  # anchor only: drift
 
 
 def loc_findings(body: str, end: int = 0):
-    return cw.check_source_locator_complete(body=body, rel='1-wiki/sources/X.md', end=end)
+    return cw.check_source_locator_complete(
+        body=body, rel='1-wiki/sources/X.md', end=end
+    )
 
 
 DG = '0-raw/papers/X.pdf'
 
 
 def dg(cur, head, status='verified', head_status='verified'):
-    return cw.anchor_change_findings(cur_text=cur, head_text=head,
-                                     rel='1-wiki/sources/X.md', status=status,
-                                     head_status=head_status)
+    return cw.anchor_change_findings(
+        cur_text=cur,
+        head_text=head,
+        rel='1-wiki/sources/X.md',
+        status=status,
+        head_status=head_status,
+    )
 
 
 def caps_findings(body: str, end: int = 0):
-    return cw.check_wikilink_display_caps(body=body, rel='1-wiki/concepts/x.md', end=end)
+    return cw.check_wikilink_display_caps(
+        body=body, rel='1-wiki/concepts/x.md', end=end
+    )
 
 
-SORT_SCRIPT = HERE.parents[5] / '.claude' / 'skills' / 'lint' / 'scripts' / 'sort_chronology.py'
+SORT_SCRIPT = (
+    HERE.parents[5]
+    / '.claude'
+    / 'skills'
+    / 'lint'
+    / 'scripts'
+    / 'sort_chronology.py'
+)
 _ss = importlib.util.spec_from_file_location('sort_chronology', SORT_SCRIPT)
 sc = importlib.util.module_from_spec(_ss)
 _ss.loader.exec_module(sc)
@@ -190,50 +226,67 @@ def _wiki(tmp_path, log=None, hot=None):
     return d
 
 
-LOG_OK = ('# Log\n\nReverse-chronological event log. Newest entry on top.\n\n'
-          '## [2026-06-08 18:00] audit | newer\n- a\n\n'
-          '## [2026-06-08 09:00] fix | older\n- b\n')
-LOG_DISORDER = ('# Log\n\nx\n\n'
-                '## [2026-06-08 09:00] fix | older first (wrong)\n- a\n\n'
-                '## [2026-06-08 18:00] audit | newer second (wrong)\n- b\n')
-LOG_UNTIMED = ('# Log\n\nx\n\n'
-               '## [2026-06-08 18:00] audit | timed\n- a\n\n'
-               '## [2026-06-07] lint | no time\n- b\n')
-HOT_OK = ('---\ntype: hot\n---\n\n# Hot\n\n## Recent activity\n\n'
-          '- [2026-06-08 20:00] b | newer\n- [2026-06-08 08:00] a | older\n\n'
-          '## Open threads\n\n- keep me\n')
-HOT_DISORDER = ('---\ntype: hot\n---\n\n# Hot\n\n## Recent activity\n\n'
-                '- [2026-06-08 08:00] a | older first (wrong)\n'
-                '- [2026-06-08 20:00] b | newer second (wrong)\n\n'
-                '## Open threads\n\n- keep me\n')
+LOG_OK = (
+    '# Log\n\nReverse-chronological event log. Newest entry on top.\n\n'
+    '## [2026-06-08 18:00] audit | newer\n- a\n\n'
+    '## [2026-06-08 09:00] fix | older\n- b\n'
+)
+LOG_DISORDER = (
+    '# Log\n\nx\n\n'
+    '## [2026-06-08 09:00] fix | older first (wrong)\n- a\n\n'
+    '## [2026-06-08 18:00] audit | newer second (wrong)\n- b\n'
+)
+LOG_UNTIMED = (
+    '# Log\n\nx\n\n'
+    '## [2026-06-08 18:00] audit | timed\n- a\n\n'
+    '## [2026-06-07] lint | no time\n- b\n'
+)
+HOT_OK = (
+    '---\ntype: hot\n---\n\n# Hot\n\n## Recent activity\n\n'
+    '- [2026-06-08 20:00] b | newer\n- [2026-06-08 08:00] a | older\n\n'
+    '## Open threads\n\n- keep me\n'
+)
+HOT_DISORDER = (
+    '---\ntype: hot\n---\n\n# Hot\n\n## Recent activity\n\n'
+    '- [2026-06-08 08:00] a | older first (wrong)\n'
+    '- [2026-06-08 20:00] b | newer second (wrong)\n\n'
+    '## Open threads\n\n- keep me\n'
+)
 # Untimed entries whose time is recoverable from a linked report filename
 # (`…-YYYY-MM-DD-HHMM-…`, matching date) — the determinate auto-recovery case.
 LOG_UNTIMED_RECOVERABLE = (
     '# Log\n\nx\n\n'
     '## [2026-06-08 18:00] audit | timed\n- a\n\n'
     '## [2026-06-07] query | recoverable\n'
-    '- Saved: [[2-outputs/query/query-2026-06-07-0915-topic.md|query]]\n')
+    '- Saved: [[2-outputs/query/query-2026-06-07-0915-topic.md|query]]\n'
+)
 HOT_UNTIMED_RECOVERABLE = (
     '---\ntype: hot\n---\n\n# Hot\n\n## Recent activity\n\n'
     '- [2026-06-08 20:00] b | newer\n'
     '- [2026-06-07] query | recoverable '
     '([[2-outputs/query/query-2026-06-07-0915-topic.md|query]])\n\n'
-    '## Open threads\n\n- keep me\n')
+    '## Open threads\n\n- keep me\n'
+)
 # Non-entry lines inside Recent activity — a parked note before the first dated
 # bullet, a sub-bullet under an entry — must survive the sort (sort_hot data-loss
 # regression guard: the block must never be rebuilt from dated bullets alone).
-HOT_WITH_STRAY = ('---\ntype: hot\n---\n\n# Hot\n\n## Recent activity\n\n'
-                  'a parked note the user left here\n'
-                  '- [2026-06-08 08:00] a | older first (wrong)\n'
-                  '- [2026-06-08 20:00] b | newer second (wrong)\n'
-                  '    - nested detail under b\n\n'
-                  '## Open threads\n\n- keep me\n')
+HOT_WITH_STRAY = (
+    '---\ntype: hot\n---\n\n# Hot\n\n## Recent activity\n\n'
+    'a parked note the user left here\n'
+    '- [2026-06-08 08:00] a | older first (wrong)\n'
+    '- [2026-06-08 20:00] b | newer second (wrong)\n'
+    '    - nested detail under b\n\n'
+    '## Open threads\n\n- keep me\n'
+)
 
 
 def _noun_findings(tmp_path, body):
     p = _write_page(tmp_path, 'concepts', 'c.md', CONCEPT_FM, body)
-    return [f for f in cw.check_page(path=p, wiki_root=tmp_path / '1-wiki')
-            if f['check_id'] == 'hyphenated_open_compound_noun']
+    return [
+        f
+        for f in cw.check_page(path=p, wiki_root=tmp_path / '1-wiki')
+        if f['check_id'] == 'hyphenated_open_compound_noun'
+    ]
 
 
 class TestCheckWiki(unittest.TestCase):
@@ -251,13 +304,18 @@ class TestCheckWiki(unittest.TestCase):
 
     def test_finding_builder_accepts_the_new_id(self) -> None:
         # finding() raises on an unregistered check_id; this confirms registration.
-        f = cw.finding(check='citation_bracket_style', file='x.md', message='m')
+        f = cw.finding(
+            check='citation_bracket_style', file='x.md', message='m'
+        )
         assert f['check_id'] == 'citation_bracket_style'
         assert f['severity'] == 'warning'
 
     def test_list_checks_cli_exposes_it(self) -> None:
-        r = subprocess.run([sys.executable, str(SCRIPT), '--list-checks'],
-                           capture_output=True, text=True)
+        r = subprocess.run(
+            [sys.executable, str(SCRIPT), '--list-checks'],
+            capture_output=True,
+            text=True,
+        )
         assert r.returncode == 0
         listed = json.loads(r.stdout)
         assert listed.get('citation_bracket_style') == 'warning'
@@ -275,14 +333,18 @@ class TestCheckWiki(unittest.TestCase):
         assert len(f) == 1
 
     def test_square_with_hyphen_and_digit_stems(self) -> None:
-        body = ('> - a [the [[[1-wiki/sources/Vaswani2017AttentionIA.md|Vaswani2017AttentionIA]]; '
-                '[[0-raw/papers/Vaswani2017AttentionIA.pdf#page=1|sec. 1, p. 1]]] b\n'
-                '> - c [[[1-wiki/sources/illustrated-transformer.md|illustrated-transformer]]; '
-                '[[0-raw/articles/illustrated-transformer.md#page=1|sec. A, p. 1]]] d')
+        body = (
+            '> - a [the [[[1-wiki/sources/Vaswani2017AttentionIA.md|Vaswani2017AttentionIA]]; '
+            '[[0-raw/papers/Vaswani2017AttentionIA.pdf#page=1|sec. 1, p. 1]]] b\n'
+            '> - c [[[1-wiki/sources/illustrated-transformer.md|illustrated-transformer]]; '
+            '[[0-raw/articles/illustrated-transformer.md#page=1|sec. A, p. 1]]] d'
+        )
         # both lines carry a square citation
         assert len(bracket_findings(body)) == 2
 
-    def test_two_squares_on_separate_lines_get_increasing_line_numbers(self) -> None:
+    def test_two_squares_on_separate_lines_get_increasing_line_numbers(
+        self,
+    ) -> None:
         body = f'> - first {square(LOC1)}.\n> - second {square(LOC2)}.'
         f = bracket_findings(body)
         assert len(f) == 2
@@ -312,7 +374,10 @@ class TestCheckWiki(unittest.TestCase):
         assert bracket_findings(body) == []
 
     def test_plain_wikilink_not_flagged(self) -> None:
-        assert bracket_findings('> - see [[1-wiki/concepts/y.md|y]] for detail.') == []
+        assert (
+            bracket_findings('> - see [[1-wiki/concepts/y.md|y]] for detail.')
+            == []
+        )
 
     def test_bare_source_link_not_flagged(self) -> None:
         # a source link with no deep-link is a different (citation_unpaired-ish) issue,
@@ -324,9 +389,7 @@ class TestCheckWiki(unittest.TestCase):
         assert bracket_findings(body) == []
 
     def test_square_inside_sources_callout_is_masked(self) -> None:
-        body = ('> [!sources] Sources\n'
-                f'> - {square(LOC1)}\n'
-                '> ^sources')
+        body = f'> [!sources] Sources\n> - {square(LOC1)}\n> ^sources'
         assert bracket_findings(body) == []
 
     def test_square_inside_double_quote_is_masked(self) -> None:
@@ -359,13 +422,15 @@ class TestCheckWiki(unittest.TestCase):
 
     def test_fix_then_rescan_is_clean_roundtrip(self) -> None:
         body = f'> - claim {square(LOC1, LOC2)}.'
-        assert bracket_findings(body)                  # dirty before
-        assert bracket_findings(fix(body)) == []       # clean after
+        assert bracket_findings(body)  # dirty before
+        assert bracket_findings(fix(body)) == []  # clean after
 
     def test_fix_only_touches_square_citations_in_mixed_body(self) -> None:
-        body = (f'> - good {roundc(LOC1)}.\n'
-                f'> - bad {square(LOC2)}.\n'
-                f'> - attributive {SRC} ({LOC1}) shows.')
+        body = (
+            f'> - good {roundc(LOC1)}.\n'
+            f'> - bad {square(LOC2)}.\n'
+            f'> - attributive {SRC} ({LOC1}) shows.'
+        )
         fixed = fix(body)
         assert bracket_findings(fixed) == []
         # the already-round and Form-1 lines are untouched
@@ -375,15 +440,25 @@ class TestCheckWiki(unittest.TestCase):
     # --- integration via check_page ---------------------------------------------
 
     def test_check_page_flags_square_on_concept(self) -> None:
-        p = _write_page(self.tmp, 'concepts', 'c.md', CONCEPT_FM,
-                        f'> [!idea] Idea\n> - claim {square(LOC1)}.\n> ^idea')
+        p = _write_page(
+            self.tmp,
+            'concepts',
+            'c.md',
+            CONCEPT_FM,
+            f'> [!idea] Idea\n> - claim {square(LOC1)}.\n> ^idea',
+        )
         wiki = self.tmp / '1-wiki'
         ids = {f['check_id'] for f in cw.check_page(path=p, wiki_root=wiki)}
         assert 'citation_bracket_style' in ids
 
     def test_check_page_does_not_flag_round_on_concept(self) -> None:
-        p = _write_page(self.tmp, 'concepts', 'c.md', CONCEPT_FM,
-                        f'> [!idea] Idea\n> - claim {roundc(LOC1)}.\n> ^idea')
+        p = _write_page(
+            self.tmp,
+            'concepts',
+            'c.md',
+            CONCEPT_FM,
+            f'> [!idea] Idea\n> - claim {roundc(LOC1)}.\n> ^idea',
+        )
         wiki = self.tmp / '1-wiki'
         ids = {f['check_id'] for f in cw.check_page(path=p, wiki_root=wiki)}
         assert 'citation_bracket_style' not in ids
@@ -391,98 +466,184 @@ class TestCheckWiki(unittest.TestCase):
     def test_check_page_exempts_source_pages(self) -> None:
         # Source pages use a different citation form and are out of scope for the
         # concept/entity/synthesis citation checks (detect_page_kind -> 'paper').
-        src_fm = ('type: paper\ntitle: "X"\nauthors: []\nyear: 2020\n'
-                  'file: "[[0-raw/papers/X.pdf]]"\nattachments: []\ntags: []\n'
-                  'frames: []\ncreated: 2026-01-01\nupdated: 2026-01-01\nstatus: draft')
-        p = _write_page(self.tmp, 'sources', 'X.md', src_fm,
-                        f'> [!tldr] TL;DR\n> - claim {square(LOC1)}.\n> ^tldr')
+        src_fm = (
+            'type: paper\ntitle: "X"\nauthors: []\nyear: 2020\n'
+            'file: "[[0-raw/papers/X.pdf]]"\nattachments: []\ntags: []\n'
+            'frames: []\ncreated: 2026-01-01\nupdated: 2026-01-01\nstatus: draft'
+        )
+        p = _write_page(
+            self.tmp,
+            'sources',
+            'X.md',
+            src_fm,
+            f'> [!tldr] TL;DR\n> - claim {square(LOC1)}.\n> ^tldr',
+        )
         wiki = self.tmp / '1-wiki'
         ids = {f['check_id'] for f in cw.check_page(path=p, wiki_root=wiki)}
         assert 'citation_bracket_style' not in ids
 
     # --- unlinked_page_mention scans source pages, own topic included -----------
 
-    def test_unlinked_mention_scans_source_pages_including_own_topic(self) -> None:
+    def test_unlinked_mention_scans_source_pages_including_own_topic(
+        self,
+    ) -> None:
         # A source page that names a concept in prose — even its own topic — must be
         # flagged: the concept page is a different file, so it is a genuine
         # cross-reference to link, not a self-link (CLAUDE.md -> Wikilink Format).
-        _write_page(self.tmp, 'sources', 'Houlsby2019.md', _SRC_FM,
-                    '> [!tldr] TL;DR\n> - Adapter tuning inserts small modules into a '
-                    'frozen model.\n> ^tldr')
-        _write_page(self.tmp, 'concepts', 'adapter-tuning.md', _CON_FM,
-                    '> [!idea] Idea\n> - x.\n> ^idea')
+        _write_page(
+            self.tmp,
+            'sources',
+            'Houlsby2019.md',
+            _SRC_FM,
+            '> [!tldr] TL;DR\n> - Adapter tuning inserts small modules into a '
+            'frozen model.\n> ^tldr',
+        )
+        _write_page(
+            self.tmp,
+            'concepts',
+            'adapter-tuning.md',
+            _CON_FM,
+            '> [!idea] Idea\n> - x.\n> ^idea',
+        )
         finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
-        assert any(f['check_id'] == 'unlinked_page_mention'
-                   and 'sources/Houlsby2019.md' in f['file']
-                   and 'adapter-tuning' in f['message'] for f in finds)
+        assert any(
+            f['check_id'] == 'unlinked_page_mention'
+            and 'sources/Houlsby2019.md' in f['file']
+            and 'adapter-tuning' in f['message']
+            for f in finds
+        )
 
-    def test_unlinked_mention_source_page_not_flagged_for_own_stem(self) -> None:
+    def test_unlinked_mention_source_page_not_flagged_for_own_stem(
+        self,
+    ) -> None:
         # The only exemption is a page linking to itself: a source page is never
         # flagged for a plain-text mention of its own stem/alias.
-        _write_page(self.tmp, 'sources', 'adapter-survey.md',
-                    _SRC_FM.replace('"[[0-raw/papers/Houlsby2019.pdf]]"',
-                                    '"[[0-raw/papers/adapter-survey.pdf]]"'),
-                    '> [!tldr] TL;DR\n> - This adapter survey reviews adapter survey '
-                    'methods.\n> ^tldr')
+        _write_page(
+            self.tmp,
+            'sources',
+            'adapter-survey.md',
+            _SRC_FM.replace(
+                '"[[0-raw/papers/Houlsby2019.pdf]]"',
+                '"[[0-raw/papers/adapter-survey.pdf]]"',
+            ),
+            '> [!tldr] TL;DR\n> - This adapter survey reviews adapter survey '
+            'methods.\n> ^tldr',
+        )
         finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
-        assert not any(f['check_id'] == 'unlinked_page_mention'
-                       and 'adapter-survey' in f['message'] for f in finds)
+        assert not any(
+            f['check_id'] == 'unlinked_page_mention'
+            and 'adapter-survey' in f['message']
+            for f in finds
+        )
 
     def test_unlinked_mention_skips_h1_title_line(self) -> None:
         # A concept name appearing only in the source page's H1 paper title is not a
         # linkable reference (you never wikilink an H1) — must not be flagged.
-        _write_page(self.tmp, 'sources', 'AdapterPaper.md',
-                    _SRC_FM.replace('"X"', '"Adapter tuning for NLP"')
-                           .replace('"[[0-raw/papers/Houlsby2019.pdf]]"',
-                                    '"[[0-raw/papers/AdapterPaper.pdf]]"'),
-                    '# Adapter tuning for NLP\n\n> [!tldr] TL;DR\n> - A frozen-backbone '
-                    'method.\n> ^tldr')
-        _write_page(self.tmp, 'concepts', 'adapter-tuning.md', _CON_FM,
-                    '> [!idea] Idea\n> - x.\n> ^idea')
+        _write_page(
+            self.tmp,
+            'sources',
+            'AdapterPaper.md',
+            _SRC_FM.replace('"X"', '"Adapter tuning for NLP"').replace(
+                '"[[0-raw/papers/Houlsby2019.pdf]]"',
+                '"[[0-raw/papers/AdapterPaper.pdf]]"',
+            ),
+            '# Adapter tuning for NLP\n\n> [!tldr] TL;DR\n> - A frozen-backbone '
+            'method.\n> ^tldr',
+        )
+        _write_page(
+            self.tmp,
+            'concepts',
+            'adapter-tuning.md',
+            _CON_FM,
+            '> [!idea] Idea\n> - x.\n> ^idea',
+        )
         finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
-        assert not any(f['check_id'] == 'unlinked_page_mention'
-                       and 'AdapterPaper' in f['file'] for f in finds)
+        assert not any(
+            f['check_id'] == 'unlinked_page_mention'
+            and 'AdapterPaper' in f['file']
+            for f in finds
+        )
 
-    def test_unlinked_mention_still_flags_prose_when_title_also_matches(self) -> None:
+    def test_unlinked_mention_still_flags_prose_when_title_also_matches(
+        self,
+    ) -> None:
         # The H1 skip removes only the title line: a genuine prose mention elsewhere
         # is still flagged.
-        _write_page(self.tmp, 'sources', 'AdapterPaper2.md',
-                    _SRC_FM.replace('"X"', '"Adapter tuning for NLP"')
-                           .replace('"[[0-raw/papers/Houlsby2019.pdf]]"',
-                                    '"[[0-raw/papers/AdapterPaper2.pdf]]"'),
-                    '# Adapter tuning for NLP\n\n> [!tldr] TL;DR\n> - Adapter tuning '
-                    'inserts small modules.\n> ^tldr')
-        _write_page(self.tmp, 'concepts', 'adapter-tuning.md', _CON_FM,
-                    '> [!idea] Idea\n> - x.\n> ^idea')
+        _write_page(
+            self.tmp,
+            'sources',
+            'AdapterPaper2.md',
+            _SRC_FM.replace('"X"', '"Adapter tuning for NLP"').replace(
+                '"[[0-raw/papers/Houlsby2019.pdf]]"',
+                '"[[0-raw/papers/AdapterPaper2.pdf]]"',
+            ),
+            '# Adapter tuning for NLP\n\n> [!tldr] TL;DR\n> - Adapter tuning '
+            'inserts small modules.\n> ^tldr',
+        )
+        _write_page(
+            self.tmp,
+            'concepts',
+            'adapter-tuning.md',
+            _CON_FM,
+            '> [!idea] Idea\n> - x.\n> ^idea',
+        )
         finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
-        assert any(f['check_id'] == 'unlinked_page_mention'
-                   and 'AdapterPaper2' in f['file']
-                   and 'adapter-tuning' in f['message'] for f in finds)
+        assert any(
+            f['check_id'] == 'unlinked_page_mention'
+            and 'AdapterPaper2' in f['file']
+            and 'adapter-tuning' in f['message']
+            for f in finds
+        )
 
-    def test_unlinked_mention_skips_version_continuation_but_keeps_bare(self) -> None:
+    def test_unlinked_mention_skips_version_continuation_but_keeps_bare(
+        self,
+    ) -> None:
         # A page-name form like the `GPT-3` alias must NOT match inside a version
         # suffix (`GPT-3.5`): the `.`-then-alphanumeric continuation is a different
         # model, not a reference to this page. A bare `GPT-3` mention still flags.
-        gpt3_fm = ('type: entity\naliases:\n  - GPT-3\nsources:\n'
-                   '  - "[[1-wiki/sources/Houlsby2019.md|Houlsby2019]]"\n'
-                   'source_count: 1\ntags: []\ncreated: 2026-01-01\n'
-                   'updated: 2026-01-01\nstatus: draft')
-        _write_page(self.tmp, 'entities', 'gpt-3.md', gpt3_fm,
-                    '> [!idea] Idea\n> - x.\n> ^idea')
-        _write_page(self.tmp, 'concepts', 'host-version.md', _CON_FM,
-                    '> [!idea] Idea\n> - Built on GPT-3.5 and GPT-3.5-Turbo only.\n'
-                    '> ^idea')
-        _write_page(self.tmp, 'concepts', 'host-bare.md', _CON_FM,
-                    '> [!idea] Idea\n> - Built on the GPT-3 model directly.\n> ^idea')
+        gpt3_fm = (
+            'type: entity\naliases:\n  - GPT-3\nsources:\n'
+            '  - "[[1-wiki/sources/Houlsby2019.md|Houlsby2019]]"\n'
+            'source_count: 1\ntags: []\ncreated: 2026-01-01\n'
+            'updated: 2026-01-01\nstatus: draft'
+        )
+        _write_page(
+            self.tmp,
+            'entities',
+            'gpt-3.md',
+            gpt3_fm,
+            '> [!idea] Idea\n> - x.\n> ^idea',
+        )
+        _write_page(
+            self.tmp,
+            'concepts',
+            'host-version.md',
+            _CON_FM,
+            '> [!idea] Idea\n> - Built on GPT-3.5 and GPT-3.5-Turbo only.\n'
+            '> ^idea',
+        )
+        _write_page(
+            self.tmp,
+            'concepts',
+            'host-bare.md',
+            _CON_FM,
+            '> [!idea] Idea\n> - Built on the GPT-3 model directly.\n> ^idea',
+        )
         finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
         # No gpt-3 finding from the version-only page.
-        assert not any(f['check_id'] == 'unlinked_page_mention'
-                       and 'host-version' in f['file']
-                       and 'gpt-3' in f['message'] for f in finds)
+        assert not any(
+            f['check_id'] == 'unlinked_page_mention'
+            and 'host-version' in f['file']
+            and 'gpt-3' in f['message']
+            for f in finds
+        )
         # Bare GPT-3 reference still flags.
-        assert any(f['check_id'] == 'unlinked_page_mention'
-                   and 'host-bare' in f['file']
-                   and 'gpt-3' in f['message'] for f in finds)
+        assert any(
+            f['check_id'] == 'unlinked_page_mention'
+            and 'host-bare' in f['file']
+            and 'gpt-3' in f['message']
+            for f in finds
+        )
 
     # --- unlinked_page_mention verified-ignore list ------------------------------
     # Genuine-vs-generic is a judgement (CLAUDE.md -> Wikilink Format). audit makes
@@ -493,80 +654,166 @@ class TestCheckWiki(unittest.TestCase):
 
     def _ignore(self, *entries: str) -> list[dict[str, object]]:
         f = self.tmp / 'ignore.md'
-        f.write_text('# x\n\n## verified-ignore\n'
-                     + ''.join(f'- {e}\n' for e in entries), encoding='utf-8')
+        f.write_text(
+            '# x\n\n## verified-ignore\n'
+            + ''.join(f'- {e}\n' for e in entries),
+            encoding='utf-8',
+        )
         return cw._load_unlinked_mention_ignore(f)
 
-    def test_unlinked_mention_verified_ignore_suppresses_generic_occurrence(self) -> None:
-        _write_page(self.tmp, 'concepts', 'adapter-tuning.md', _CON_FM,
-                    '> [!idea] Idea\n> - x.\n> ^idea')
-        _write_page(self.tmp, 'concepts', 'host.md', _CON_FM,
-                    '> [!idea] Idea\n> - Loosely, any adapter tuning story counts.\n'
-                    '> ^idea')
-        ign = self._ignore('1-wiki/concepts/host.md :: adapter-tuning :: '
-                           'any adapter tuning story')
+    def test_unlinked_mention_verified_ignore_suppresses_generic_occurrence(
+        self,
+    ) -> None:
+        _write_page(
+            self.tmp,
+            'concepts',
+            'adapter-tuning.md',
+            _CON_FM,
+            '> [!idea] Idea\n> - x.\n> ^idea',
+        )
+        _write_page(
+            self.tmp,
+            'concepts',
+            'host.md',
+            _CON_FM,
+            '> [!idea] Idea\n> - Loosely, any adapter tuning story counts.\n'
+            '> ^idea',
+        )
+        ign = self._ignore(
+            '1-wiki/concepts/host.md :: adapter-tuning :: '
+            'any adapter tuning story'
+        )
         with mock.patch.object(cw, 'UNLINKED_MENTION_IGNORE', ign):
-            finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
-        assert not any(f['check_id'] == 'unlinked_page_mention'
-                       and 'host.md' in f['file'] for f in finds)
+            finds = cw.check_unlinked_page_mentions(
+                wiki_root=self.tmp / '1-wiki'
+            )
+        assert not any(
+            f['check_id'] == 'unlinked_page_mention' and 'host.md' in f['file']
+            for f in finds
+        )
 
-    def test_unlinked_mention_verified_ignore_leaves_other_occurrences(self) -> None:
+    def test_unlinked_mention_verified_ignore_leaves_other_occurrences(
+        self,
+    ) -> None:
         # An entry suppresses ONE occurrence context, not the whole page: a second,
         # genuine mention of the same target still flags.
-        _write_page(self.tmp, 'concepts', 'adapter-tuning.md', _CON_FM,
-                    '> [!idea] Idea\n> - x.\n> ^idea')
-        _write_page(self.tmp, 'concepts', 'host2.md', _CON_FM,
-                    '> [!idea] Idea\n> - Loosely, any adapter tuning story counts.\n'
-                    '> - Adapter tuning inserts small modules into a frozen model.\n'
-                    '> ^idea')
-        ign = self._ignore('1-wiki/concepts/host2.md :: adapter-tuning :: '
-                           'any adapter tuning story')
+        _write_page(
+            self.tmp,
+            'concepts',
+            'adapter-tuning.md',
+            _CON_FM,
+            '> [!idea] Idea\n> - x.\n> ^idea',
+        )
+        _write_page(
+            self.tmp,
+            'concepts',
+            'host2.md',
+            _CON_FM,
+            '> [!idea] Idea\n> - Loosely, any adapter tuning story counts.\n'
+            '> - Adapter tuning inserts small modules into a frozen model.\n'
+            '> ^idea',
+        )
+        ign = self._ignore(
+            '1-wiki/concepts/host2.md :: adapter-tuning :: '
+            'any adapter tuning story'
+        )
         with mock.patch.object(cw, 'UNLINKED_MENTION_IGNORE', ign):
-            finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
-        hits = [f for f in finds if f['check_id'] == 'unlinked_page_mention'
-                and 'host2.md' in f['file']]
+            finds = cw.check_unlinked_page_mentions(
+                wiki_root=self.tmp / '1-wiki'
+            )
+        hits = [
+            f
+            for f in finds
+            if f['check_id'] == 'unlinked_page_mention'
+            and 'host2.md' in f['file']
+        ]
         assert len(hits) == 1
-        assert '1×' in hits[0]['message']  # the generic one is gone, the genuine one stays
+        assert (
+            '1×' in hits[0]['message']
+        )  # the generic one is gone, the genuine one stays
 
     def test_unlinked_mention_verified_ignore_is_page_scoped(self) -> None:
         # The same wording on a DIFFERENT page is judged again — an entry recorded
         # for one page never silently suppresses a genuine reference on another.
-        _write_page(self.tmp, 'concepts', 'adapter-tuning.md', _CON_FM,
-                    '> [!idea] Idea\n> - x.\n> ^idea')
-        _write_page(self.tmp, 'concepts', 'other.md', _CON_FM,
-                    '> [!idea] Idea\n> - Loosely, any adapter tuning story counts.\n'
-                    '> ^idea')
-        ign = self._ignore('1-wiki/concepts/host.md :: adapter-tuning :: '
-                           'any adapter tuning story')
+        _write_page(
+            self.tmp,
+            'concepts',
+            'adapter-tuning.md',
+            _CON_FM,
+            '> [!idea] Idea\n> - x.\n> ^idea',
+        )
+        _write_page(
+            self.tmp,
+            'concepts',
+            'other.md',
+            _CON_FM,
+            '> [!idea] Idea\n> - Loosely, any adapter tuning story counts.\n'
+            '> ^idea',
+        )
+        ign = self._ignore(
+            '1-wiki/concepts/host.md :: adapter-tuning :: '
+            'any adapter tuning story'
+        )
         with mock.patch.object(cw, 'UNLINKED_MENTION_IGNORE', ign):
-            finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
-        assert any(f['check_id'] == 'unlinked_page_mention'
-                   and 'other.md' in f['file'] for f in finds)
+            finds = cw.check_unlinked_page_mentions(
+                wiki_root=self.tmp / '1-wiki'
+            )
+        assert any(
+            f['check_id'] == 'unlinked_page_mention'
+            and 'other.md' in f['file']
+            for f in finds
+        )
 
-    def test_unlinked_mention_verified_ignore_reflags_when_phrase_reworded(self) -> None:
+    def test_unlinked_mention_verified_ignore_reflags_when_phrase_reworded(
+        self,
+    ) -> None:
         # Self-invalidating: the page's wording changed, so the entry no longer
         # matches and the mention flags again rather than riding on a stale judgement.
-        _write_page(self.tmp, 'concepts', 'adapter-tuning.md', _CON_FM,
-                    '> [!idea] Idea\n> - x.\n> ^idea')
-        _write_page(self.tmp, 'concepts', 'host3.md', _CON_FM,
-                    '> [!idea] Idea\n> - Concretely, this adapter tuning result holds.\n'
-                    '> ^idea')
-        ign = self._ignore('1-wiki/concepts/host3.md :: adapter-tuning :: '
-                           'any adapter tuning story')
+        _write_page(
+            self.tmp,
+            'concepts',
+            'adapter-tuning.md',
+            _CON_FM,
+            '> [!idea] Idea\n> - x.\n> ^idea',
+        )
+        _write_page(
+            self.tmp,
+            'concepts',
+            'host3.md',
+            _CON_FM,
+            '> [!idea] Idea\n> - Concretely, this adapter tuning result holds.\n'
+            '> ^idea',
+        )
+        ign = self._ignore(
+            '1-wiki/concepts/host3.md :: adapter-tuning :: '
+            'any adapter tuning story'
+        )
         with mock.patch.object(cw, 'UNLINKED_MENTION_IGNORE', ign):
-            finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
-        assert any(f['check_id'] == 'unlinked_page_mention'
-                   and 'host3.md' in f['file'] for f in finds)
+            finds = cw.check_unlinked_page_mentions(
+                wiki_root=self.tmp / '1-wiki'
+            )
+        assert any(
+            f['check_id'] == 'unlinked_page_mention'
+            and 'host3.md' in f['file']
+            for f in finds
+        )
 
-    def test_unlinked_mention_ignore_loader_parses_and_skips_malformed(self) -> None:
-        ign = self._ignore('1-wiki/concepts/host.md :: adapter-tuning :: a b c',
-                           'missing the target field',
-                           '1-wiki/concepts/host.md ::  :: empty target')
+    def test_unlinked_mention_ignore_loader_parses_and_skips_malformed(
+        self,
+    ) -> None:
+        ign = self._ignore(
+            '1-wiki/concepts/host.md :: adapter-tuning :: a b c',
+            'missing the target field',
+            '1-wiki/concepts/host.md ::  :: empty target',
+        )
         assert [(e['page'], e['target'], e['phrase']) for e in ign] == [
-            ('1-wiki/concepts/host.md', 'adapter-tuning', 'a b c')]
+            ('1-wiki/concepts/host.md', 'adapter-tuning', 'a b c')
+        ]
         assert ign[0]['line'] == 4  # reported at its own line in the data file
 
-    def test_unlinked_mention_ignore_loader_missing_file_is_empty_not_fatal(self) -> None:
+    def test_unlinked_mention_ignore_loader_missing_file_is_empty_not_fatal(
+        self,
+    ) -> None:
         # A missing file leaves the check fully unsuppressed — the safe direction.
         assert cw._load_unlinked_mention_ignore(self.tmp / 'nope.md') == []
 
@@ -589,55 +836,108 @@ class TestCheckWiki(unittest.TestCase):
     def test_stale_mention_ignore_flags_reworded_phrase(self) -> None:
         # The page still mentions the target, but not inside the recorded phrase:
         # the judgement no longer binds, so the entry is reported as dead.
-        _write_page(self.tmp, 'concepts', 'adapter-tuning.md', _CON_FM,
-                    '> [!idea] Idea\n> - x.\n> ^idea')
-        _write_page(self.tmp, 'concepts', 'host4.md', _CON_FM,
-                    '> [!idea] Idea\n> - Concretely, this adapter tuning result holds.\n'
-                    '> ^idea')
-        ign = self._ignore('1-wiki/concepts/host4.md :: adapter-tuning :: '
-                           'any adapter tuning story')
+        _write_page(
+            self.tmp,
+            'concepts',
+            'adapter-tuning.md',
+            _CON_FM,
+            '> [!idea] Idea\n> - x.\n> ^idea',
+        )
+        _write_page(
+            self.tmp,
+            'concepts',
+            'host4.md',
+            _CON_FM,
+            '> [!idea] Idea\n> - Concretely, this adapter tuning result holds.\n'
+            '> ^idea',
+        )
+        ign = self._ignore(
+            '1-wiki/concepts/host4.md :: adapter-tuning :: '
+            'any adapter tuning story'
+        )
         with mock.patch.object(cw, 'UNLINKED_MENTION_IGNORE', ign):
-            finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
+            finds = cw.check_unlinked_page_mentions(
+                wiki_root=self.tmp / '1-wiki'
+            )
         stale = [f for f in finds if f['check_id'] == 'stale_mention_ignore']
         assert len(stale) == 1
         assert 'falls inside the recorded phrase' in stale[0]['message']
 
     def test_stale_mention_ignore_flags_missing_host_page(self) -> None:
-        _write_page(self.tmp, 'concepts', 'adapter-tuning.md', _CON_FM,
-                    '> [!idea] Idea\n> - x.\n> ^idea')
-        ign = self._ignore('1-wiki/concepts/gone.md :: adapter-tuning :: '
-                           'any adapter tuning story')
+        _write_page(
+            self.tmp,
+            'concepts',
+            'adapter-tuning.md',
+            _CON_FM,
+            '> [!idea] Idea\n> - x.\n> ^idea',
+        )
+        ign = self._ignore(
+            '1-wiki/concepts/gone.md :: adapter-tuning :: '
+            'any adapter tuning story'
+        )
         with mock.patch.object(cw, 'UNLINKED_MENTION_IGNORE', ign):
-            finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
+            finds = cw.check_unlinked_page_mentions(
+                wiki_root=self.tmp / '1-wiki'
+            )
         stale = [f for f in finds if f['check_id'] == 'stale_mention_ignore']
         assert len(stale) == 1
         assert 'no longer exists' in stale[0]['message']
 
     def test_stale_mention_ignore_flags_missing_target_page(self) -> None:
-        _write_page(self.tmp, 'concepts', 'adapter-tuning.md', _CON_FM,
-                    '> [!idea] Idea\n> - x.\n> ^idea')
-        _write_page(self.tmp, 'concepts', 'host5.md', _CON_FM,
-                    '> [!idea] Idea\n> - Loosely, any adapter tuning story counts.\n'
-                    '> ^idea')
-        ign = self._ignore('1-wiki/concepts/host5.md :: dropped-concept :: '
-                           'any adapter tuning story')
+        _write_page(
+            self.tmp,
+            'concepts',
+            'adapter-tuning.md',
+            _CON_FM,
+            '> [!idea] Idea\n> - x.\n> ^idea',
+        )
+        _write_page(
+            self.tmp,
+            'concepts',
+            'host5.md',
+            _CON_FM,
+            '> [!idea] Idea\n> - Loosely, any adapter tuning story counts.\n'
+            '> ^idea',
+        )
+        ign = self._ignore(
+            '1-wiki/concepts/host5.md :: dropped-concept :: '
+            'any adapter tuning story'
+        )
         with mock.patch.object(cw, 'UNLINKED_MENTION_IGNORE', ign):
-            finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
+            finds = cw.check_unlinked_page_mentions(
+                wiki_root=self.tmp / '1-wiki'
+            )
         stale = [f for f in finds if f['check_id'] == 'stale_mention_ignore']
         assert len(stale) == 1
         assert 'dropped-concept' in stale[0]['message']
 
-    def test_stale_mention_ignore_silent_when_entry_still_suppresses(self) -> None:
+    def test_stale_mention_ignore_silent_when_entry_still_suppresses(
+        self,
+    ) -> None:
         # A live entry — one doing real work — is never reported as stale.
-        _write_page(self.tmp, 'concepts', 'adapter-tuning.md', _CON_FM,
-                    '> [!idea] Idea\n> - x.\n> ^idea')
-        _write_page(self.tmp, 'concepts', 'host6.md', _CON_FM,
-                    '> [!idea] Idea\n> - Loosely, any adapter tuning story counts.\n'
-                    '> ^idea')
-        ign = self._ignore('1-wiki/concepts/host6.md :: adapter-tuning :: '
-                           'any adapter tuning story')
+        _write_page(
+            self.tmp,
+            'concepts',
+            'adapter-tuning.md',
+            _CON_FM,
+            '> [!idea] Idea\n> - x.\n> ^idea',
+        )
+        _write_page(
+            self.tmp,
+            'concepts',
+            'host6.md',
+            _CON_FM,
+            '> [!idea] Idea\n> - Loosely, any adapter tuning story counts.\n'
+            '> ^idea',
+        )
+        ign = self._ignore(
+            '1-wiki/concepts/host6.md :: adapter-tuning :: '
+            'any adapter tuning story'
+        )
         with mock.patch.object(cw, 'UNLINKED_MENTION_IGNORE', ign):
-            finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
+            finds = cw.check_unlinked_page_mentions(
+                wiki_root=self.tmp / '1-wiki'
+            )
         assert not any(f['check_id'] == 'stale_mention_ignore' for f in finds)
 
     # --- callout block IDs (kebab-case of the callout title) ---------------------
@@ -650,14 +950,23 @@ class TestCheckWiki(unittest.TestCase):
 
     def test_expected_block_id_overrides_abbreviated_types(self) -> None:
         assert cw.expected_block_id('why') == 'why-it-matters'
-        assert cw.expected_block_id('disconfirming') == 'disconfirming-evidence'
-        assert (cw.expected_block_id('what-would-change-this')
-                == 'what-would-change-this-answer')
+        assert (
+            cw.expected_block_id('disconfirming') == 'disconfirming-evidence'
+        )
+        assert (
+            cw.expected_block_id('what-would-change-this')
+            == 'what-would-change-this-answer'
+        )
 
     def test_correct_overridden_block_id_not_flagged(self) -> None:
-        body = ('> [!idea] Idea\n> - x.\n> ^idea\n\n'
-                '> [!why] Why It Matters\n> - x.\n> ^why-it-matters')
-        ids = {f['check_id'] for f in cw.check_callout_block_ids(body=body, rel='c.md')}
+        body = (
+            '> [!idea] Idea\n> - x.\n> ^idea\n\n'
+            '> [!why] Why It Matters\n> - x.\n> ^why-it-matters'
+        )
+        ids = {
+            f['check_id']
+            for f in cw.check_callout_block_ids(body=body, rel='c.md')
+        }
         assert 'callout_block_id' not in ids
 
     def test_old_unexpanded_block_id_is_flagged(self) -> None:
@@ -676,19 +985,30 @@ class TestCheckWiki(unittest.TestCase):
             if not fp.exists():
                 continue
             for page in sorted(fp.glob('*.md')):
-                findings.extend(f for f in cw.check_page(path=page, wiki_root=WIKI)
-                                if f['check_id'] == 'citation_bracket_style')
+                findings.extend(
+                    f
+                    for f in cw.check_page(path=page, wiki_root=WIKI)
+                    if f['check_id'] == 'citation_bracket_style'
+                )
         assert findings == [], findings
 
     def test_full_run_output_is_deterministic(self) -> None:
-        r1 = subprocess.run([sys.executable, str(SCRIPT), str(WIKI)],
-                            capture_output=True, text=True)
-        r2 = subprocess.run([sys.executable, str(SCRIPT), str(WIKI)],
-                            capture_output=True, text=True)
+        r1 = subprocess.run(
+            [sys.executable, str(SCRIPT), str(WIKI)],
+            capture_output=True,
+            text=True,
+        )
+        r2 = subprocess.run(
+            [sys.executable, str(SCRIPT), str(WIKI)],
+            capture_output=True,
+            text=True,
+        )
         assert r1.stdout == r2.stdout
         # well-formed JSON, and no square-citation findings in the committed wiki
         data = json.loads(r1.stdout)
-        assert not [f for f in data if f['check_id'] == 'citation_bracket_style']
+        assert not [
+            f for f in data if f['check_id'] == 'citation_bracket_style'
+        ]
 
     # --- embed isolation (embed_not_isolated) -----------------------------------
     #
@@ -710,8 +1030,11 @@ class TestCheckWiki(unittest.TestCase):
         assert f['severity'] == 'warning'
 
     def test_list_checks_cli_exposes_embed_not_isolated(self) -> None:
-        r = subprocess.run([sys.executable, str(SCRIPT), '--list-checks'],
-                           capture_output=True, text=True)
+        r = subprocess.run(
+            [sys.executable, str(SCRIPT), '--list-checks'],
+            capture_output=True,
+            text=True,
+        )
         assert r.returncode == 0
         assert json.loads(r.stdout).get('embed_not_isolated') == 'warning'
 
@@ -726,23 +1049,35 @@ class TestCheckWiki(unittest.TestCase):
     def test_embed_missing_blank_below_only(self) -> None:
         f = embed_findings(f'> [!idea] Idea\n> - claim.\n>\n> {EMB}\n> ^idea')
         assert len(f) == 1
-        assert 'below' in f[0]['message'] and 'above and below' not in f[0]['message']
+        assert (
+            'below' in f[0]['message']
+            and 'above and below' not in f[0]['message']
+        )
 
     def test_embed_missing_blank_above_only(self) -> None:
         f = embed_findings(f'> [!idea] Idea\n> - claim.\n> {EMB}\n>\n> ^idea')
         assert len(f) == 1
-        assert 'above' in f[0]['message'] and 'above and below' not in f[0]['message']
+        assert (
+            'above' in f[0]['message']
+            and 'above and below' not in f[0]['message']
+        )
 
     def test_two_unisolated_embeds_get_increasing_line_numbers(self) -> None:
-        body = (f'> [!evidence] Evidence\n> - a.\n> {EMB}\n> - b.\n> {EMB}\n'
-                f'> ^evidence')
+        body = (
+            f'> [!evidence] Evidence\n> - a.\n> {EMB}\n> - b.\n> {EMB}\n'
+            f'> ^evidence'
+        )
         f = embed_findings(body)
         assert len(f) == 2
         assert lineno(f[1]) > lineno(f[0])
 
     def test_embed_line_number_shifts_by_frontmatter_offset(self) -> None:
         body = f'> [!idea] Idea\n> - claim.\n> {EMB}\n> ^idea'
-        assert lineno(embed_findings(body, end=10)[0]) - lineno(embed_findings(body, end=0)[0]) == 10
+        assert (
+            lineno(embed_findings(body, end=10)[0])
+            - lineno(embed_findings(body, end=0)[0])
+            == 10
+        )
 
     # detection: negative cases
 
@@ -757,7 +1092,10 @@ class TestCheckWiki(unittest.TestCase):
 
     def test_embed_mixed_with_prose_on_line_not_flagged(self) -> None:
         # An embed sharing its line with other content is not a standalone embed line.
-        assert embed_findings(f'> [!idea] Idea\n> - see {EMB} here.\n> ^idea') == []
+        assert (
+            embed_findings(f'> [!idea] Idea\n> - see {EMB} here.\n> ^idea')
+            == []
+        )
 
     # auto-fix round-trip
 
@@ -774,15 +1112,25 @@ class TestCheckWiki(unittest.TestCase):
     # integration via check_page
 
     def test_check_page_flags_unisolated_embed(self) -> None:
-        p = _write_page(self.tmp, 'concepts', 'c.md', CONCEPT_FM,
-                        f'> [!idea] Idea\n> - claim.\n> {EMB}\n> ^idea')
+        p = _write_page(
+            self.tmp,
+            'concepts',
+            'c.md',
+            CONCEPT_FM,
+            f'> [!idea] Idea\n> - claim.\n> {EMB}\n> ^idea',
+        )
         wiki = self.tmp / '1-wiki'
         ids = {f['check_id'] for f in cw.check_page(path=p, wiki_root=wiki)}
         assert 'embed_not_isolated' in ids
 
     def test_check_page_does_not_flag_isolated_embed(self) -> None:
-        p = _write_page(self.tmp, 'concepts', 'c.md', CONCEPT_FM,
-                        f'> [!idea] Idea\n> - claim.\n>\n> {EMB}\n>\n> ^idea')
+        p = _write_page(
+            self.tmp,
+            'concepts',
+            'c.md',
+            CONCEPT_FM,
+            f'> [!idea] Idea\n> - claim.\n>\n> {EMB}\n>\n> ^idea',
+        )
         wiki = self.tmp / '1-wiki'
         ids = {f['check_id'] for f in cw.check_page(path=p, wiki_root=wiki)}
         assert 'embed_not_isolated' not in ids
@@ -796,8 +1144,11 @@ class TestCheckWiki(unittest.TestCase):
             if not fp.exists():
                 continue
             for page in sorted(fp.glob('*.md')):
-                findings.extend(f for f in cw.check_page(path=page, wiki_root=WIKI)
-                                if f['check_id'] == 'embed_not_isolated')
+                findings.extend(
+                    f
+                    for f in cw.check_page(path=page, wiki_root=WIKI)
+                    if f['check_id'] == 'embed_not_isolated'
+                )
         assert findings == [], findings
 
     # --- hyphenated open compounds (hyphenated_open_compound) --------------------
@@ -815,80 +1166,137 @@ class TestCheckWiki(unittest.TestCase):
         assert cw.CHECKS.get('hyphenated_open_compound') == 'warning'
 
     def test_hyphen_finding_builder_accepts_the_id(self) -> None:
-        f = cw.finding(check='hyphenated_open_compound', file='x.md', message='m')
+        f = cw.finding(
+            check='hyphenated_open_compound', file='x.md', message='m'
+        )
         assert f['severity'] == 'warning'
 
     def test_hyphen_list_checks_cli_exposes_it(self) -> None:
-        r = subprocess.run([sys.executable, str(SCRIPT), '--list-checks'],
-                           capture_output=True, text=True)
+        r = subprocess.run(
+            [sys.executable, str(SCRIPT), '--list-checks'],
+            capture_output=True,
+            text=True,
+        )
         assert r.returncode == 0
-        assert json.loads(r.stdout).get('hyphenated_open_compound') == 'warning'
+        assert (
+            json.loads(r.stdout).get('hyphenated_open_compound') == 'warning'
+        )
 
     # detection: positive cases (the regex, directly)
 
     def test_regex_flags_each_banned_compound(self) -> None:
-        for tok in ('reinforcement-learning', 'deep-reinforcement-learning',
-                    'machine-learning', 'deep-learning', 'imitation-learning',
-                    'transfer-learning', 'supervised-learning',
-                    'unsupervised-learning', 'self-supervised-learning',
-                    'natural-language', 'language-model', 'language-models'):
+        for tok in (
+            'reinforcement-learning',
+            'deep-reinforcement-learning',
+            'machine-learning',
+            'deep-learning',
+            'imitation-learning',
+            'transfer-learning',
+            'supervised-learning',
+            'unsupervised-learning',
+            'self-supervised-learning',
+            'natural-language',
+            'language-model',
+            'language-models',
+        ):
             m = cw.HYPHENATED_OPEN_COMPOUND.search(f'a {tok} benchmark')
             assert m, f'{tok} should be flagged'
 
     def test_regex_longest_match_wins(self) -> None:
         # deep-reinforcement-learning matches as the whole token, not the
         # reinforcement-learning suffix, so the suggested fix keeps "deep".
-        m = cw.HYPHENATED_OPEN_COMPOUND.search('a deep-reinforcement-learning agent')
+        m = cw.HYPHENATED_OPEN_COMPOUND.search(
+            'a deep-reinforcement-learning agent'
+        )
         assert m.group(1).lower() == 'deep-reinforcement-learning'
-        assert cw.OPEN_COMPOUND_SUGGEST[m.group(1).lower()] == 'deep reinforcement learning'
+        assert (
+            cw.OPEN_COMPOUND_SUGGEST[m.group(1).lower()]
+            == 'deep reinforcement learning'
+        )
         # self-supervised-learning keeps its "self-" prefix hyphenated.
-        m2 = cw.HYPHENATED_OPEN_COMPOUND.search('a self-supervised-learning method')
+        m2 = cw.HYPHENATED_OPEN_COMPOUND.search(
+            'a self-supervised-learning method'
+        )
         assert m2.group(1).lower() == 'self-supervised-learning'
-        assert cw.OPEN_COMPOUND_SUGGEST[m2.group(1).lower()] == 'self-supervised learning'
+        assert (
+            cw.OPEN_COMPOUND_SUGGEST[m2.group(1).lower()]
+            == 'self-supervised learning'
+        )
 
     # detection: negative cases (no false positives)
 
     def test_regex_leaves_open_forms_alone(self) -> None:
-        for s in ('reinforcement learning benchmark', 'natural language description',
-                  'language model agents'):
+        for s in (
+            'reinforcement learning benchmark',
+            'natural language description',
+            'language model agents',
+        ):
             assert not cw.HYPHENATED_OPEN_COMPOUND.search(s), s
 
     def test_regex_does_not_flag_multi_agent_or_foundation_model(self) -> None:
-        for s in ('a multi-agent system', 'the multi-agent-debate page',
-                  'foundation-model agents', 'foundation-model-specific claims'):
+        for s in (
+            'a multi-agent system',
+            'the multi-agent-debate page',
+            'foundation-model agents',
+            'foundation-model-specific claims',
+        ):
             assert not cw.HYPHENATED_OPEN_COMPOUND.search(s), s
 
-    def test_regex_longer_token_guard_spares_natural_language_vs_code(self) -> None:
+    def test_regex_longer_token_guard_spares_natural_language_vs_code(
+        self,
+    ) -> None:
         # the (?!-) guard: natural-language followed by another hyphen is left alone.
-        assert not cw.HYPHENATED_OPEN_COMPOUND.search('the natural-language-vs-code split')
+        assert not cw.HYPHENATED_OPEN_COMPOUND.search(
+            'the natural-language-vs-code split'
+        )
 
     # integration via check_page
 
     def test_check_page_flags_hyphen_on_concept(self) -> None:
-        f = hyphen_findings(self.tmp, 'concepts', 'c.md', CONCEPT_FM,
-                            '> [!idea] Idea\n> - a reinforcement-learning method.\n> ^idea')
+        f = hyphen_findings(
+            self.tmp,
+            'concepts',
+            'c.md',
+            CONCEPT_FM,
+            '> [!idea] Idea\n> - a reinforcement-learning method.\n> ^idea',
+        )
         assert len(f) == 1
         assert 'reinforcement learning' in f[0]['fix_hint']
 
     def test_check_page_flags_hyphen_on_source_page_too(self) -> None:
         # Unlike the citation checks, this one is NOT exempt for source pages —
         # the over-hyphenation appeared on source pages, so they are scanned.
-        f = hyphen_findings(self.tmp, 'sources', 'X.md', SOURCE_FM,
-                            '> [!tldr] TL;DR\n> - a deep-learning pipeline.\n> ^tldr')
+        f = hyphen_findings(
+            self.tmp,
+            'sources',
+            'X.md',
+            SOURCE_FM,
+            '> [!tldr] TL;DR\n> - a deep-learning pipeline.\n> ^tldr',
+        )
         assert len(f) == 1
         assert 'deep learning' in f[0]['fix_hint']
 
     def test_check_page_masks_hyphen_inside_wikilink_and_code(self) -> None:
         # A hyphenated token inside a [[wikilink]] target/display or inline `code`
         # is masked, not flagged — only prose hyphenation is drift.
-        body = ('> [!idea] Idea\n'
-                '> - see [[1-wiki/concepts/reinforcement-learning.md|reinforcement-learning]] '
-                'and `reinforcement-learning` literally.\n> ^idea')
-        assert hyphen_findings(self.tmp, 'concepts', 'c.md', CONCEPT_FM, body) == []
+        body = (
+            '> [!idea] Idea\n'
+            '> - see [[1-wiki/concepts/reinforcement-learning.md|reinforcement-learning]] '
+            'and `reinforcement-learning` literally.\n> ^idea'
+        )
+        assert (
+            hyphen_findings(self.tmp, 'concepts', 'c.md', CONCEPT_FM, body)
+            == []
+        )
 
     def test_check_page_does_not_flag_open_form(self) -> None:
-        f = hyphen_findings(self.tmp, 'concepts', 'c.md', CONCEPT_FM,
-                            '> [!idea] Idea\n> - a reinforcement learning method.\n> ^idea')
+        f = hyphen_findings(
+            self.tmp,
+            'concepts',
+            'c.md',
+            CONCEPT_FM,
+            '> [!idea] Idea\n> - a reinforcement learning method.\n> ^idea',
+        )
         assert f == []
 
     # real-repo anchor
@@ -900,8 +1308,11 @@ class TestCheckWiki(unittest.TestCase):
             if not fp.exists():
                 continue
             for page in sorted(fp.glob('*.md')):
-                findings.extend(f for f in cw.check_page(path=page, wiki_root=WIKI)
-                                if f['check_id'] == 'hyphenated_open_compound')
+                findings.extend(
+                    f
+                    for f in cw.check_page(path=page, wiki_root=WIKI)
+                    if f['check_id'] == 'hyphenated_open_compound'
+                )
         assert findings == [], findings
 
     def test_real_wiki_has_no_hyphenated_open_compound_noun(self) -> None:
@@ -911,15 +1322,19 @@ class TestCheckWiki(unittest.TestCase):
             if not fp.exists():
                 continue
             for page in sorted(fp.glob('*.md')):
-                findings.extend(f for f in cw.check_page(path=page, wiki_root=WIKI)
-                                if f['check_id'] == 'hyphenated_open_compound_noun')
+                findings.extend(
+                    f
+                    for f in cw.check_page(path=page, wiki_root=WIKI)
+                    if f['check_id'] == 'hyphenated_open_compound_noun'
+                )
         assert findings == [], findings
 
     def test_unverified_marker_regex_identical_to_body_hash(self) -> None:
         assert cw.UNVERIFIED_MARKER_RE.pattern == bh._UNVERIFIED_RE.pattern, (
             'UNVERIFIED_MARKER_RE (check_wiki, counts markers) and _UNVERIFIED_RE '
             '(body_hash, masks them from the hash) must stay byte-identical, or '
-            'claim-counting and hash-masking silently disagree.')
+            'claim-counting and hash-masking silently disagree.'
+        )
 
     # --- source-page locator completeness (source_locator_incomplete) ------------
     #
@@ -936,15 +1351,22 @@ class TestCheckWiki(unittest.TestCase):
         assert cw.CHECKS.get('source_locator_incomplete') == 'warning'
 
     def test_source_locator_finding_builder_accepts_the_id(self) -> None:
-        f = cw.finding(check='source_locator_incomplete', file='x.md', message='m')
+        f = cw.finding(
+            check='source_locator_incomplete', file='x.md', message='m'
+        )
         assert f['check_id'] == 'source_locator_incomplete'
         assert f['severity'] == 'warning'
 
     def test_source_locator_list_checks_cli_exposes_it(self) -> None:
-        r = subprocess.run([sys.executable, str(SCRIPT), '--list-checks'],
-                           capture_output=True, text=True)
+        r = subprocess.run(
+            [sys.executable, str(SCRIPT), '--list-checks'],
+            capture_output=True,
+            text=True,
+        )
         assert r.returncode == 0
-        assert json.loads(r.stdout).get('source_locator_incomplete') == 'warning'
+        assert (
+            json.loads(r.stdout).get('source_locator_incomplete') == 'warning'
+        )
 
     # detection: positive cases (anchor and page NOT together inside the link)
 
@@ -961,7 +1383,11 @@ class TestCheckWiki(unittest.TestCase):
 
     def test_source_locator_line_number_shifts_by_offset(self) -> None:
         body = f'> - a claim ({LOC_PAGE_ONLY}).'
-        assert lineno(loc_findings(body, end=10)[0]) - lineno(loc_findings(body, end=0)[0]) == 10
+        assert (
+            lineno(loc_findings(body, end=10)[0])
+            - lineno(loc_findings(body, end=0)[0])
+            == 10
+        )
 
     # detection: negative cases
 
@@ -972,8 +1398,20 @@ class TestCheckWiki(unittest.TestCase):
         # Structural (sec./app./ch.), float (fig./tab./eq.), and theorem-environment
         # (def./thm./lem./prop./cor./alg.) anchors are all valid (CLAUDE.md -> Source
         # Support And Verification); a page paired with any of them is complete.
-        for disp in ('sec. 4', 'app. C', 'ch. 2', 'fig. 4', 'tab. 8', 'eq. 3',
-                     'def. 1', 'thm. 3.1', 'lem. 4.2', 'prop. 5', 'cor. 3.3', 'alg. 2'):
+        for disp in (
+            'sec. 4',
+            'app. C',
+            'ch. 2',
+            'fig. 4',
+            'tab. 8',
+            'eq. 3',
+            'def. 1',
+            'thm. 3.1',
+            'lem. 4.2',
+            'prop. 5',
+            'cor. 3.3',
+            'alg. 2',
+        ):
             link = f'[[0-raw/papers/X.pdf#page=5|{disp}, p. 5]]'
             assert loc_findings(f'> - claim ({link}).') == [], disp
 
@@ -981,48 +1419,107 @@ class TestCheckWiki(unittest.TestCase):
         # The front-matter `abstract` is a valid anchor (CLAUDE.md -> Source Support
         # And Verification). Abstract-drawn content is cited `abstract, p. 1`, never
         # relabelled `sec. 1` (on most papers sec. 1 is not on the abstract's page).
-        assert loc_findings('> - a claim ([[0-raw/papers/X.pdf#page=1|abstract, p. 1]]).') == []
+        assert (
+            loc_findings(
+                '> - a claim ([[0-raw/papers/X.pdf#page=1|abstract, p. 1]]).'
+            )
+            == []
+        )
         # case-insensitive, and only as the anchor token — `p. 1` alone still fails.
-        assert loc_findings('> - a claim ([[0-raw/papers/X.pdf#page=1|Abstract, p. 1]]).') == []
-        assert len(loc_findings('> - a claim ([[0-raw/papers/X.pdf#page=1|p. 1]]).')) == 1
+        assert (
+            loc_findings(
+                '> - a claim ([[0-raw/papers/X.pdf#page=1|Abstract, p. 1]]).'
+            )
+            == []
+        )
+        assert (
+            len(
+                loc_findings(
+                    '> - a claim ([[0-raw/papers/X.pdf#page=1|p. 1]]).'
+                )
+            )
+            == 1
+        )
 
     def test_source_locator_unpaginated_appendix_anchor_alone_ok(self) -> None:
         # The unpaginated-supplement exemption (CLAUDE.md -> Source Support And
         # Verification): a published appendix often carries no printed page, so an
         # `app.`-anchored display cites the anchor alone rather than fabricating a
         # `p. M`. The exemption is `app.`-only and does not widen the anchor set.
-        assert loc_findings('> - a claim ([[0-raw/papers/X.pdf#page=16|app. D.1, tab. 8]]).') == []
-        assert loc_findings('> - a claim ([[0-raw/papers/X.pdf#page=16|app. C]]).') == []
+        assert (
+            loc_findings(
+                '> - a claim ([[0-raw/papers/X.pdf#page=16|app. D.1, tab. 8]]).'
+            )
+            == []
+        )
+        assert (
+            loc_findings(
+                '> - a claim ([[0-raw/papers/X.pdf#page=16|app. C]]).'
+            )
+            == []
+        )
         # a paginated appendix keeps its page; the exemption does not require dropping it
-        assert loc_findings('> - a claim ([[0-raw/papers/X.pdf#page=16|app. C, p. 4186]]).') == []
+        assert (
+            loc_findings(
+                '> - a claim ([[0-raw/papers/X.pdf#page=16|app. C, p. 4186]]).'
+            )
+            == []
+        )
         # …and no other anchor kind may stand alone (theorem environments included)
-        for disp in ('sec. 4', 'ch. 2', 'fig. 4', 'tab. 8', 'eq. 3', 'abstract',
-                     'def. 1', 'thm. 3.1', 'lem. 4.2', 'prop. 5', 'cor. 3.3', 'alg. 2'):
+        for disp in (
+            'sec. 4',
+            'ch. 2',
+            'fig. 4',
+            'tab. 8',
+            'eq. 3',
+            'abstract',
+            'def. 1',
+            'thm. 3.1',
+            'lem. 4.2',
+            'prop. 5',
+            'cor. 3.3',
+            'alg. 2',
+        ):
             link = f'[[0-raw/papers/X.pdf#page=5|{disp}]]'
             assert len(loc_findings(f'> - claim ({link}).')) == 1, disp
 
-    def test_citation_locator_unpaginated_appendix_anchor_alone_ok(self) -> None:
+    def test_citation_locator_unpaginated_appendix_anchor_alone_ok(
+        self,
+    ) -> None:
         # The concept/entity/synthesis counterpart: both checks share
         # locator_display_complete, so the exemption cannot drift between them.
         body = f'> - claim {SRC} ([[0-raw/papers/X.pdf#page=16|app. D.1, tab. 8]]).'
-        f = cw.check_citation_form(body=body, rel='1-wiki/concepts/c.md', end=0)
-        assert [x['check_id'] for x in f if x['check_id'] == 'citation_locator_incomplete'] == []
+        f = cw.check_citation_form(
+            body=body, rel='1-wiki/concepts/c.md', end=0
+        )
+        assert [
+            x['check_id']
+            for x in f
+            if x['check_id'] == 'citation_locator_incomplete'
+        ] == []
         bare = f'> - claim {SRC} ([[0-raw/papers/X.pdf#page=16|sec. 4]]).'
-        f = cw.check_citation_form(body=bare, rel='1-wiki/concepts/c.md', end=0)
+        f = cw.check_citation_form(
+            body=bare, rel='1-wiki/concepts/c.md', end=0
+        )
         assert 'citation_locator_incomplete' in {x['check_id'] for x in f}
 
     def test_source_locator_inside_inline_code_is_masked(self) -> None:
         assert loc_findings(f'> - literally `{LOC_PAGE_ONLY}` in code.') == []
 
     def test_source_locator_inside_sources_callout_is_masked(self) -> None:
-        body = (f'> [!sources] Sources\n> - {LOC_PAGE_ONLY}\n> ^sources')
+        body = f'> [!sources] Sources\n> - {LOC_PAGE_ONLY}\n> ^sources'
         assert loc_findings(body) == []
 
     # integration via check_page
 
     def test_check_page_flags_source_locator_on_source(self) -> None:
-        p = _write_page(self.tmp, 'sources', 'X.md', SOURCE_FM,
-                        f'> [!tldr] TL;DR\n> - a claim ({LOC_PAGE_ONLY}).\n> ^tldr')
+        p = _write_page(
+            self.tmp,
+            'sources',
+            'X.md',
+            SOURCE_FM,
+            f'> [!tldr] TL;DR\n> - a claim ({LOC_PAGE_ONLY}).\n> ^tldr',
+        )
         wiki = self.tmp / '1-wiki'
         ids = {f['check_id'] for f in cw.check_page(path=p, wiki_root=wiki)}
         assert 'source_locator_incomplete' in ids
@@ -1030,8 +1527,13 @@ class TestCheckWiki(unittest.TestCase):
     def test_check_page_does_not_flag_source_locator_on_concept(self) -> None:
         # Concept pages run citation_locator_incomplete instead; the source-page
         # check must not run on them.
-        p = _write_page(self.tmp, 'concepts', 'c.md', CONCEPT_FM,
-                        f'> [!idea] Idea\n> - claim {SRC} ({LOC_PAGE_ONLY}).\n> ^idea')
+        p = _write_page(
+            self.tmp,
+            'concepts',
+            'c.md',
+            CONCEPT_FM,
+            f'> [!idea] Idea\n> - claim {SRC} ({LOC_PAGE_ONLY}).\n> ^idea',
+        )
         wiki = self.tmp / '1-wiki'
         ids = {f['check_id'] for f in cw.check_page(path=p, wiki_root=wiki)}
         assert 'source_locator_incomplete' not in ids
@@ -1046,47 +1548,94 @@ class TestCheckWiki(unittest.TestCase):
 
     def test_diffguard_abstract_to_sec_is_flagged(self) -> None:
         # The exact bug: abstract-drawn content relabelled `sec. 1` on a verified page.
-        f = dg(f'> - c ([[{DG}#page=1|sec. 1, p. 1]]).',
-               f'> - c ([[{DG}#page=1|abstract, p. 1]]).')
+        f = dg(
+            f'> - c ([[{DG}#page=1|sec. 1, p. 1]]).',
+            f'> - c ([[{DG}#page=1|abstract, p. 1]]).',
+        )
         assert len(f) == 1 and f[0]['check_id'] == 'verified_anchor_unaudited'
 
     def test_diffguard_page_only_to_anchor_is_flagged(self) -> None:
-        assert len(dg(f'> - c ([[{DG}#page=13|sec. 4.2, p. 13]]).',
-                      f'> - c ([[{DG}#page=13|p. 13]]).')) == 1
+        assert (
+            len(
+                dg(
+                    f'> - c ([[{DG}#page=13|sec. 4.2, p. 13]]).',
+                    f'> - c ([[{DG}#page=13|p. 13]]).',
+                )
+            )
+            == 1
+        )
 
     def test_diffguard_anchor_changed_same_page_is_flagged(self) -> None:
-        assert len(dg(f'> - c ([[{DG}#page=5|sec. 4, p. 5]]).',
-                      f'> - c ([[{DG}#page=5|sec. 3, p. 5]]).')) == 1
+        assert (
+            len(
+                dg(
+                    f'> - c ([[{DG}#page=5|sec. 4, p. 5]]).',
+                    f'> - c ([[{DG}#page=5|sec. 3, p. 5]]).',
+                )
+            )
+            == 1
+        )
 
     def test_diffguard_relocation_is_not_flagged(self) -> None:
         # `sec. 3.2` existed (outside the link) at HEAD — repositioning it inside is
         # claim-neutral, not a section change.
-        assert dg(f'> - c ([[{DG}#page=9|sec. 3.2, p. 9]]).',
-                  f'> - c (sec. 3.2, [[{DG}#page=9|p. 9]]).') == []
+        assert (
+            dg(
+                f'> - c ([[{DG}#page=9|sec. 3.2, p. 9]]).',
+                f'> - c (sec. 3.2, [[{DG}#page=9|p. 9]]).',
+            )
+            == []
+        )
 
     def test_diffguard_unchanged_is_not_flagged(self) -> None:
         line = f'> - c ([[{DG}#page=5|sec. 3, p. 5]]).'
         assert dg(line, line) == []
 
     def test_diffguard_skips_non_verified_page(self) -> None:
-        assert dg(f'> - c ([[{DG}#page=1|sec. 1, p. 1]]).',
-                  f'> - c ([[{DG}#page=1|abstract, p. 1]]).', status='draft') == []
+        assert (
+            dg(
+                f'> - c ([[{DG}#page=1|sec. 1, p. 1]]).',
+                f'> - c ([[{DG}#page=1|abstract, p. 1]]).',
+                status='draft',
+            )
+            == []
+        )
 
     def test_diffguard_promotion_from_draft_head_is_not_flagged(self) -> None:
         # A draft->verified promotion that adds a citation anchor is the verification
         # event, not a self-re-stamp: exempt when the page was NOT verified at HEAD.
-        assert dg(f'> - c ([[{DG}#page=1|sec. 1, p. 1]]).',
-                  f'> - c ([[{DG}#page=1|p. 1]]).', head_status='draft') == []
+        assert (
+            dg(
+                f'> - c ([[{DG}#page=1|sec. 1, p. 1]]).',
+                f'> - c ([[{DG}#page=1|p. 1]]).',
+                head_status='draft',
+            )
+            == []
+        )
 
-    def test_diffguard_anchor_change_still_flagged_when_verified_at_head(self) -> None:
+    def test_diffguard_anchor_change_still_flagged_when_verified_at_head(
+        self,
+    ) -> None:
         # The genuine abuse still fires: verified at HEAD, stayed verified, anchor changed.
-        assert len(dg(f'> - c ([[{DG}#page=1|sec. 1, p. 1]]).',
-                      f'> - c ([[{DG}#page=1|abstract, p. 1]]).',
-                      head_status='verified')) == 1
+        assert (
+            len(
+                dg(
+                    f'> - c ([[{DG}#page=1|sec. 1, p. 1]]).',
+                    f'> - c ([[{DG}#page=1|abstract, p. 1]]).',
+                    head_status='verified',
+                )
+            )
+            == 1
+        )
 
     def test_diffguard_unverified_marker_is_exempt(self) -> None:
-        assert dg(f'> - c ([[{DG}#page=1|sec. 1, p. 1]]). *[unverified]*',
-                  f'> - c ([[{DG}#page=1|abstract, p. 1]]).') == []
+        assert (
+            dg(
+                f'> - c ([[{DG}#page=1|sec. 1, p. 1]]). *[unverified]*',
+                f'> - c ([[{DG}#page=1|abstract, p. 1]]).',
+            )
+            == []
+        )
 
     def test_diffguard_registered_and_exposed(self) -> None:
         assert cw.CHECKS.get('verified_anchor_unaudited') == 'error'
@@ -1094,51 +1643,99 @@ class TestCheckWiki(unittest.TestCase):
     # --- verified_hash_mismatch (committed-state backstop, Mechanism 2) -----------
 
     def test_verified_hash_match_is_not_flagged(self) -> None:
-        p = _write_page(self.tmp, 'sources', 'X.md', SOURCE_FM,
-                        '> [!tldr] TL;DR\n> - a claim.\n> ^tldr')
+        p = _write_page(
+            self.tmp,
+            'sources',
+            'X.md',
+            SOURCE_FM,
+            '> [!tldr] TL;DR\n> - a claim.\n> ^tldr',
+        )
         h = cw.body_hash(path=str(p))
-        assert cw.check_verified_hash(
-            path=p, fm={'status': 'verified', 'verified_hash': h},
-            rel='1-wiki/sources/X.md') == []
+        assert (
+            cw.check_verified_hash(
+                path=p,
+                fm={'status': 'verified', 'verified_hash': h},
+                rel='1-wiki/sources/X.md',
+            )
+            == []
+        )
 
     def test_verified_hash_mismatch_is_flagged(self) -> None:
-        p = _write_page(self.tmp, 'sources', 'X.md', SOURCE_FM,
-                        '> [!tldr] TL;DR\n> - a claim.\n> ^tldr')
+        p = _write_page(
+            self.tmp,
+            'sources',
+            'X.md',
+            SOURCE_FM,
+            '> [!tldr] TL;DR\n> - a claim.\n> ^tldr',
+        )
         f = cw.check_verified_hash(
-            path=p, fm={'status': 'verified', 'verified_hash': 'deadbeef'},
-            rel='1-wiki/sources/X.md')
+            path=p,
+            fm={'status': 'verified', 'verified_hash': 'deadbeef'},
+            rel='1-wiki/sources/X.md',
+        )
         assert len(f) == 1 and f[0]['check_id'] == 'verified_hash_mismatch'
 
     def test_verified_without_stamp_is_flagged(self) -> None:
-        p = _write_page(self.tmp, 'sources', 'X.md', SOURCE_FM,
-                        '> [!tldr] TL;DR\n> - a claim.\n> ^tldr')
+        p = _write_page(
+            self.tmp,
+            'sources',
+            'X.md',
+            SOURCE_FM,
+            '> [!tldr] TL;DR\n> - a claim.\n> ^tldr',
+        )
         f = cw.check_verified_hash(
-            path=p, fm={'status': 'verified'}, rel='1-wiki/sources/X.md')
+            path=p, fm={'status': 'verified'}, rel='1-wiki/sources/X.md'
+        )
         assert len(f) == 1 and f[0]['check_id'] == 'verified_hash_mismatch'
 
     def test_verified_hash_skips_draft(self) -> None:
-        p = _write_page(self.tmp, 'sources', 'X.md', SOURCE_FM,
-                        '> [!tldr] TL;DR\n> - a claim.\n> ^tldr')
-        assert cw.check_verified_hash(
-            path=p, fm={'status': 'draft', 'verified_hash': 'x'},
-            rel='1-wiki/sources/X.md') == []
+        p = _write_page(
+            self.tmp,
+            'sources',
+            'X.md',
+            SOURCE_FM,
+            '> [!tldr] TL;DR\n> - a claim.\n> ^tldr',
+        )
+        assert (
+            cw.check_verified_hash(
+                path=p,
+                fm={'status': 'draft', 'verified_hash': 'x'},
+                rel='1-wiki/sources/X.md',
+            )
+            == []
+        )
 
     def test_verified_hash_masks_added_unverified_line(self) -> None:
         # Claim-level model through the new check: a verified page whose only change
         # since stamping is an added *[unverified]* line does not trip the hash.
-        p = _write_page(self.tmp, 'sources', 'X.md', SOURCE_FM,
-                        '> [!tldr] TL;DR\n> - a claim.\n> ^tldr')
+        p = _write_page(
+            self.tmp,
+            'sources',
+            'X.md',
+            SOURCE_FM,
+            '> [!tldr] TL;DR\n> - a claim.\n> ^tldr',
+        )
         h = cw.body_hash(path=str(p))
-        p.write_text(p.read_text(encoding='utf-8') + '> - pending. *[unverified]*\n',
-                     encoding='utf-8')
-        assert cw.check_verified_hash(
-            path=p, fm={'status': 'verified', 'verified_hash': h},
-            rel='1-wiki/sources/X.md') == []
+        p.write_text(
+            p.read_text(encoding='utf-8') + '> - pending. *[unverified]*\n',
+            encoding='utf-8',
+        )
+        assert (
+            cw.check_verified_hash(
+                path=p,
+                fm={'status': 'verified', 'verified_hash': h},
+                rel='1-wiki/sources/X.md',
+            )
+            == []
+        )
 
     def test_verified_hash_registered(self) -> None:
         assert cw.CHECKS.get('verified_hash_mismatch') == 'warning'
-        r = subprocess.run([sys.executable, str(SCRIPT), '--list-checks'],
-                           capture_output=True, text=True)
+        r = subprocess.run(
+            [sys.executable, str(SCRIPT), '--list-checks'],
+            capture_output=True,
+            text=True,
+        )
         assert json.loads(r.stdout).get('verified_anchor_unaudited') == 'error'
 
     def test_verified_hash_malformed_delimiter_is_flagged(self) -> None:
@@ -1150,18 +1747,28 @@ class TestCheckWiki(unittest.TestCase):
         d = self.tmp / '1-wiki' / 'sources'
         d.mkdir(parents=True, exist_ok=True)
         p = d / 'X.md'
-        p.write_text('---\n' + SOURCE_FM + '\n--- \n\n'
-                     '> [!tldr] TL;DR\n> - a claim.\n> ^tldr\n', encoding='utf-8')
+        p.write_text(
+            '---\n' + SOURCE_FM + '\n--- \n\n'
+            '> [!tldr] TL;DR\n> - a claim.\n> ^tldr\n',
+            encoding='utf-8',
+        )
         f = cw.check_verified_hash(
-            path=p, fm={'status': 'verified', 'verified_hash': 'deadbeef'},
-            rel='1-wiki/sources/X.md')
+            path=p,
+            fm={'status': 'verified', 'verified_hash': 'deadbeef'},
+            rel='1-wiki/sources/X.md',
+        )
         assert len(f) == 1 and f[0]['check_id'] == 'verified_hash_mismatch'
 
     # --- wikilink_pipe_spacing transform (re-stamp-eligible, so pinned) ----------
 
     def test_pipe_spacing_detects_padded_pipe(self) -> None:
-        _write_page(self.tmp, 'concepts', 'c.md', CONCEPT_FM,
-                    '> [!idea] Idea\n> - see [[1-wiki/concepts/y.md | y]].\n> ^idea')
+        _write_page(
+            self.tmp,
+            'concepts',
+            'c.md',
+            CONCEPT_FM,
+            '> [!idea] Idea\n> - see [[1-wiki/concepts/y.md | y]].\n> ^idea',
+        )
         finds = cw.check_wikilink_pipe_spacing(wiki_root=self.tmp / '1-wiki')
         assert [f['check_id'] for f in finds] == ['wikilink_pipe_spacing']
 
@@ -1196,66 +1803,105 @@ class TestCheckWiki(unittest.TestCase):
         assert cw.CHECKS.get('wikilink_display_uncapitalized') == 'warning'
 
     def test_caps_finding_builder_accepts_the_id(self) -> None:
-        f = cw.finding(check='wikilink_display_uncapitalized', file='x.md', message='m')
+        f = cw.finding(
+            check='wikilink_display_uncapitalized', file='x.md', message='m'
+        )
         assert f['check_id'] == 'wikilink_display_uncapitalized'
         assert f['severity'] == 'warning'
 
     def test_caps_list_checks_cli_exposes_it(self) -> None:
-        r = subprocess.run([sys.executable, str(SCRIPT), '--list-checks'],
-                           capture_output=True, text=True)
+        r = subprocess.run(
+            [sys.executable, str(SCRIPT), '--list-checks'],
+            capture_output=True,
+            text=True,
+        )
         assert r.returncode == 0
-        assert json.loads(r.stdout).get('wikilink_display_uncapitalized') == 'warning'
+        assert (
+            json.loads(r.stdout).get('wikilink_display_uncapitalized')
+            == 'warning'
+        )
 
     # detection: positive cases
 
     def test_caps_lowercase_bullet_initial_flagged(self) -> None:
-        f = caps_findings('> - [[1-wiki/concepts/c.md|collaboration channel]] — the unit.')
+        f = caps_findings(
+            '> - [[1-wiki/concepts/c.md|collaboration channel]] — the unit.'
+        )
         assert len(f) == 1
         assert 'Collaboration channel' in f[0]['fix_hint']
 
     def test_caps_indented_sub_bullet_flagged(self) -> None:
-        f = caps_findings('>   - [[1-wiki/concepts/c.md|collaboration channel]] — the unit.')
+        f = caps_findings(
+            '>   - [[1-wiki/concepts/c.md|collaboration channel]] — the unit.'
+        )
         assert len(f) == 1
 
     def test_caps_line_number_shifts_by_offset(self) -> None:
         body = '> - [[1-wiki/concepts/c.md|collaboration channel]] — x.'
-        assert lineno(caps_findings(body, end=10)[0]) - lineno(caps_findings(body, end=0)[0]) == 10
+        assert (
+            lineno(caps_findings(body, end=10)[0])
+            - lineno(caps_findings(body, end=0)[0])
+            == 10
+        )
 
     # detection: negative cases
 
     def test_caps_capitalized_display_not_flagged(self) -> None:
-        assert caps_findings('> - [[1-wiki/entities/d.md|BERT]] is a system.') == []
+        assert (
+            caps_findings('> - [[1-wiki/entities/d.md|BERT]] is a system.')
+            == []
+        )
 
     def test_caps_digit_initial_display_not_flagged(self) -> None:
-        assert caps_findings('> - [[1-wiki/concepts/g.md|5G networks]] are fast.') == []
+        assert (
+            caps_findings('> - [[1-wiki/concepts/g.md|5G networks]] are fast.')
+            == []
+        )
 
     def test_caps_mid_bullet_wikilink_not_flagged(self) -> None:
         # The leading-capital rule is sentence-initial only; a wikilink later in the
         # bullet keeps its lowercase common-noun display.
-        assert caps_findings('> - It uses a [[1-wiki/concepts/c.md|collaboration channel]].') == []
+        assert (
+            caps_findings(
+                '> - It uses a [[1-wiki/concepts/c.md|collaboration channel]].'
+            )
+            == []
+        )
 
     def test_caps_sources_callout_exempt(self) -> None:
         # Source-stem displays in the Sources callout are filename-derived, kept
         # verbatim, and must not be force-capitalized.
-        body = ('> [!sources] Sources\n'
-                '> - [[1-wiki/sources/illustrated-transformer.md|illustrated-transformer]]\n'
-                '> ^sources')
+        body = (
+            '> [!sources] Sources\n'
+            '> - [[1-wiki/sources/illustrated-transformer.md|illustrated-transformer]]\n'
+            '> ^sources'
+        )
         assert caps_findings(body) == []
 
     # integration via check_page
 
     def test_check_page_flags_caps_on_concept(self) -> None:
-        p = _write_page(self.tmp, 'concepts', 'c.md', CONCEPT_FM,
-                        '> [!idea] Idea\n> - [[1-wiki/concepts/c.md|collaboration channel]] — x.\n> ^idea')
+        p = _write_page(
+            self.tmp,
+            'concepts',
+            'c.md',
+            CONCEPT_FM,
+            '> [!idea] Idea\n> - [[1-wiki/concepts/c.md|collaboration channel]] — x.\n> ^idea',
+        )
         wiki = self.tmp / '1-wiki'
         ids = {f['check_id'] for f in cw.check_page(path=p, wiki_root=wiki)}
         assert 'wikilink_display_uncapitalized' in ids
 
     def test_check_page_flags_caps_on_source(self) -> None:
         # The rule is general — applies to source pages too.
-        p = _write_page(self.tmp, 'sources', 'X.md', SOURCE_FM,
-                        '> [!concepts-entities] Concepts and Entities\n'
-                        '> - [[1-wiki/concepts/c.md|collaboration channel]] — x.\n> ^concepts-entities')
+        p = _write_page(
+            self.tmp,
+            'sources',
+            'X.md',
+            SOURCE_FM,
+            '> [!concepts-entities] Concepts and Entities\n'
+            '> - [[1-wiki/concepts/c.md|collaboration channel]] — x.\n> ^concepts-entities',
+        )
         wiki = self.tmp / '1-wiki'
         ids = {f['check_id'] for f in cw.check_page(path=p, wiki_root=wiki)}
         assert 'wikilink_display_uncapitalized' in ids
@@ -1287,8 +1933,11 @@ class TestCheckWiki(unittest.TestCase):
         assert cw.CHECKS.get('chronology_out_of_order') == 'warning'
 
     def test_chronology_list_checks_cli_exposes_them(self) -> None:
-        r = subprocess.run([sys.executable, str(SCRIPT), '--list-checks'],
-                           capture_output=True, text=True)
+        r = subprocess.run(
+            [sys.executable, str(SCRIPT), '--list-checks'],
+            capture_output=True,
+            text=True,
+        )
         listed = json.loads(r.stdout)
         assert listed.get('chronology_missing_time') == 'warning'
         assert listed.get('chronology_out_of_order') == 'warning'
@@ -1314,8 +1963,11 @@ class TestCheckWiki(unittest.TestCase):
     def test_chronology_hot_recent_activity_checked(self) -> None:
         w = _wiki(self.tmp, hot=HOT_DISORDER)
         fs = cw.check_chronology(wiki_root=w)
-        assert any(f['check_id'] == 'chronology_out_of_order'
-                   and f['file'].endswith('hot.md') for f in fs)
+        assert any(
+            f['check_id'] == 'chronology_out_of_order'
+            and f['file'].endswith('hot.md')
+            for f in fs
+        )
 
     def test_chronology_inorder_hot_not_flagged(self) -> None:
         w = _wiki(self.tmp, hot=HOT_OK)
@@ -1360,20 +2012,25 @@ class TestCheckWiki(unittest.TestCase):
         # (that silently dropped placeholders, parked notes, and sub-bullets).
         w = _wiki(self.tmp, hot=HOT_WITH_STRAY)
         out = sc.sort_hot(w / 'hot.md')
-        assert 'a parked note the user left here' in out       # preamble preserved
-        assert 'nested detail under b' in out                  # entry body preserved
+        assert 'a parked note the user left here' in out  # preamble preserved
+        assert 'nested detail under b' in out  # entry body preserved
         ra = out.split('## Recent activity')[1].split('## Open threads')[0]
         bullets = re.findall(r'^- \[(.*?)\]', ra, re.M)
-        assert bullets == ['2026-06-08 20:00', '2026-06-08 08:00']  # sorted newest-first
+        assert bullets == [
+            '2026-06-08 20:00',
+            '2026-06-08 08:00',
+        ]  # sorted newest-first
         # the sub-bullet moved with its entry (b), not stranded under a
         assert out.index('nested detail under b') < out.index('08:00] a')
-        assert '## Open threads\n\n- keep me' in out           # other sections intact
+        assert '## Open threads\n\n- keep me' in out  # other sections intact
 
     def test_sorter_hot_placeholder_only_preserved(self) -> None:
         # A Recent-activity section with only a `- None yet` placeholder (no dated
         # entry) is left untouched rather than emptied.
-        hot = ('---\ntype: hot\n---\n\n# Hot\n\n## Recent activity\n\n'
-               '- None yet\n\n## Open threads\n\n- keep me\n')
+        hot = (
+            '---\ntype: hot\n---\n\n# Hot\n\n## Recent activity\n\n'
+            '- None yet\n\n## Open threads\n\n- keep me\n'
+        )
         w = _wiki(self.tmp, hot=hot)
         out = sc.sort_hot(w / 'hot.md')
         ra = out.split('## Recent activity')[1].split('## Open threads')[0]
@@ -1381,29 +2038,43 @@ class TestCheckWiki(unittest.TestCase):
 
     def test_sorter_main_skips_untimed_returns_1(self) -> None:
         _wiki(self.tmp, log=LOG_UNTIMED, hot=HOT_OK)
-        r = subprocess.run([sys.executable, str(SORT_SCRIPT), str(self.tmp / '1-wiki')],
-                           capture_output=True, text=True)
-        assert r.returncode == 1  # log skipped: no recoverable link, manual time needed
+        r = subprocess.run(
+            [sys.executable, str(SORT_SCRIPT), str(self.tmp / '1-wiki')],
+            capture_output=True,
+            text=True,
+        )
+        assert (
+            r.returncode == 1
+        )  # log skipped: no recoverable link, manual time needed
 
     # auto-recovery of a missing time from the linked report filename (determinate)
 
     def test_recover_time_single_matching_link(self) -> None:
-        txt = '- Saved: [[2-outputs/query/query-2026-06-07-0915-topic.md|query]]'
+        txt = (
+            '- Saved: [[2-outputs/query/query-2026-06-07-0915-topic.md|query]]'
+        )
         assert sc.recover_time(txt, '2026-06-07') == '09:15'
 
     def test_recover_time_date_mismatch_returns_none(self) -> None:
         # The link's date must match the entry's date, or it is not this entry's time.
-        txt = '- Saved: [[2-outputs/query/query-2026-06-07-0915-topic.md|query]]'
+        txt = (
+            '- Saved: [[2-outputs/query/query-2026-06-07-0915-topic.md|query]]'
+        )
         assert sc.recover_time(txt, '2026-06-08') is None
 
     def test_recover_time_conflicting_links_returns_none(self) -> None:
         # Two same-date links with different times → ambiguous → stays manual.
-        txt = ('- a [[2-outputs/query/query-2026-06-07-0915-x.md|q]] '
-               'and [[2-outputs/query/query-2026-06-07-1620-y.md|q]]')
+        txt = (
+            '- a [[2-outputs/query/query-2026-06-07-0915-x.md|q]] '
+            'and [[2-outputs/query/query-2026-06-07-1620-y.md|q]]'
+        )
         assert sc.recover_time(txt, '2026-06-07') is None
 
     def test_recover_time_no_link_returns_none(self) -> None:
-        assert sc.recover_time('- just prose, no report link', '2026-06-07') is None
+        assert (
+            sc.recover_time('- just prose, no report link', '2026-06-07')
+            is None
+        )
 
     def test_sorter_fills_recoverable_log_then_sorts(self) -> None:
         w = _wiki(self.tmp, log=LOG_UNTIMED_RECOVERABLE)
@@ -1422,8 +2093,11 @@ class TestCheckWiki(unittest.TestCase):
     # real-repo anchor: the committed log/hot are timed and sorted
 
     def test_real_wiki_log_hot_timed_and_sorted(self) -> None:
-        findings = [f for f in cw.check_chronology(wiki_root=WIKI)
-                    if f['check_id'].startswith('chronology')]
+        findings = [
+            f
+            for f in cw.check_chronology(wiki_root=WIKI)
+            if f['check_id'].startswith('chronology')
+        ]
         assert findings == [], findings
 
     # --- hyphenated_open_compound_noun: bare-noun de-hyphenation, modifier-safe ----
@@ -1433,21 +2107,28 @@ class TestCheckWiki(unittest.TestCase):
     # (OPEN_COMPOUND_NOUN_SUGGEST / HYPHENATED_COMPOUND_ALLOWED) drive it; these tests
     # pin the noun-vs-modifier behaviour so the lists can grow without regressing it.
 
-    def test_open_compound_noun_flags_bare_noun_before_clause_end(self) -> None:
+    def test_open_compound_noun_flags_bare_noun_before_clause_end(
+        self,
+    ) -> None:
         f = _noun_findings(
-            self.tmp, '> [!idea] Idea\n> - The lever is the belief-state.\n> ^idea')
+            self.tmp,
+            '> [!idea] Idea\n> - The lever is the belief-state.\n> ^idea',
+        )
         assert len(f) == 1
         assert 'belief state' in f[0]['fix_hint']
 
     def test_open_compound_noun_flags_before_copula(self) -> None:
         f = _noun_findings(
-            self.tmp, '> [!idea] Idea\n> - The tool-use is costly here.\n> ^idea')
+            self.tmp,
+            '> [!idea] Idea\n> - The tool-use is costly here.\n> ^idea',
+        )
         assert any('tool use' in x['fix_hint'] for x in f)
 
     def test_open_compound_noun_flags_before_versus(self) -> None:
         f = _noun_findings(
             self.tmp,
-            '> [!idea] Idea\n> - A test of belief-state versus other levers.\n> ^idea')
+            '> [!idea] Idea\n> - A test of belief-state versus other levers.\n> ^idea',
+        )
         assert len(f) == 1
 
     def test_open_compound_noun_does_not_flag_modifier(self) -> None:
@@ -1455,14 +2136,17 @@ class TestCheckWiki(unittest.TestCase):
         # the hyphen is correct and must NOT be flagged (the no-overcorrection rule).
         f = _noun_findings(
             self.tmp,
-            '> [!idea] Idea\n> - An explicit belief-state representation helps.\n> ^idea')
+            '> [!idea] Idea\n> - An explicit belief-state representation helps.\n> ^idea',
+        )
         assert f == []
 
     def test_open_compound_noun_does_not_flag_allowed_lookalike(self) -> None:
         # fine-tuning is on the ALLOWED keep-hyphenated list — never flagged, even as
         # a bare noun.
         f = _noun_findings(
-            self.tmp, '> [!idea] Idea\n> - The main cost is the fine-tuning.\n> ^idea')
+            self.tmp,
+            '> [!idea] Idea\n> - The main cost is the fine-tuning.\n> ^idea',
+        )
         assert f == []
 
     def test_open_compound_noun_does_not_flag_wikilink_display(self) -> None:
@@ -1470,15 +2154,19 @@ class TestCheckWiki(unittest.TestCase):
         # never flagged — display text stays a manual call.
         f = _noun_findings(
             self.tmp,
-            '> [!idea] Idea\n> - See [[1-wiki/concepts/tool-use.md|tool-use]].\n> ^idea')
+            '> [!idea] Idea\n> - See [[1-wiki/concepts/tool-use.md|tool-use]].\n> ^idea',
+        )
         assert f == []
 
     def test_open_compound_noun_registered_as_warning(self) -> None:
         assert cw.CHECKS.get('hyphenated_open_compound_noun') == 'warning'
 
     def test_open_compound_noun_in_list_checks_cli(self) -> None:
-        r = subprocess.run([sys.executable, str(SCRIPT), '--list-checks'],
-                           capture_output=True, text=True)
+        r = subprocess.run(
+            [sys.executable, str(SCRIPT), '--list-checks'],
+            capture_output=True,
+            text=True,
+        )
         assert r.returncode == 0
         listed = json.loads(r.stdout)
         assert listed.get('hyphenated_open_compound_noun') == 'warning'
@@ -1486,7 +2174,9 @@ class TestCheckWiki(unittest.TestCase):
     def test_open_compound_noun_lists_are_disjoint(self) -> None:
         # A term must not sit on both lists by accident (the allowed list is also a
         # hard never-flag guard, but disjointness keeps intent clear).
-        overlap = set(cw.OPEN_COMPOUND_NOUN_SUGGEST) & cw.HYPHENATED_COMPOUND_ALLOWED
+        overlap = (
+            set(cw.OPEN_COMPOUND_NOUN_SUGGEST) & cw.HYPHENATED_COMPOUND_ALLOWED
+        )
         assert overlap == set(), overlap
 
     # --- hyphenated_open_compound_noun, direction 2: re-hyphenate an open modifier --
@@ -1498,31 +2188,41 @@ class TestCheckWiki(unittest.TestCase):
     def test_open_compound_noun_direction2_flags_open_modifier(self) -> None:
         f = _noun_findings(
             self.tmp,
-            '> [!idea] Idea\n> - An explicit belief state representation helps.\n> ^idea')
+            '> [!idea] Idea\n> - An explicit belief state representation helps.\n> ^idea',
+        )
         assert len(f) == 1
         assert 'belief-state representation' in f[0]['fix_hint']
 
-    def test_open_compound_noun_direction2_ignores_following_verb(self) -> None:
+    def test_open_compound_noun_direction2_ignores_following_verb(
+        self,
+    ) -> None:
         # "tool use reaches" — an open compound before a VERB is a noun, not a
         # modifier; must NOT be flagged (the 27-false-positive guard).
         f = _noun_findings(
             self.tmp,
-            '> [!idea] Idea\n> - Here tool use reaches outside the model.\n> ^idea')
+            '> [!idea] Idea\n> - Here tool use reaches outside the model.\n> ^idea',
+        )
         assert f == []
 
     def test_open_compound_noun_direction2_ignores_nonhead_noun(self) -> None:
         # A noun not on COMPOUND_MODIFIER_HEADS is never treated as a head.
         f = _noun_findings(
-            self.tmp, '> [!idea] Idea\n> - The tool use philosophy varies.\n> ^idea')
+            self.tmp,
+            '> [!idea] Idea\n> - The tool use philosophy varies.\n> ^idea',
+        )
         assert f == []
 
     def test_open_compound_noun_verified_ignore_suppresses_both(self) -> None:
         # A phrase on the verified-ignore list is skipped (here, a direction-2 case).
-        with mock.patch.object(cw, 'HYPHENATION_VERIFIED_IGNORE',
-                               frozenset({'belief state representation'})):
+        with mock.patch.object(
+            cw,
+            'HYPHENATION_VERIFIED_IGNORE',
+            frozenset({'belief state representation'}),
+        ):
             f = _noun_findings(
                 self.tmp,
-                '> [!idea] Idea\n> - An explicit belief state representation helps.\n> ^idea')
+                '> [!idea] Idea\n> - An explicit belief state representation helps.\n> ^idea',
+            )
         assert f == []
 
     # --- hyphenation lists loaded from the agent-writable data file ----------------
@@ -1541,19 +2241,32 @@ class TestCheckWiki(unittest.TestCase):
         f.write_text(
             '# x\n\n## disallowed\n- foo-bar = foo bar\n- bad line no equals\n\n'
             '## allowed\n- keep-this\n\n## heads\n- thing\n\n'
-            '## verified-ignore\n- foo bar thing\n', encoding='utf-8')
+            '## verified-ignore\n- foo bar thing\n',
+            encoding='utf-8',
+        )
         dis, allow, heads, ign = cw._load_hyphenation_lists(f)
-        assert dis == {'foo-bar': 'foo bar'}          # malformed no-equals line skipped
+        assert dis == {
+            'foo-bar': 'foo bar'
+        }  # malformed no-equals line skipped
         assert allow == frozenset({'keep-this'})
         assert heads == frozenset({'thing'})
         assert ign == frozenset({'foo bar thing'})
 
     def test_hyphenation_loader_missing_file_is_empty_not_fatal(self) -> None:
-        dis, allow, heads, ign = cw._load_hyphenation_lists(self.tmp / 'nope.md')
-        assert (dis, allow, heads, ign) == ({}, frozenset(), frozenset(), frozenset())
+        dis, allow, heads, ign = cw._load_hyphenation_lists(
+            self.tmp / 'nope.md'
+        )
+        assert (dis, allow, heads, ign) == (
+            {},
+            frozenset(),
+            frozenset(),
+            frozenset(),
+        )
 
     def test_never_match_regex_matches_nothing(self) -> None:
-        assert cw._never_match().search('belief state tool use anything') is None
+        assert (
+            cw._never_match().search('belief state tool use anything') is None
+        )
 
 
 class TestPaginationMap(unittest.TestCase):
@@ -1578,24 +2291,31 @@ class TestPaginationMap(unittest.TestCase):
         assert cw._parse_page_span('5') == [5]
         assert cw._parse_page_span('1-3') == [1, 2, 3]
         assert cw._parse_page_span('x') is None
-        assert cw._parse_page_span('3-1') is None   # reversed span rejected
+        assert cw._parse_page_span('3-1') is None  # reversed span rejected
 
     def test_load_map_arabic_span_none_and_comment(self) -> None:
-        m = cw._load_pagination_map(self._mapfile(
-            '## 0-raw/papers/X.pdf\n'
-            '- 1 = 4171          # proceedings offset\n'
-            '- 2-4 = 4172-4174\n'
-            '- 5 = none\n'))
-        assert m == {'0-raw/papers/X.pdf':
-                     {1: 4171, 2: 4172, 3: 4173, 4: 4174, 5: None}}
+        m = cw._load_pagination_map(
+            self._mapfile(
+                '## 0-raw/papers/X.pdf\n'
+                '- 1 = 4171          # proceedings offset\n'
+                '- 2-4 = 4172-4174\n'
+                '- 5 = none\n'
+            )
+        )
+        assert m == {
+            '0-raw/papers/X.pdf': {1: 4171, 2: 4172, 3: 4173, 4: 4174, 5: None}
+        }
 
     def test_load_map_skips_malformed(self) -> None:
-        m = cw._load_pagination_map(self._mapfile(
-            '## 0-raw/papers/X.pdf\n'
-            '- 1 = 4171\n'
-            '- 2-4 = 4172-4173\n'   # unequal span lengths -> skipped
-            '- garbage line\n'      # no '=' -> skipped
-            '- 9 = notanumber\n'))  # rhs not number/none/span -> skipped
+        m = cw._load_pagination_map(
+            self._mapfile(
+                '## 0-raw/papers/X.pdf\n'
+                '- 1 = 4171\n'
+                '- 2-4 = 4172-4173\n'  # unequal span lengths -> skipped
+                '- garbage line\n'  # no '=' -> skipped
+                '- 9 = notanumber\n'
+            )
+        )  # rhs not number/none/span -> skipped
         assert m == {'0-raw/papers/X.pdf': {1: 4171}}
 
     def test_load_map_missing_file_is_empty(self) -> None:
@@ -1603,9 +2323,12 @@ class TestPaginationMap(unittest.TestCase):
 
     def test_load_map_ignores_non_raw_headings(self) -> None:
         # Prose H2 headings and fenced examples must not become entries.
-        m = cw._load_pagination_map(self._mapfile(
-            '## Why this file exists\n- 1 = 5\n'   # not a 0-raw heading -> skipped
-            '## 0-raw/papers/X.pdf\n- 1 = 5\n'))
+        m = cw._load_pagination_map(
+            self._mapfile(
+                '## Why this file exists\n- 1 = 5\n'  # not a 0-raw heading -> skipped
+                '## 0-raw/papers/X.pdf\n- 1 = 5\n'
+            )
+        )
         assert m == {'0-raw/papers/X.pdf': {1: 5}}
 
     def test_shipped_template_parses_empty(self) -> None:
@@ -1614,37 +2337,61 @@ class TestPaginationMap(unittest.TestCase):
         assert cw._load_pagination_map() == {}
 
     def test_printed_page_three_states(self) -> None:
-        with mock.patch.object(cw, 'PAGINATION_MAP',
-                               {'0-raw/papers/X.pdf': {5: 4175, 6: None}}):
-            assert cw.printed_page('0-raw/papers/X.pdf', 5) == ('paginated', 4175)
-            assert cw.printed_page('0-raw/papers/X.pdf', 6) == ('unpaginated', None)
-            assert cw.printed_page('0-raw/papers/X.pdf', 7) == ('unregistered', None)
-            assert cw.printed_page('0-raw/papers/Other.pdf', 1) == ('unregistered', None)
+        with mock.patch.object(
+            cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {5: 4175, 6: None}}
+        ):
+            assert cw.printed_page('0-raw/papers/X.pdf', 5) == (
+                'paginated',
+                4175,
+            )
+            assert cw.printed_page('0-raw/papers/X.pdf', 6) == (
+                'unpaginated',
+                None,
+            )
+            assert cw.printed_page('0-raw/papers/X.pdf', 7) == (
+                'unregistered',
+                None,
+            )
+            assert cw.printed_page('0-raw/papers/Other.pdf', 1) == (
+                'unregistered',
+                None,
+            )
 
     # --- map-aware exemption ---
     def test_exemption_paginated_requires_page(self) -> None:
-        with mock.patch.object(cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {5: 5}}):
+        with mock.patch.object(
+            cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {5: 5}}
+        ):
             # page prints a number -> anchor alone (even `app.`) is incomplete
             assert not cw.locator_display_complete(
-                display='sec. 3', raw='0-raw/papers/X.pdf', phys=5)
+                display='sec. 3', raw='0-raw/papers/X.pdf', phys=5
+            )
             assert not cw.locator_display_complete(
-                display='app. A', raw='0-raw/papers/X.pdf', phys=5)
+                display='app. A', raw='0-raw/papers/X.pdf', phys=5
+            )
             assert cw.locator_display_complete(
-                display='sec. 3, p. 5', raw='0-raw/papers/X.pdf', phys=5)
+                display='sec. 3, p. 5', raw='0-raw/papers/X.pdf', phys=5
+            )
 
     def test_exemption_unpaginated_allows_any_anchor_only(self) -> None:
-        with mock.patch.object(cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {20: None}}):
+        with mock.patch.object(
+            cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {20: None}}
+        ):
             assert cw.locator_display_complete(
-                display='app. A', raw='0-raw/papers/X.pdf', phys=20)
-            assert cw.locator_display_complete(   # any anchor, not only `app.`
-                display='sec. 3', raw='0-raw/papers/X.pdf', phys=20)
+                display='app. A', raw='0-raw/papers/X.pdf', phys=20
+            )
+            assert cw.locator_display_complete(  # any anchor, not only `app.`
+                display='sec. 3', raw='0-raw/papers/X.pdf', phys=20
+            )
 
     def test_exemption_unregistered_falls_back_to_app_heuristic(self) -> None:
         with mock.patch.object(cw, 'PAGINATION_MAP', {}):
-            assert cw.locator_display_complete(     # `app.`-only OK (fallback)
-                display='app. A', raw='0-raw/papers/X.pdf', phys=3)
+            assert cw.locator_display_complete(  # `app.`-only OK (fallback)
+                display='app. A', raw='0-raw/papers/X.pdf', phys=3
+            )
             assert not cw.locator_display_complete(  # `sec.`-only still incomplete
-                display='sec. 3', raw='0-raw/papers/X.pdf', phys=3)
+                display='sec. 3', raw='0-raw/papers/X.pdf', phys=3
+            )
 
     def test_exemption_no_keys_is_pure_display_heuristic(self) -> None:
         # Called without raw/phys (e.g. a caller with no deep-link keys): the
@@ -1654,38 +2401,60 @@ class TestPaginationMap(unittest.TestCase):
 
     # --- locator_page_mismatch ---
     def _match(self, body: str) -> list[str]:
-        return [f['check_id'] for f in cw.check_locator_page_match(
-            body=body, rel='1-wiki/concepts/c.md', end=0)]
+        return [
+            f['check_id']
+            for f in cw.check_locator_page_match(
+                body=body, rel='1-wiki/concepts/c.md', end=0
+            )
+        ]
 
     def test_mismatch_fires_on_wrong_printed_page(self) -> None:
-        with mock.patch.object(cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {5: 4175}}):
-            body = ('> - claim ([[1-wiki/sources/X.md|X]]; '
-                    '[[0-raw/papers/X.pdf#page=5|sec. 3, p. 99]]).')
+        with mock.patch.object(
+            cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {5: 4175}}
+        ):
+            body = (
+                '> - claim ([[1-wiki/sources/X.md|X]]; '
+                '[[0-raw/papers/X.pdf#page=5|sec. 3, p. 99]]).'
+            )
             assert self._match(body) == ['locator_page_mismatch']
 
     def test_no_mismatch_when_page_matches(self) -> None:
-        with mock.patch.object(cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {5: 4175}}):
-            body = ('> - claim ([[1-wiki/sources/X.md|X]]; '
-                    '[[0-raw/papers/X.pdf#page=5|sec. 3, p. 4175]]).')
+        with mock.patch.object(
+            cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {5: 4175}}
+        ):
+            body = (
+                '> - claim ([[1-wiki/sources/X.md|X]]; '
+                '[[0-raw/papers/X.pdf#page=5|sec. 3, p. 4175]]).'
+            )
             assert self._match(body) == []
 
     def test_mismatch_fires_when_page_prints_nothing(self) -> None:
-        with mock.patch.object(cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {20: None}}):
-            body = ('> - claim ([[1-wiki/sources/X.md|X]]; '
-                    '[[0-raw/papers/X.pdf#page=20|app. A, p. 4]]).')
+        with mock.patch.object(
+            cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {20: None}}
+        ):
+            body = (
+                '> - claim ([[1-wiki/sources/X.md|X]]; '
+                '[[0-raw/papers/X.pdf#page=20|app. A, p. 4]]).'
+            )
             assert self._match(body) == ['locator_page_mismatch']
 
     def test_no_mismatch_on_unregistered_raw(self) -> None:
         with mock.patch.object(cw, 'PAGINATION_MAP', {}):
-            body = ('> - claim ([[1-wiki/sources/X.md|X]]; '
-                    '[[0-raw/papers/X.pdf#page=5|sec. 3, p. 99]]).')
+            body = (
+                '> - claim ([[1-wiki/sources/X.md|X]]; '
+                '[[0-raw/papers/X.pdf#page=5|sec. 3, p. 99]]).'
+            )
             assert self._match(body) == []
 
     def test_mismatch_ignores_pp_ranges(self) -> None:
         # Conservative for an error-severity check: `pp. M–N` ranges not matched.
-        with mock.patch.object(cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {5: 4175}}):
-            body = ('> - claim ([[1-wiki/sources/X.md|X]]; '
-                    '[[0-raw/papers/X.pdf#page=5|sec. 3, pp. 99-100]]).')
+        with mock.patch.object(
+            cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {5: 4175}}
+        ):
+            body = (
+                '> - claim ([[1-wiki/sources/X.md|X]]; '
+                '[[0-raw/papers/X.pdf#page=5|sec. 3, pp. 99-100]]).'
+            )
             assert self._match(body) == []
 
     def test_page_num_re_ignores_p_inside_app(self) -> None:
@@ -1696,38 +2465,75 @@ class TestPaginationMap(unittest.TestCase):
     # --- pagination_map_unregistered ---
     def test_registration_flags_unregistered_raw(self) -> None:
         with mock.patch.object(cw, 'PAGINATION_MAP', {}):
-            _write_page(self.tmp, 'concepts', 'c.md', CONCEPT_FM,
-                        '> - claim ([[1-wiki/sources/X.md|X]]; '
-                        '[[0-raw/papers/X.pdf#page=5|sec. 3, p. 5]]).')
+            _write_page(
+                self.tmp,
+                'concepts',
+                'c.md',
+                CONCEPT_FM,
+                '> - claim ([[1-wiki/sources/X.md|X]]; '
+                '[[0-raw/papers/X.pdf#page=5|sec. 3, p. 5]]).',
+            )
             f = cw.check_pagination_registration(wiki_root=self.tmp / '1-wiki')
-            assert [x['check_id'] for x in f] == ['pagination_map_unregistered']
+            assert [x['check_id'] for x in f] == [
+                'pagination_map_unregistered'
+            ]
             assert f[0]['file'] == '0-raw/papers/X.pdf'
 
     def test_registration_silent_when_registered(self) -> None:
-        with mock.patch.object(cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {5: 5}}):
-            _write_page(self.tmp, 'concepts', 'c.md', CONCEPT_FM,
-                        '> - claim ([[1-wiki/sources/X.md|X]]; '
-                        '[[0-raw/papers/X.pdf#page=5|sec. 3, p. 5]]).')
-            assert cw.check_pagination_registration(wiki_root=self.tmp / '1-wiki') == []
+        with mock.patch.object(
+            cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {5: 5}}
+        ):
+            _write_page(
+                self.tmp,
+                'concepts',
+                'c.md',
+                CONCEPT_FM,
+                '> - claim ([[1-wiki/sources/X.md|X]]; '
+                '[[0-raw/papers/X.pdf#page=5|sec. 3, p. 5]]).',
+            )
+            assert (
+                cw.check_pagination_registration(wiki_root=self.tmp / '1-wiki')
+                == []
+            )
 
     def test_registration_one_finding_per_raw(self) -> None:
         with mock.patch.object(cw, 'PAGINATION_MAP', {}):
-            _write_page(self.tmp, 'concepts', 'c.md', CONCEPT_FM,
-                        '> - a ([[1-wiki/sources/X.md|X]]; '
-                        '[[0-raw/papers/X.pdf#page=5|sec. 3, p. 5]]).\n'
-                        '> - b ([[1-wiki/sources/X.md|X]]; '
-                        '[[0-raw/papers/X.pdf#page=6|sec. 4, p. 6]]).')
+            _write_page(
+                self.tmp,
+                'concepts',
+                'c.md',
+                CONCEPT_FM,
+                '> - a ([[1-wiki/sources/X.md|X]]; '
+                '[[0-raw/papers/X.pdf#page=5|sec. 3, p. 5]]).\n'
+                '> - b ([[1-wiki/sources/X.md|X]]; '
+                '[[0-raw/papers/X.pdf#page=6|sec. 4, p. 6]]).',
+            )
             f = cw.check_pagination_registration(wiki_root=self.tmp / '1-wiki')
-            assert len(f) == 1   # one per raw, not per citation
+            assert len(f) == 1  # one per raw, not per citation
 
 
 # --- book source type + unknown_source_type guard + invariants --------------
 
-_SRC_SLUGS = ['tldr', 'contribution', 'key-claims', 'evidence', 'method',
-              'assumptions', 'limitations', 'appraisal', 'concepts-entities',
-              'contradictions', 'open-questions', 'connections']
-_SLUG_TITLES = {'tldr': 'TL;DR', 'concepts-entities': 'Concepts and Entities',
-                'key-claims': 'Key Claims', 'open-questions': 'Open Questions'}
+_SRC_SLUGS = [
+    'tldr',
+    'contribution',
+    'key-claims',
+    'evidence',
+    'method',
+    'assumptions',
+    'limitations',
+    'appraisal',
+    'concepts-entities',
+    'contradictions',
+    'open-questions',
+    'connections',
+]
+_SLUG_TITLES = {
+    'tldr': 'TL;DR',
+    'concepts-entities': 'Concepts and Entities',
+    'key-claims': 'Key Claims',
+    'open-questions': 'Open Questions',
+}
 
 
 def _src_callout(slug: str) -> str:
@@ -1738,8 +2544,9 @@ def _src_callout(slug: str) -> str:
 
 
 def _src_body(slugs: list[str] | None = None) -> str:
-    return '\n\n'.join(_src_callout(s) for s in (slugs if slugs is not None
-                                                 else _SRC_SLUGS))
+    return '\n\n'.join(
+        _src_callout(s) for s in (slugs if slugs is not None else _SRC_SLUGS)
+    )
 
 
 def _typed_fm(type_value: str, authored: bool = True) -> str:
@@ -1748,8 +2555,10 @@ def _typed_fm(type_value: str, authored: bool = True) -> str:
     fm = f'type: {type_value}\ntitle: "X"\n'
     if authored:
         fm += 'authors: []\nvenue: "Pub"\nyear: 2020\n'
-    fm += ('file: "[[0-raw/books/X.pdf]]"\nattachments: []\ntags: []\n'
-           'frames: []\ncreated: 2026-01-01\nupdated: 2026-01-01\nstatus: draft')
+    fm += (
+        'file: "[[0-raw/books/X.pdf]]"\nattachments: []\ntags: []\n'
+        'frames: []\ncreated: 2026-01-01\nupdated: 2026-01-01\nstatus: draft'
+    )
     return fm
 
 
@@ -1763,18 +2572,28 @@ class BookSourceTypeTests(unittest.TestCase):
 
     def test_book_mirrors_paper_fields_and_sections(self) -> None:
         # A book has a paper's author-and-year identity (CLAUDE.md).
-        self.assertEqual(cw.REQUIRED_FIELDS['book'], cw.REQUIRED_FIELDS['paper'])
-        self.assertEqual(cw.REQUIRED_SECTIONS['book'],
-                         cw.REQUIRED_SECTIONS['paper'])
+        self.assertEqual(
+            cw.REQUIRED_FIELDS['book'], cw.REQUIRED_FIELDS['paper']
+        )
+        self.assertEqual(
+            cw.REQUIRED_SECTIONS['book'], cw.REQUIRED_SECTIONS['paper']
+        )
 
     def test_complete_book_page_has_no_structural_findings(self) -> None:
         with tempfile.TemporaryDirectory() as td:
-            p = _write_page(Path(td), 'sources', 'B.md', _typed_fm('book'),
-                            _src_body())
-            ids = {f['check_id']
-                   for f in cw.check_page(path=p, wiki_root=Path(td) / '1-wiki')}
-        for cid in ('unknown_source_type', 'section_order',
-                    'frontmatter_missing_field', 'callout_block_id'):
+            p = _write_page(
+                Path(td), 'sources', 'B.md', _typed_fm('book'), _src_body()
+            )
+            ids = {
+                f['check_id']
+                for f in cw.check_page(path=p, wiki_root=Path(td) / '1-wiki')
+            }
+        for cid in (
+            'unknown_source_type',
+            'section_order',
+            'frontmatter_missing_field',
+            'callout_block_id',
+        ):
             self.assertNotIn(cid, ids)
 
 
@@ -1784,7 +2603,9 @@ class UnknownSourceTypeTests(unittest.TestCase):
 
     def _ids(self, td: str, fm: str, slugs: list[str] | None = None):
         p = _write_page(Path(td), 'sources', 'S.md', fm, _src_body(slugs))
-        return [f for f in cw.check_page(path=p, wiki_root=Path(td) / '1-wiki')]
+        return [
+            f for f in cw.check_page(path=p, wiki_root=Path(td) / '1-wiki')
+        ]
 
     def test_unknown_type_is_flagged(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -1807,9 +2628,11 @@ class UnknownSourceTypeTests(unittest.TestCase):
     def test_missing_type_on_source_page_is_flagged(self) -> None:
         # type: absent entirely -> kind == '' -> also caught (not treated as an
         # out-of-scope non-page file, because it lives under sources/).
-        fm = ('title: "X"\nfile: "[[0-raw/books/X.pdf]]"\nattachments: []\n'
-              'tags: []\nframes: []\ncreated: 2026-01-01\nupdated: 2026-01-01\n'
-              'status: draft')
+        fm = (
+            'title: "X"\nfile: "[[0-raw/books/X.pdf]]"\nattachments: []\n'
+            'tags: []\nframes: []\ncreated: 2026-01-01\nupdated: 2026-01-01\n'
+            'status: draft'
+        )
         with tempfile.TemporaryDirectory() as td:
             ids = {f['check_id'] for f in self._ids(td, fm)}
         self.assertIn('unknown_source_type', ids)
@@ -1820,8 +2643,11 @@ class UnknownSourceTypeTests(unittest.TestCase):
         # `authors`, which only paper/article/book owe.
         with tempfile.TemporaryDirectory() as td:
             findings = self._ids(td, _typed_fm('medai', authored=False))
-        missing = [f['message'] for f in findings
-                   if f['check_id'] == 'frontmatter_missing_field']
+        missing = [
+            f['message']
+            for f in findings
+            if f['check_id'] == 'frontmatter_missing_field'
+        ]
         self.assertFalse(any('authors' in m for m in missing), missing)
 
     def test_known_source_type_not_flagged(self) -> None:
@@ -1830,8 +2656,11 @@ class UnknownSourceTypeTests(unittest.TestCase):
         self.assertNotIn('unknown_source_type', ids)
 
     def test_list_checks_cli_exposes_it(self) -> None:
-        r = subprocess.run([sys.executable, str(SCRIPT), '--list-checks'],
-                           capture_output=True, text=True)
+        r = subprocess.run(
+            [sys.executable, str(SCRIPT), '--list-checks'],
+            capture_output=True,
+            text=True,
+        )
         self.assertEqual(cw.CHECKS['unknown_source_type'], 'error')
         self.assertEqual(json.loads(r.stdout)['unknown_source_type'], 'error')
 
@@ -1850,13 +2679,16 @@ class SourceSchemaInvariantTests(unittest.TestCase):
     def test_invariant2_divergent_section_rosters_raise(self) -> None:
         with self.assertRaises(AssertionError) as ctx:
             cw._derive_source_common_schema(
-                {'a', 'b'}, {'a': ['type'], 'b': ['type']},
-                {'a': ['s1'], 'b': ['s2']})
+                {'a', 'b'},
+                {'a': ['type'], 'b': ['type']},
+                {'a': ['s1'], 'b': ['s2']},
+            )
         self.assertIn('roster', str(ctx.exception))
 
     def test_control_real_tables_derive_cleanly(self) -> None:
         cf, cs = cw._derive_source_common_schema(
-            cw.SOURCE_KINDS, cw.REQUIRED_FIELDS, cw.REQUIRED_SECTIONS)
+            cw.SOURCE_KINDS, cw.REQUIRED_FIELDS, cw.REQUIRED_SECTIONS
+        )
         self.assertEqual(cf, cw.SOURCE_COMMON_FIELDS)
         self.assertEqual(cs, cw.SOURCE_COMMON_SECTIONS)
 
@@ -1868,8 +2700,9 @@ class SourceSchemaInvariantTests(unittest.TestCase):
             self.assertIn(f, cw.SOURCE_COMMON_FIELDS)
 
     def test_common_sections_is_the_shared_roster(self) -> None:
-        self.assertEqual(cw.SOURCE_COMMON_SECTIONS,
-                         cw.REQUIRED_SECTIONS['paper'])
+        self.assertEqual(
+            cw.SOURCE_COMMON_SECTIONS, cw.REQUIRED_SECTIONS['paper']
+        )
 
 
 class RawIntegrityBooksTests(unittest.TestCase):
@@ -1885,10 +2718,13 @@ class RawIntegrityBooksTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             d = self._setup_raw(td)
             (d / '0-raw' / 'books' / 'Uningested.pdf').write_bytes(b'%PDF-1.4')
-            pairs = {(f['check_id'], f['file'])
-                     for f in cw.check_raw_integrity(wiki_root=d / '1-wiki')}
-        self.assertIn(('raw_without_source_page', '0-raw/books/Uningested.pdf'),
-                      pairs)
+            pairs = {
+                (f['check_id'], f['file'])
+                for f in cw.check_raw_integrity(wiki_root=d / '1-wiki')
+            }
+        self.assertIn(
+            ('raw_without_source_page', '0-raw/books/Uningested.pdf'), pairs
+        )
 
     def test_ingested_book_raw_resolves(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -1899,9 +2735,12 @@ class RawIntegrityBooksTests(unittest.TestCase):
                 'year: 2019\nfile: "[[0-raw/books/Jh2019.pdf]]"\n'
                 'attachments: []\ntags: []\nframes: []\ncreated: 2026-01-01\n'
                 'updated: 2026-01-01\nstatus: draft\n---\n\n> x\n',
-                encoding='utf-8')
-            ids = {f['check_id']
-                   for f in cw.check_raw_integrity(wiki_root=d / '1-wiki')}
+                encoding='utf-8',
+            )
+            ids = {
+                f['check_id']
+                for f in cw.check_raw_integrity(wiki_root=d / '1-wiki')
+            }
         # The book raw is found, so no false "unresolved file" and no "uningested".
         self.assertNotIn('file_field_unresolved', ids)
         self.assertNotIn('raw_without_source_page', ids)

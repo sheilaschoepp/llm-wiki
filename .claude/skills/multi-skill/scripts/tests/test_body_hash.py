@@ -19,6 +19,7 @@ Run from anywhere:
 
 The module is loaded by path so the tests do not depend on cwd or packaging.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -28,7 +29,7 @@ import unittest
 from pathlib import Path
 
 HERE = Path(__file__).resolve()
-SCRIPT = HERE.parents[1] / 'body_hash.py'              # scripts/body_hash.py
+SCRIPT = HERE.parents[1] / 'body_hash.py'  # scripts/body_hash.py
 
 spec = importlib.util.spec_from_file_location('body_hash', SCRIPT)
 bh = importlib.util.module_from_spec(spec)
@@ -80,24 +81,35 @@ class TestBodyHash(unittest.TestCase):
         """A page with one marked claim hashes equal to the same page with that line gone."""
         marked = FM + '# T\n\n- plain claim\n- pending claim *[unverified]*\n'
         without = FM + '# T\n\n- plain claim\n'
-        assert bh.body_hash(path=self.write(marked)) == bh.body_hash(path=self.write(without))
+        assert bh.body_hash(path=self.write(marked)) == bh.body_hash(
+            path=self.write(without)
+        )
 
     def test_editing_marked_claim_does_not_move_hash(self) -> None:
         a = FM + '# T\n\n- pending one *[unverified]*\n'
-        b = FM + '# T\n\n- a completely different pending claim *[unverified]*\n'
-        assert bh.body_hash(path=self.write(a)) == bh.body_hash(path=self.write(b))
+        b = (
+            FM
+            + '# T\n\n- a completely different pending claim *[unverified]*\n'
+        )
+        assert bh.body_hash(path=self.write(a)) == bh.body_hash(
+            path=self.write(b)
+        )
 
     def test_editing_unmarked_claim_moves_hash(self) -> None:
         a = FM + '# T\n\n- checked claim one\n'
         b = FM + '# T\n\n- checked claim two\n'
-        assert bh.body_hash(path=self.write(a)) != bh.body_hash(path=self.write(b))
+        assert bh.body_hash(path=self.write(a)) != bh.body_hash(
+            path=self.write(b)
+        )
 
     def test_mask_is_line_scoped_continuation_still_counts(self) -> None:
         """Only the marker-bearing line is dropped; a continuation line still counts,
         so two pages differing only on a marked claim's continuation hash differently."""
         a = FM + '# T\n\n- claim *[unverified]*\n  continuation alpha\n'
         b = FM + '# T\n\n- claim *[unverified]*\n  continuation beta\n'
-        assert bh.body_hash(path=self.write(a)) != bh.body_hash(path=self.write(b))
+        assert bh.body_hash(path=self.write(a)) != bh.body_hash(
+            path=self.write(b)
+        )
 
     def test_no_marker_page_unchanged_by_masking(self) -> None:
         body = '# T\n\n- a\n- b\n- c\n'
@@ -107,19 +119,28 @@ class TestBodyHash(unittest.TestCase):
         """A `*[unverified]*` MENTION inside inline code is documentation, not a
         pending claim, so the line's real content still counts toward the hash
         (mirrors check_wiki.py, which counts markers only outside code spans)."""
-        a = FM + '# T\n\n- the `*[unverified]*` marker means pending -- alpha\n'
+        a = (
+            FM
+            + '# T\n\n- the `*[unverified]*` marker means pending -- alpha\n'
+        )
         b = FM + '# T\n\n- the `*[unverified]*` marker means pending -- beta\n'
         # editing the non-code content moves the hash: the line is not masked away
-        assert bh.body_hash(path=self.write(a)) != bh.body_hash(path=self.write(b))
+        assert bh.body_hash(path=self.write(a)) != bh.body_hash(
+            path=self.write(b)
+        )
         # and the line is not dropped: the page does not hash as if the line were gone
-        assert bh.body_hash(path=self.write(a)) != bh.body_hash(path=self.write(FM + '# T\n\n'))
+        assert bh.body_hash(path=self.write(a)) != bh.body_hash(
+            path=self.write(FM + '# T\n\n')
+        )
 
     # --- line endings ---
 
     def test_crlf_and_lf_hash_identically(self) -> None:
         lf = FM + '# T\n\n- a\n- b\n'
         crlf = lf.replace('\n', '\r\n')
-        assert bh.body_hash(path=self.write(lf)) == bh.body_hash(path=self.write(crlf))
+        assert bh.body_hash(path=self.write(lf)) == bh.body_hash(
+            path=self.write(crlf)
+        )
 
     # --- malformed frontmatter ---
 

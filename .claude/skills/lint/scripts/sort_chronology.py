@@ -26,6 +26,7 @@ Idempotent: an already-sorted, fully-timed file is rewritten byte-identically.
 already sorted), 1 if a file was skipped for an unrecoverable missing time, 2 on a
 usage/path error.
 """
+
 from __future__ import annotations
 
 import re
@@ -39,7 +40,9 @@ HOT_ENTRY_RE = re.compile(r'^- \[(\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))?\]')
 # (e.g. query-2026-06-23-1045-…). A missing `[date]` time is recoverable from it
 # — transcribed, not invented — when the link is determinate. (The check side,
 # `check_chronology` in check_wiki.py, points its fix_hint here.)
-REPORT_TIME_RE = re.compile(r'2-outputs/[^\s\]|)]*-(\d{4}-\d{2}-\d{2})-(\d{2})(\d{2})')
+REPORT_TIME_RE = re.compile(
+    r'2-outputs/[^\s\]|)]*-(\d{4}-\d{2}-\d{2})-(\d{2})(\d{2})'
+)
 
 
 def recover_time(entry_text: str, entry_date: str) -> str | None:
@@ -60,7 +63,9 @@ def sort_log(path: Path) -> str:
     """Return the sorted text of log.md, or raise ValueError if an entry is
     untimed. Preamble (everything before the first dated header) is preserved."""
     lines = path.read_text(encoding='utf-8').split('\n')
-    first = next((i for i, l in enumerate(lines) if LOG_HEADER_RE.match(l)), None)
+    first = next(
+        (i for i, l in enumerate(lines) if LOG_HEADER_RE.match(l)), None
+    )
     if first is None:
         return path.read_text(encoding='utf-8')  # nothing to sort
     preamble = lines[:first]
@@ -89,11 +94,17 @@ def sort_log(path: Path) -> str:
     # left untouched and the time must be added by hand first.
     for e in entries:
         if e[1] is None:
-            t = recover_time(entry_text='\n'.join([e[2]] + e[3]), entry_date=e[0])
+            t = recover_time(
+                entry_text='\n'.join([e[2]] + e[3]), entry_date=e[0]
+            )
             if t is None:
-                raise ValueError(f'untimed entry not auto-recoverable: {e[2][:60]}')
+                raise ValueError(
+                    f'untimed entry not auto-recoverable: {e[2][:60]}'
+                )
             e[1] = t
-            e[2] = re.sub(r'^(## \[\d{4}-\d{2}-\d{2})\]', rf'\1 {t}]', e[2], count=1)
+            e[2] = re.sub(
+                r'^(## \[\d{4}-\d{2}-\d{2})\]', rf'\1 {t}]', e[2], count=1
+            )
 
     # Stable sort: equal (date, time) keep original order even under reverse.
     entries.sort(key=lambda e: (e[0], e[1]), reverse=True)
@@ -114,16 +125,28 @@ def sort_hot(path: Path) -> str:
     continuation) move with it as its body. Every other section is preserved verbatim."""
     lines = path.read_text(encoding='utf-8').split('\n')
     try:
-        start = next(i for i, l in enumerate(lines) if l.strip() == '## Recent activity')
+        start = next(
+            i for i, l in enumerate(lines) if l.strip() == '## Recent activity'
+        )
     except StopIteration:
         return path.read_text(encoding='utf-8')
-    end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith('## ')),
-               len(lines))
-    block = lines[start + 1:end]
+    end = next(
+        (
+            i
+            for i in range(start + 1, len(lines))
+            if lines[i].startswith('## ')
+        ),
+        len(lines),
+    )
+    block = lines[start + 1 : end]
 
-    first = next((i for i, l in enumerate(block) if HOT_ENTRY_RE.match(l)), None)
+    first = next(
+        (i for i, l in enumerate(block) if HOT_ENTRY_RE.match(l)), None
+    )
     if first is None:
-        return path.read_text(encoding='utf-8')  # no dated entry (e.g. a placeholder) — nothing to sort
+        return path.read_text(
+            encoding='utf-8'
+        )  # no dated entry (e.g. a placeholder) — nothing to sort
     preamble = block[:first]
     while preamble and preamble[0].strip() == '':
         preamble.pop(0)
@@ -150,12 +173,17 @@ def sort_hot(path: Path) -> str:
     # (determinate only); an entry with no recoverable link stays a manual finding.
     for e in entries:
         if e[1] is None:
-            t = recover_time(entry_text='\n'.join([e[2]] + e[3]), entry_date=e[0])
+            t = recover_time(
+                entry_text='\n'.join([e[2]] + e[3]), entry_date=e[0]
+            )
             if t is None:
                 raise ValueError(
-                    f'untimed Recent-activity entry not auto-recoverable: {e[2][:60]}')
+                    f'untimed Recent-activity entry not auto-recoverable: {e[2][:60]}'
+                )
             e[1] = t
-            e[2] = re.sub(r'^(- \[\d{4}-\d{2}-\d{2})\]', rf'\1 {t}]', e[2], count=1)
+            e[2] = re.sub(
+                r'^(- \[\d{4}-\d{2}-\d{2})\]', rf'\1 {t}]', e[2], count=1
+            )
 
     # Stable sort: equal (date, time) keep original order even under reverse.
     entries.sort(key=lambda e: (e[0], e[1]), reverse=True)
@@ -167,7 +195,7 @@ def sort_hot(path: Path) -> str:
         new_block.append(bullet)
         new_block.extend(body)
     new_block.append('')
-    out = lines[:start + 1] + new_block + lines[end:]
+    out = lines[: start + 1] + new_block + lines[end:]
     return '\n'.join(out).rstrip('\n') + '\n'
 
 
@@ -186,7 +214,9 @@ def main() -> int:
         try:
             after = sorter(path=path)
         except ValueError as exc:
-            sys.stderr.write(f'{name}: skipped — {exc}; add the time by hand, then re-run.\n')
+            sys.stderr.write(
+                f'{name}: skipped — {exc}; add the time by hand, then re-run.\n'
+            )
             skipped = True
             continue
         if after != before:

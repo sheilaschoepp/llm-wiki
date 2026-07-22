@@ -42,65 +42,176 @@ from pathlib import Path
 # Bare-name callables exempt from the keyword-only rule. Sourced from
 # the 'Exceptions' list in a-archive/style/coding-best-practices.md
 # (under 'Keyword arguments'). Keep in sync with that file.
-ALLOW_LIST_BUILTINS = frozenset({
-    # Built-ins commonly used positionally.
-    'abs', 'all', 'any', 'ascii', 'bin', 'bool', 'bytearray', 'bytes',
-    'callable', 'chr', 'classmethod', 'complex', 'dict', 'dir',
-    'divmod', 'enumerate', 'filter', 'float', 'format', 'frozenset',
-    'getattr', 'hasattr', 'hash', 'hex', 'id', 'int', 'isinstance',
-    'issubclass', 'iter', 'len', 'list', 'map', 'max', 'memoryview',
-    'min', 'next', 'object', 'oct', 'open', 'ord', 'pow', 'print',
-    'property', 'range', 'repr', 'reversed', 'round', 'set',
-    'setattr', 'slice', 'sorted', 'staticmethod', 'str', 'sum',
-    'super', 'tuple', 'type', 'vars', 'zip',
-})
+ALLOW_LIST_BUILTINS = frozenset(
+    {
+        # Built-ins commonly used positionally.
+        'abs',
+        'all',
+        'any',
+        'ascii',
+        'bin',
+        'bool',
+        'bytearray',
+        'bytes',
+        'callable',
+        'chr',
+        'classmethod',
+        'complex',
+        'dict',
+        'dir',
+        'divmod',
+        'enumerate',
+        'filter',
+        'float',
+        'format',
+        'frozenset',
+        'getattr',
+        'hasattr',
+        'hash',
+        'hex',
+        'id',
+        'int',
+        'isinstance',
+        'issubclass',
+        'iter',
+        'len',
+        'list',
+        'map',
+        'max',
+        'memoryview',
+        'min',
+        'next',
+        'object',
+        'oct',
+        'open',
+        'ord',
+        'pow',
+        'print',
+        'property',
+        'range',
+        'repr',
+        'reversed',
+        'round',
+        'set',
+        'setattr',
+        'slice',
+        'sorted',
+        'staticmethod',
+        'str',
+        'sum',
+        'super',
+        'tuple',
+        'type',
+        'vars',
+        'zip',
+    }
+)
 
 # Standard exception constructors — instantiated positionally with a
 # message string is universal.
-ALLOW_LIST_EXCEPTIONS = frozenset({
-    'ArithmeticError', 'AssertionError', 'AttributeError',
-    'BlockingIOError', 'BrokenPipeError', 'BufferError', 'BytesWarning',
-    'ChildProcessError', 'ConnectionAbortedError', 'ConnectionError',
-    'ConnectionRefusedError', 'ConnectionResetError',
-    'DeprecationWarning', 'EOFError', 'EnvironmentError', 'Exception',
-    'FileExistsError', 'FileNotFoundError', 'FloatingPointError',
-    'FutureWarning', 'GeneratorExit', 'IOError', 'ImportError',
-    'ImportWarning', 'IndentationError', 'IndexError',
-    'InterruptedError', 'IsADirectoryError', 'KeyError',
-    'KeyboardInterrupt', 'LookupError', 'MemoryError',
-    'ModuleNotFoundError', 'NameError', 'NotADirectoryError',
-    'NotImplementedError', 'OSError', 'OverflowError',
-    'PendingDeprecationWarning', 'PermissionError',
-    'ProcessLookupError', 'RecursionError', 'ReferenceError',
-    'ResourceWarning', 'RuntimeError', 'RuntimeWarning',
-    'StopAsyncIteration', 'StopIteration', 'SyntaxError',
-    'SyntaxWarning', 'SystemError', 'SystemExit', 'TabError',
-    'TimeoutError', 'TypeError', 'UnboundLocalError',
-    'UnicodeDecodeError', 'UnicodeEncodeError', 'UnicodeError',
-    'UnicodeTranslateError', 'UnicodeWarning', 'UserWarning',
-    'ValueError', 'Warning', 'ZeroDivisionError',
-})
+ALLOW_LIST_EXCEPTIONS = frozenset(
+    {
+        'ArithmeticError',
+        'AssertionError',
+        'AttributeError',
+        'BlockingIOError',
+        'BrokenPipeError',
+        'BufferError',
+        'BytesWarning',
+        'ChildProcessError',
+        'ConnectionAbortedError',
+        'ConnectionError',
+        'ConnectionRefusedError',
+        'ConnectionResetError',
+        'DeprecationWarning',
+        'EOFError',
+        'EnvironmentError',
+        'Exception',
+        'FileExistsError',
+        'FileNotFoundError',
+        'FloatingPointError',
+        'FutureWarning',
+        'GeneratorExit',
+        'IOError',
+        'ImportError',
+        'ImportWarning',
+        'IndentationError',
+        'IndexError',
+        'InterruptedError',
+        'IsADirectoryError',
+        'KeyError',
+        'KeyboardInterrupt',
+        'LookupError',
+        'MemoryError',
+        'ModuleNotFoundError',
+        'NameError',
+        'NotADirectoryError',
+        'NotImplementedError',
+        'OSError',
+        'OverflowError',
+        'PendingDeprecationWarning',
+        'PermissionError',
+        'ProcessLookupError',
+        'RecursionError',
+        'ReferenceError',
+        'ResourceWarning',
+        'RuntimeError',
+        'RuntimeWarning',
+        'StopAsyncIteration',
+        'StopIteration',
+        'SyntaxError',
+        'SyntaxWarning',
+        'SystemError',
+        'SystemExit',
+        'TabError',
+        'TimeoutError',
+        'TypeError',
+        'UnboundLocalError',
+        'UnicodeDecodeError',
+        'UnicodeEncodeError',
+        'UnicodeError',
+        'UnicodeTranslateError',
+        'UnicodeWarning',
+        'UserWarning',
+        'ValueError',
+        'Warning',
+        'ZeroDivisionError',
+    }
+)
 
 # Other bare-name stdlib helpers where positional is universal. Sourced
 # from the 'Standard library helpers where positional is universal'
 # clause in coding-best-practices.md. Conservative — add to this list
 # only when a real call site is flagged that the user decides should be
 # allowed.
-ALLOW_LIST_OTHER = frozenset({
-    # pathlib — Path('some/path') is the documented constructor form.
-    'Path', 'PurePath', 'PurePosixPath', 'PureWindowsPath',
-    'PosixPath', 'WindowsPath',
-    # datetime — datetime(2026, 1, 1) is the documented constructor.
-    'date', 'datetime', 'time', 'timedelta', 'timezone',
-    # decimal / fractions — same positional pattern.
-    'Decimal', 'Fraction',
-    # collections — Counter(['a', 'b']), deque([...]), etc.
-    'Counter', 'OrderedDict', 'defaultdict', 'deque', 'namedtuple',
-})
-
-ALLOW_LIST = (
-    ALLOW_LIST_BUILTINS | ALLOW_LIST_EXCEPTIONS | ALLOW_LIST_OTHER
+ALLOW_LIST_OTHER = frozenset(
+    {
+        # pathlib — Path('some/path') is the documented constructor form.
+        'Path',
+        'PurePath',
+        'PurePosixPath',
+        'PureWindowsPath',
+        'PosixPath',
+        'WindowsPath',
+        # datetime — datetime(2026, 1, 1) is the documented constructor.
+        'date',
+        'datetime',
+        'time',
+        'timedelta',
+        'timezone',
+        # decimal / fractions — same positional pattern.
+        'Decimal',
+        'Fraction',
+        # collections — Counter(['a', 'b']), deque([...]), etc.
+        'Counter',
+        'OrderedDict',
+        'defaultdict',
+        'deque',
+        'namedtuple',
+    }
 )
+
+ALLOW_LIST = ALLOW_LIST_BUILTINS | ALLOW_LIST_EXCEPTIONS | ALLOW_LIST_OTHER
 
 
 def call_has_positional_args(call: ast.Call) -> bool:
@@ -138,28 +249,32 @@ def find_positional_calls(file_path: Path) -> list[dict]:
         # finding, never crash the scanner (an uncaught error here exits
         # 1 with no JSON and blocks the lint loop). Parallels the
         # script_syntax_error path below.
-        return [{
-            'severity': 'error',
-            'check_id': 'script_unreadable',
-            'file': file_path.name,
-            'line': None,
-            'message': f'Script could not be read as UTF-8 text: {exc}',
-            'fix_hint': (
-                'Re-save the file as UTF-8, or remove it from scripts/ '
-                'if it is not a Python source file.'
-            ),
-        }]
+        return [
+            {
+                'severity': 'error',
+                'check_id': 'script_unreadable',
+                'file': file_path.name,
+                'line': None,
+                'message': f'Script could not be read as UTF-8 text: {exc}',
+                'fix_hint': (
+                    'Re-save the file as UTF-8, or remove it from scripts/ '
+                    'if it is not a Python source file.'
+                ),
+            }
+        ]
     try:
         tree = ast.parse(source=source, filename=str(file_path))
     except SyntaxError as exc:
-        return [{
-            'severity': 'error',
-            'check_id': 'script_syntax_error',
-            'file': file_path.name,
-            'line': exc.lineno,
-            'message': f'Python syntax error: {exc.msg}',
-            'fix_hint': 'Fix the syntax error before re-running checks.',
-        }]
+        return [
+            {
+                'severity': 'error',
+                'check_id': 'script_syntax_error',
+                'file': file_path.name,
+                'line': exc.lineno,
+                'message': f'Python syntax error: {exc.msg}',
+                'fix_hint': 'Fix the syntax error before re-running checks.',
+            }
+        ]
 
     findings = []
     for node in ast.walk(tree):
@@ -172,25 +287,27 @@ def find_positional_calls(file_path: Path) -> list[dict]:
             continue
         if not call_has_positional_args(call=node):
             continue
-        findings.append({
-            'severity': 'error',
-            'check_id': 'positional_call',
-            'file': file_path.name,
-            'line': node.lineno,
-            'message': (
-                f"Call to '{name}' passes positional argument(s); "
-                f"coding-best-practices.md requires keyword arguments "
-                f"for non-stdlib calls."
-            ),
-            'fix_hint': (
-                f"Rewrite the call to use keyword arguments "
-                f"(e.g., '{name}(arg=value)' instead of "
-                f"'{name}(value)'). If '{name}' is a stdlib helper or "
-                f"a project-wide exception, add it to ALLOW_LIST_OTHER "
-                f"in scripts/check_kwargs.py with a one-line "
-                f"justification."
-            ),
-        })
+        findings.append(
+            {
+                'severity': 'error',
+                'check_id': 'positional_call',
+                'file': file_path.name,
+                'line': node.lineno,
+                'message': (
+                    f"Call to '{name}' passes positional argument(s); "
+                    f'coding-best-practices.md requires keyword arguments '
+                    f'for non-stdlib calls.'
+                ),
+                'fix_hint': (
+                    f'Rewrite the call to use keyword arguments '
+                    f"(e.g., '{name}(arg=value)' instead of "
+                    f"'{name}(value)'). If '{name}' is a stdlib helper or "
+                    f'a project-wide exception, add it to ALLOW_LIST_OTHER '
+                    f'in scripts/check_kwargs.py with a one-line '
+                    f'justification.'
+                ),
+            }
+        )
     return findings
 
 
@@ -208,8 +325,7 @@ def resolve_target_files(target: Path) -> list[Path]:
         if not scripts_dir.is_dir():
             return []
         return sorted(
-            path for path in scripts_dir.glob('*.py')
-            if path.is_file()
+            path for path in scripts_dir.glob('*.py') if path.is_file()
         )
     if target.suffix == '.py' and target.is_file():
         return [target]

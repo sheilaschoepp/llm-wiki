@@ -22,6 +22,7 @@ whether to apply fixes mechanically or surface for user approval.
 Tracked patterns and constants are pulled out so future schema changes
 update one place. Keeps SKILL.md prose focused on procedure, not regex.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -77,7 +78,13 @@ SKILL_COUNT_PROSE = re.compile(
 # Meta-skills excluded from the working-skill count (CLAUDE.md Operations
 # section: consistency, skill-linter, skill-llm-council, checkup, and cleanup
 # are project-scoped meta-skills).
-META_SKILL_NAMES = {'consistency', 'skill-linter', 'skill-llm-council', 'checkup', 'cleanup'}
+META_SKILL_NAMES = {
+    'consistency',
+    'skill-linter',
+    'skill-llm-council',
+    'checkup',
+    'cleanup',
+}
 
 # Standalone skills deliberately kept out of the project catalogues: skills that
 # serve some out-of-band purpose rather than the wiki workflow, and so are exempt
@@ -89,26 +96,79 @@ META_SKILL_NAMES = {'consistency', 'skill-linter', 'skill-llm-council', 'checkup
 STANDALONE_SKILL_NAMES: set[str] = set()
 
 EXPECTED_SECTIONS = {
-    'source': ['tldr', 'contribution', 'key-claims', 'evidence', 'method',
-               'assumptions', 'limitations', 'appraisal', 'concepts-entities',
-               'contradictions', 'open-questions', 'connections'],
-    'entity': ['idea', 'why', 'not-this', 'examples', 'contradictions',
-               'disconfirming', 'open-questions', 'connections', 'sources'],
-    'concept': ['idea', 'why', 'not-this', 'examples', 'contradictions',
-                'disconfirming', 'open-questions', 'connections', 'sources'],
-    'synthesis': ['question', 'answer', 'scope', 'evidence', 'tensions',
-                  'what-would-change-this', 'open-questions', 'connections',
-                  'sources'],
+    'source': [
+        'tldr',
+        'contribution',
+        'key-claims',
+        'evidence',
+        'method',
+        'assumptions',
+        'limitations',
+        'appraisal',
+        'concepts-entities',
+        'contradictions',
+        'open-questions',
+        'connections',
+    ],
+    'entity': [
+        'idea',
+        'why',
+        'not-this',
+        'examples',
+        'contradictions',
+        'disconfirming',
+        'open-questions',
+        'connections',
+        'sources',
+    ],
+    'concept': [
+        'idea',
+        'why',
+        'not-this',
+        'examples',
+        'contradictions',
+        'disconfirming',
+        'open-questions',
+        'connections',
+        'sources',
+    ],
+    'synthesis': [
+        'question',
+        'answer',
+        'scope',
+        'evidence',
+        'tensions',
+        'what-would-change-this',
+        'open-questions',
+        'connections',
+        'sources',
+    ],
 }
 
 # referenced_paths_exist: backticked path-like strings whose targets should exist on disk.
 # Only match candidates that start with a known top-level prefix or are one of
 # a small set of repo-root files. Placeholder/template paths are skipped.
-PATH_PREFIXES = ('0-raw/', '1-wiki/', '2-outputs/', 'a-archive/',
-                 '.claude/', '.obsidian/')
+PATH_PREFIXES = (
+    '0-raw/',
+    '1-wiki/',
+    '2-outputs/',
+    'a-archive/',
+    '.claude/',
+    '.obsidian/',
+)
 TOPLEVEL_FILES = {'CLAUDE.md', 'README.md', 'MEMORY.md'}
-PLACEHOLDER_TOKENS = ('{', '}', '*', '<', '>', 'YYYY', 'MM-DD', 'HHMM',
-                      '$', '...')
+PLACEHOLDER_TOKENS = (
+    '{',
+    '}',
+    '*',
+    '<',
+    '>',
+    'YYYY',
+    'MM-DD',
+    'HHMM',
+    '$',
+    '...',
+)
 PATH_IN_BACKTICKS = re.compile(r'`([^`\n]+?)`')
 # Markdown link target: [text](path). The path group excludes spaces and
 # closing parens so we don't capture across links or stop early on '(' inside
@@ -118,69 +178,108 @@ BASH_FENCE_LANGS = {'bash', 'sh', 'shell', 'zsh', 'console'}
 
 CALLOUT_RE = re.compile(r'^> \[!([a-z-]+)\]', re.MULTILINE)
 WIKILINK_RE = re.compile(r'\[\[([^\]|]+)(?:\|[^\]]+)?\]\]')
-REQUIRED_CALLOUTS = sorted({slug for slugs in EXPECTED_SECTIONS.values()
-                            for slug in slugs})
+REQUIRED_CALLOUTS = sorted(
+    {slug for slugs in EXPECTED_SECTIONS.values() for slug in slugs}
+)
 
 # AI-writing tells (ai_writing_tells). Mechanical/regex-friendly tells only — semantic
 # tells (puffing tone, broader-context reflex, etc.) belong in audit. Source
 # list: a-archive/style/ai-writing-tells.md. Each entry: (label, severity,
 # pattern, fix_hint).
 AI_TELL_PATTERNS: list[tuple[str, str, re.Pattern[str], str]] = [
-    ('high-density AI vocabulary', 'warning',
-     re.compile(
-         r'\b(delve[sd]?|delving|meticulous(?:ly)?|pivotal|tapestry|'
-         r'showcas(?:e[sd]?|ing)|garner(?:ed|ing|s)?|'
-         r'intricate(?:ly)?|intricacies|interplay|'
-         r'testament|vibrant|bolster(?:ed|ing|s)?|enduring)\b',
-         re.IGNORECASE),
-     'Replace with a plainer word; see ai-writing-tells.md vocabulary list.'),
-    ('significance-puffing phrase', 'warning',
-     re.compile(
-         r'\b(stands as|serves as a|is a testament to|'
-         r'plays a (?:vital|significant|crucial|pivotal|key) role|'
-         r'evolving landscape|rich (?:cultural )?heritage|'
-         r'diverse (?:array|tapestry)|nestled in|in the heart of|'
-         r'setting the stage for|key turning point)\b',
-         re.IGNORECASE),
-     'Cut the puffery; state the specific fact.'),
-    ('hedging / knowledge-cutoff tell', 'warning',
-     re.compile(
-         r'\b(as of (?:my (?:last )?(?:knowledge|training) '
-         r'(?:update|cutoff)|the time of writing)|'
-         r'as an AI language model|as a large language model|'
-         r'in the (?:provided|available) (?:sources|search results))\b',
-         re.IGNORECASE),
-     'Drop the hedge; use the certain / believe-but-verify / guessing '
-     'scheme from CLAUDE.md.'),
-    ('citation-markup leakage', 'error',
-     re.compile(
-         r':contentReference\[oaicite:|oai_citation|turn0search\d+|'
-         r'cite turn0search|attached_file:\d+|grok_card'),
-     'Strip the leaked AI citation markup.'),
-    ('placeholder leakage', 'error',
-     re.compile(
-         r'\[Your Name\]|\[Insert (?:Date|Time|Name|Topic|Source)\]|'
-         r"\[Entertainer's Name\]|INSERT_SOURCE_URL|"
-         r'PASTE_[A-Z_]+_HERE|\[link to revised article\]'),
-     'Fill in the placeholder or remove the line.'),
-    ('UTM parameter leakage', 'warning',
-     re.compile(
-         r'utm_source=(?:chatgpt\.com|openai|copilot\.com)|'
-         r'referrer=grok\.com'),
-     'Strip the UTM parameter from the URL.'),
-    ('Subject: header in body', 'warning',
-     re.compile(r'^Subject:\s', re.MULTILINE),
-     'Remove the leftover email-style subject line.'),
-    ('footnote-arrow leakage', 'warning',
-     re.compile(r'↩'),
-     'Remove the leaked footnote arrow character.'),
-    ('negative-parallelism cliche', 'suggestion',
-     re.compile(r'\bnot only [^,\n]{1,80}, but also\b', re.IGNORECASE),
-     'Restructure as plain prose.'),
-    ("'Despite challenges' conclusion template", 'suggestion',
-     re.compile(r'^Despite (?:its |these |the )?challenges,',
-                re.MULTILINE | re.IGNORECASE),
-     'Name the specific challenge or drop the sentence.'),
+    (
+        'high-density AI vocabulary',
+        'warning',
+        re.compile(
+            r'\b(delve[sd]?|delving|meticulous(?:ly)?|pivotal|tapestry|'
+            r'showcas(?:e[sd]?|ing)|garner(?:ed|ing|s)?|'
+            r'intricate(?:ly)?|intricacies|interplay|'
+            r'testament|vibrant|bolster(?:ed|ing|s)?|enduring)\b',
+            re.IGNORECASE,
+        ),
+        'Replace with a plainer word; see ai-writing-tells.md vocabulary list.',
+    ),
+    (
+        'significance-puffing phrase',
+        'warning',
+        re.compile(
+            r'\b(stands as|serves as a|is a testament to|'
+            r'plays a (?:vital|significant|crucial|pivotal|key) role|'
+            r'evolving landscape|rich (?:cultural )?heritage|'
+            r'diverse (?:array|tapestry)|nestled in|in the heart of|'
+            r'setting the stage for|key turning point)\b',
+            re.IGNORECASE,
+        ),
+        'Cut the puffery; state the specific fact.',
+    ),
+    (
+        'hedging / knowledge-cutoff tell',
+        'warning',
+        re.compile(
+            r'\b(as of (?:my (?:last )?(?:knowledge|training) '
+            r'(?:update|cutoff)|the time of writing)|'
+            r'as an AI language model|as a large language model|'
+            r'in the (?:provided|available) (?:sources|search results))\b',
+            re.IGNORECASE,
+        ),
+        'Drop the hedge; use the certain / believe-but-verify / guessing '
+        'scheme from CLAUDE.md.',
+    ),
+    (
+        'citation-markup leakage',
+        'error',
+        re.compile(
+            r':contentReference\[oaicite:|oai_citation|turn0search\d+|'
+            r'cite turn0search|attached_file:\d+|grok_card'
+        ),
+        'Strip the leaked AI citation markup.',
+    ),
+    (
+        'placeholder leakage',
+        'error',
+        re.compile(
+            r'\[Your Name\]|\[Insert (?:Date|Time|Name|Topic|Source)\]|'
+            r"\[Entertainer's Name\]|INSERT_SOURCE_URL|"
+            r'PASTE_[A-Z_]+_HERE|\[link to revised article\]'
+        ),
+        'Fill in the placeholder or remove the line.',
+    ),
+    (
+        'UTM parameter leakage',
+        'warning',
+        re.compile(
+            r'utm_source=(?:chatgpt\.com|openai|copilot\.com)|'
+            r'referrer=grok\.com'
+        ),
+        'Strip the UTM parameter from the URL.',
+    ),
+    (
+        'Subject: header in body',
+        'warning',
+        re.compile(r'^Subject:\s', re.MULTILINE),
+        'Remove the leftover email-style subject line.',
+    ),
+    (
+        'footnote-arrow leakage',
+        'warning',
+        re.compile(r'↩'),
+        'Remove the leaked footnote arrow character.',
+    ),
+    (
+        'negative-parallelism cliche',
+        'suggestion',
+        re.compile(r'\bnot only [^,\n]{1,80}, but also\b', re.IGNORECASE),
+        'Restructure as plain prose.',
+    ),
+    (
+        "'Despite challenges' conclusion template",
+        'suggestion',
+        re.compile(
+            r'^Despite (?:its |these |the )?challenges,',
+            re.MULTILINE | re.IGNORECASE,
+        ),
+        'Name the specific challenge or drop the sentence.',
+    ),
 ]
 
 CHECK_MANIFEST = [
@@ -308,7 +407,7 @@ CHECK_MANIFEST = [
         'check_id': 'unbackticked_paths_resolve',
         'packet': 'styles-files',
         'name': 'unbackticked schema-prefix path references resolve',
-        'scope': "CLAUDE.md — finds path-shaped tokens starting with a known schema prefix (0-raw/, 1-wiki/, 2-outputs/, a-archive/, .claude/) in prose outside backticks and code fences, and verifies each resolves to an existing path. Pairs with filename_references_resolve (which scans backticked filenames); together they catch path drift regardless of backtick convention.",
+        'scope': 'CLAUDE.md — finds path-shaped tokens starting with a known schema prefix (0-raw/, 1-wiki/, 2-outputs/, a-archive/, .claude/) in prose outside backticks and code fences, and verifies each resolves to an existing path. Pairs with filename_references_resolve (which scans backticked filenames); together they catch path drift regardless of backtick convention.',
     },
     {
         'check_id': 'operations_list_matches_skills',
@@ -332,7 +431,7 @@ CHECK_MANIFEST = [
         'check_id': 'output_kinds_match_disk',
         'packet': 'naming',
         'name': 'output kinds match disk',
-        'scope': "OUTPUT_KIND_DIRS in the script vs the on-disk 2-outputs/ subfolders (minus the OUTPUT_EXEMPT_DIRS free-form folders and the STANDALONE_SKILL_NAMES output folders; the quarantine/preserve preservation subfolders now nest under forget/ and supersede/, so they are not immediate children). Flags an output folder that exists but is absent from OUTPUT_KIND_DIRS (its files would escape file_naming_consistency) and a listed kind whose folder is missing while its owning skill still exists. Standalone skills are exempt. Findings are root-level proposals (the constant lives in the script).",
+        'scope': 'OUTPUT_KIND_DIRS in the script vs the on-disk 2-outputs/ subfolders (minus the OUTPUT_EXEMPT_DIRS free-form folders and the STANDALONE_SKILL_NAMES output folders; the quarantine/preserve preservation subfolders now nest under forget/ and supersede/, so they are not immediate children). Flags an output folder that exists but is absent from OUTPUT_KIND_DIRS (its files would escape file_naming_consistency) and a listed kind whose folder is missing while its owning skill still exists. Standalone skills are exempt. Findings are root-level proposals (the constant lives in the script).',
     },
     {
         'check_id': 'catalogue_matches_manifest',
@@ -365,8 +464,13 @@ for item in CHECK_MANIFEST:
     PACKET_CHECKS.setdefault(item['packet'], []).append(item['check_id'])
 
 
-def finding(check_id: str, file: str, message: str,
-            fix_hint: str = '', line: int | None = None) -> dict[str, Any]:
+def finding(
+    check_id: str,
+    file: str,
+    message: str,
+    fix_hint: str = '',
+    line: int | None = None,
+) -> dict[str, Any]:
     """Build a finding dict from check ID, file, message, and fix hint."""
     return {
         'check_id': check_id,
@@ -377,8 +481,12 @@ def finding(check_id: str, file: str, message: str,
     }
 
 
-def search_files(root: Path, patterns: list[str], paths: list[str],
-                 exclude_paths: Sequence[str] = ()) -> list[tuple[Path, int, str]]:
+def search_files(
+    root: Path,
+    patterns: list[str],
+    paths: list[str],
+    exclude_paths: Sequence[str] = (),
+) -> list[tuple[Path, int, str]]:
     """Return (path, line_no, line_content) for every line in `paths` matching
     any of `patterns`, with substring-match exclusions applied."""
     hits: list[tuple[Path, int, str]] = []
@@ -415,13 +523,15 @@ def check_retired_feature_mentions(root: Path) -> list[dict[str, Any]]:
     )
     for path, line_no, content in hits:
         relstr = str(path.relative_to(root))
-        findings.append(finding(
-            check_id='retired_feature_mentions',
-            file=relstr,
-            message=f'Removed-feature mention: {content.strip()[:MESSAGE_SNIPPET_LEN]}',
-            fix_hint='Remove the stale reference or migrate to the current schema.',
-            line=line_no,
-        ))
+        findings.append(
+            finding(
+                check_id='retired_feature_mentions',
+                file=relstr,
+                message=f'Removed-feature mention: {content.strip()[:MESSAGE_SNIPPET_LEN]}',
+                fix_hint='Remove the stale reference or migrate to the current schema.',
+                line=line_no,
+            )
+        )
     return findings
 
 
@@ -431,48 +541,60 @@ def check_working_skill_count_prose(root: Path) -> list[dict[str, Any]]:
     skills_dir = root / '.claude/skills'
     if not skills_dir.exists():
         return findings
-    actual = sum(1 for p in skills_dir.iterdir()
-                 if p.is_dir() and p.name not in META_SKILL_NAMES
-                 and p.name not in STANDALONE_SKILL_NAMES
-                 and (p / 'SKILL.md').exists())
-    expected_word = {10: 'ten', 11: 'eleven', 12: 'twelve'}.get(actual, str(actual))
+    actual = sum(
+        1
+        for p in skills_dir.iterdir()
+        if p.is_dir()
+        and p.name not in META_SKILL_NAMES
+        and p.name not in STANDALONE_SKILL_NAMES
+        and (p / 'SKILL.md').exists()
+    )
+    expected_word = {10: 'ten', 11: 'eleven', 12: 'twelve'}.get(
+        actual, str(actual)
+    )
 
     # Walk files directly — search_files is substring-only and this check
     # needs the SKILL_COUNT_PROSE regex.
     for rel in ['CLAUDE.md', 'README.md']:
         full = root / rel
         if full.exists():
-            for i, line in enumerate(full.read_text(encoding='utf-8').splitlines(),
-                                     start=1):
+            for i, line in enumerate(
+                full.read_text(encoding='utf-8').splitlines(), start=1
+            ):
                 m = SKILL_COUNT_PROSE.search(line)
                 if m:
                     word = m.group(1) or m.group(3) or ''
                     if word.lower() != expected_word:
-                        findings.append(finding(
-                            check_id='working_skill_count_prose',
-                            file=rel,
-                            message=f"Skill-count prose `{m.group(0)}` doesn't match "
-                            f'actual working-skill count ({actual}).',
-                            fix_hint=f'Update the prose to `{expected_word}`.',
-                            line=i,
-                        ))
+                        findings.append(
+                            finding(
+                                check_id='working_skill_count_prose',
+                                file=rel,
+                                message=f"Skill-count prose `{m.group(0)}` doesn't match "
+                                f'actual working-skill count ({actual}).',
+                                fix_hint=f'Update the prose to `{expected_word}`.',
+                                line=i,
+                            )
+                        )
     for skill_md in (root / '.claude/skills').rglob('SKILL.md'):
         if 'consistency' in str(skill_md):
             continue
-        for i, line in enumerate(skill_md.read_text(encoding='utf-8').splitlines(),
-                                 start=1):
+        for i, line in enumerate(
+            skill_md.read_text(encoding='utf-8').splitlines(), start=1
+        ):
             m = SKILL_COUNT_PROSE.search(line)
             if m:
                 word = m.group(1) or m.group(3) or ''
                 if word.lower() != expected_word:
-                    findings.append(finding(
-                        check_id='working_skill_count_prose',
-                        file=str(skill_md.relative_to(root)),
-                        message=f"Skill-count prose `{m.group(0)}` doesn't match "
-                        f'actual working-skill count ({actual}).',
-                        fix_hint=f'Update the prose to `{expected_word}`.',
-                        line=i,
-                    ))
+                    findings.append(
+                        finding(
+                            check_id='working_skill_count_prose',
+                            file=str(skill_md.relative_to(root)),
+                            message=f"Skill-count prose `{m.group(0)}` doesn't match "
+                            f'actual working-skill count ({actual}).',
+                            fix_hint=f'Update the prose to `{expected_word}`.',
+                            line=i,
+                        )
+                    )
     return findings
 
 
@@ -501,13 +623,15 @@ def check_old_schema_wording(root: Path) -> list[dict[str, Any]]:
                 # lint's vague_source_referent entry), not old-schema prose.
                 probe = re.sub(r'`[^`]*`', '', lowered)
                 if any(p in probe for p in STALE_SCHEMA_PHRASES):
-                    findings.append(finding(
-                        check_id='old_schema_wording',
-                        file=relstr,
-                        message=f'Stale old-schema wording: {content.strip()[:MESSAGE_SNIPPET_LEN]}',
-                        fix_hint='Update to the current schema.',
-                        line=line_no,
-                    ))
+                    findings.append(
+                        finding(
+                            check_id='old_schema_wording',
+                            file=relstr,
+                            message=f'Stale old-schema wording: {content.strip()[:MESSAGE_SNIPPET_LEN]}',
+                            fix_hint='Update to the current schema.',
+                            line=line_no,
+                        )
+                    )
     return findings
 
 
@@ -531,13 +655,15 @@ def check_placeholder_consistency(root: Path) -> list[dict[str, Any]]:
                 if m:
                     placeholders.add(m.group(1).strip())
             if len(placeholders) > 1:
-                findings.append(finding(
-                    check_id='placeholder_consistency',
-                    file=str(page.relative_to(root)),
-                    message=f'Mixed empty-section placeholders on one page: '
-                    f'{sorted(placeholders)}.',
-                    fix_hint='Pick one canonical placeholder phrase and use it consistently.',
-                ))
+                findings.append(
+                    finding(
+                        check_id='placeholder_consistency',
+                        file=str(page.relative_to(root)),
+                        message=f'Mixed empty-section placeholders on one page: '
+                        f'{sorted(placeholders)}.',
+                        fix_hint='Pick one canonical placeholder phrase and use it consistently.',
+                    )
+                )
     return findings
 
 
@@ -557,8 +683,12 @@ def check_body_section_order(root: Path) -> list[dict[str, Any]]:
             return 'synthesis'
         return ''
 
-    for folder in ('1-wiki/sources', '1-wiki/entities', '1-wiki/concepts',
-                   '1-wiki/syntheses'):
+    for folder in (
+        '1-wiki/sources',
+        '1-wiki/entities',
+        '1-wiki/concepts',
+        '1-wiki/syntheses',
+    ):
         full = root / folder
         if not full.exists():
             continue
@@ -568,13 +698,15 @@ def check_body_section_order(root: Path) -> list[dict[str, Any]]:
             expected = EXPECTED_SECTIONS.get(kind, [])
             actual = [m.group(1) for m in CALLOUT_RE.finditer(text)]
             if expected and actual != expected:
-                findings.append(finding(
-                    check_id='body_section_order',
-                    file=str(page.relative_to(root)),
-                    message=f"Section order doesn't match `{kind}` schema: "
-                    f'got {actual}, expected {expected}.',
-                    fix_hint='Reorder body callouts to match CLAUDE.md schema.',
-                ))
+                findings.append(
+                    finding(
+                        check_id='body_section_order',
+                        file=str(page.relative_to(root)),
+                        message=f"Section order doesn't match `{kind}` schema: "
+                        f'got {actual}, expected {expected}.',
+                        fix_hint='Reorder body callouts to match CLAUDE.md schema.',
+                    )
+                )
     return findings
 
 
@@ -589,15 +721,17 @@ def check_source_venue_year_split(root: Path) -> list[dict[str, Any]]:
         text = page.read_text(encoding='utf-8')
         m = venue_year_re.search(text)
         if m:
-            line_no = text[:m.start()].count('\n') + 1
-            findings.append(finding(
-                check_id='source_venue_year_split',
-                file=str(page.relative_to(root)),
-                message=f'`venue:` field embeds a year: {m.group(0).strip()}',
-                fix_hint='Move the year to the separate `year:` field; venue should be '
-                'the venue name only (e.g., `NeurIPS`, not `NeurIPS 2017`).',
-                line=line_no,
-            ))
+            line_no = text[: m.start()].count('\n') + 1
+            findings.append(
+                finding(
+                    check_id='source_venue_year_split',
+                    file=str(page.relative_to(root)),
+                    message=f'`venue:` field embeds a year: {m.group(0).strip()}',
+                    fix_hint='Move the year to the separate `year:` field; venue should be '
+                    'the venue name only (e.g., `NeurIPS`, not `NeurIPS 2017`).',
+                    line=line_no,
+                )
+            )
     return findings
 
 
@@ -619,38 +753,53 @@ def check_index_vs_files_drift(root: Path) -> list[dict[str, Any]]:
         # the for-clause runs before any if-clause, so an in-comprehension
         # existence check does not protect the iterdir() call and a missing
         # wiki subfolder would raise FileNotFoundError mid-battery.
-        present = sorted(p.stem for p in folder.iterdir()
-                         if p.suffix == '.md') if folder.exists() else []
+        present = (
+            sorted(p.stem for p in folder.iterdir() if p.suffix == '.md')
+            if folder.exists()
+            else []
+        )
         m_start = re.search(rf'^## {name}\s*$', text, re.MULTILINE)
         if not m_start:
             continue
         body_start = m_start.end()
         if end_marker:
-            m_end = re.search(rf'^{re.escape(end_marker)}\s*$',
-                              text[body_start:], re.MULTILINE)
-            section_body = text[body_start:body_start + m_end.start()] if m_end else text[body_start:]
+            m_end = re.search(
+                rf'^{re.escape(end_marker)}\s*$',
+                text[body_start:],
+                re.MULTILINE,
+            )
+            section_body = (
+                text[body_start : body_start + m_end.start()]
+                if m_end
+                else text[body_start:]
+            )
         else:
             section_body = text[body_start:]
         # Wikilinks are path-qualified (`[[1-wiki/sources/foo.md|foo]]`);
         # normalize each target to its bare stem before comparing to files.
-        listed = sorted({Path(x.strip()).stem
-                         for x in WIKILINK_RE.findall(section_body)})
+        listed = sorted(
+            {Path(x.strip()).stem for x in WIKILINK_RE.findall(section_body)}
+        )
         rel_folder = str(folder.relative_to(root))
         for stem in sorted(set(present) - set(listed)):
-            findings.append(finding(
-                check_id='index_vs_files_drift',
-                file='1-wiki/index.md',
-                message=f"{name}: file `{stem}.md` exists but isn't listed in index.md.",
-                fix_hint=f'Add `- [[{rel_folder}/{stem}.md|{stem}]]` to the '
-                f'{name} section.',
-            ))
+            findings.append(
+                finding(
+                    check_id='index_vs_files_drift',
+                    file='1-wiki/index.md',
+                    message=f"{name}: file `{stem}.md` exists but isn't listed in index.md.",
+                    fix_hint=f'Add `- [[{rel_folder}/{stem}.md|{stem}]]` to the '
+                    f'{name} section.',
+                )
+            )
         for stem in sorted(set(listed) - set(present)):
-            findings.append(finding(
-                check_id='index_vs_files_drift',
-                file='1-wiki/index.md',
-                message=f'{name}: index.md lists `{stem}.md` but no matching file.',
-                fix_hint='Remove the entry or restore the file.',
-            ))
+            findings.append(
+                finding(
+                    check_id='index_vs_files_drift',
+                    file='1-wiki/index.md',
+                    message=f'{name}: index.md lists `{stem}.md` but no matching file.',
+                    fix_hint='Remove the entry or restore the file.',
+                )
+            )
     return findings
 
 
@@ -662,16 +811,20 @@ def check_gitkeep_coverage(root: Path) -> list[dict[str, Any]]:
         if not folder.is_dir():
             continue
         # Skip if any part is hidden / excluded.
-        if any(part.startswith('.') or part in excluded
-               for part in folder.relative_to(root).parts):
+        if any(
+            part.startswith('.') or part in excluded
+            for part in folder.relative_to(root).parts
+        ):
             continue
         if not (folder / '.gitkeep').exists():
-            findings.append(finding(
-                check_id='gitkeep_coverage',
-                file=str(folder.relative_to(root)),
-                message="Non-hidden folder missing `.gitkeep` (won't survive fresh clone).",
-                fix_hint=f'touch `{folder.relative_to(root)}/.gitkeep`',
-            ))
+            findings.append(
+                finding(
+                    check_id='gitkeep_coverage',
+                    file=str(folder.relative_to(root)),
+                    message="Non-hidden folder missing `.gitkeep` (won't survive fresh clone).",
+                    fix_hint=f'touch `{folder.relative_to(root)}/.gitkeep`',
+                )
+            )
     return findings
 
 
@@ -684,12 +837,14 @@ def check_attachments_folder_coverage(root: Path) -> list[dict[str, Any]]:
     if not attachments.exists():
         # Schema requires the folder. Surface it once so a manual mkdir
         # restores the structure.
-        findings.append(finding(
-            check_id='attachments_folder_coverage',
-            file='1-wiki/attachments',
-            message='Required schema folder `1-wiki/attachments/` is missing.',
-            fix_hint='Create `1-wiki/attachments/` and add a `.gitkeep`.',
-        ))
+        findings.append(
+            finding(
+                check_id='attachments_folder_coverage',
+                file='1-wiki/attachments',
+                message='Required schema folder `1-wiki/attachments/` is missing.',
+                fix_hint='Create `1-wiki/attachments/` and add a `.gitkeep`.',
+            )
+        )
         return findings
     if not sources.exists():
         return findings
@@ -698,13 +853,15 @@ def check_attachments_folder_coverage(root: Path) -> list[dict[str, Any]]:
         if not stem_dir.is_dir():
             continue
         if stem_dir.name not in source_stems:
-            findings.append(finding(
-                check_id='attachments_folder_coverage',
-                file=f'1-wiki/attachments/{stem_dir.name}',
-                message=f'Attachment folder `{stem_dir.name}/` has no matching source '
-                f'page at `1-wiki/sources/{stem_dir.name}.md`.',
-                fix_hint='Quarantine the folder via /forget, or create the source page.',
-            ))
+            findings.append(
+                finding(
+                    check_id='attachments_folder_coverage',
+                    file=f'1-wiki/attachments/{stem_dir.name}',
+                    message=f'Attachment folder `{stem_dir.name}/` has no matching source '
+                    f'page at `1-wiki/sources/{stem_dir.name}.md`.',
+                    fix_hint='Quarantine the folder via /forget, or create the source page.',
+                )
+            )
     return findings
 
 
@@ -713,21 +870,25 @@ def check_callout_css_coverage(root: Path) -> list[dict[str, Any]]:
     findings = []
     css = root / '.obsidian/snippets/custom_callouts.css'
     if not css.exists():
-        return [finding(
-            check_id='callout_css_coverage',
-            file='.obsidian/snippets/custom_callouts.css',
-            message='Callout stylesheet is missing.',
-            fix_hint='Create styles for the required callout slugs.',
-        )]
+        return [
+            finding(
+                check_id='callout_css_coverage',
+                file='.obsidian/snippets/custom_callouts.css',
+                message='Callout stylesheet is missing.',
+                fix_hint='Create styles for the required callout slugs.',
+            )
+        ]
     text = css.read_text(encoding='utf-8')
     for slug in REQUIRED_CALLOUTS:
         if f'data-callout="{slug}"' not in text:
-            findings.append(finding(
-                check_id='callout_css_coverage',
-                file=str(css.relative_to(root)),
-                message=f'Missing CSS style for callout `{slug}`.',
-                fix_hint=f'Add `.callout[data-callout=\"{slug}\"]` to the stylesheet.',
-            ))
+            findings.append(
+                finding(
+                    check_id='callout_css_coverage',
+                    file=str(css.relative_to(root)),
+                    message=f'Missing CSS style for callout `{slug}`.',
+                    fix_hint=f'Add `.callout[data-callout="{slug}"]` to the stylesheet.',
+                )
+            )
     return findings
 
 
@@ -740,8 +901,10 @@ def check_referenced_paths_exist(root: Path) -> list[dict[str, Any]]:
     # `0-raw/papers/Vaswani2017AttentionIA.pdf`) that aren't expected to exist;
     # scanning them produces false positives, so they are out of scope.
     paths_to_scan = ['README.md', '.claude/skills/']
-    exclude_paths = ['consistency/SKILL.md',
-                     'consistency/scripts/check_consistency.py']
+    exclude_paths = [
+        'consistency/SKILL.md',
+        'consistency/scripts/check_consistency.py',
+    ]
     file_line_re = re.compile(r':\d+$')
     for rel in paths_to_scan:
         full = root / rel
@@ -799,8 +962,10 @@ def check_referenced_paths_exist(root: Path) -> list[dict[str, Any]]:
                         continue
                     if any(tok in candidate for tok in PLACEHOLDER_TOKENS):
                         continue
-                    is_path = (candidate.startswith(PATH_PREFIXES)
-                               or candidate in TOPLEVEL_FILES)
+                    is_path = (
+                        candidate.startswith(PATH_PREFIXES)
+                        or candidate in TOPLEVEL_FILES
+                    )
                     if not is_path:
                         continue
                     target_rel = candidate.rstrip('/')
@@ -811,13 +976,15 @@ def check_referenced_paths_exist(root: Path) -> list[dict[str, Any]]:
                     if key in seen:
                         continue
                     seen.add(key)
-                    findings.append(finding(
-                        check_id='referenced_paths_exist',
-                        file=relstr,
-                        message=f'Referenced path `{candidate}` does not exist in repo.',
-                        fix_hint='Update the reference or restore the file/folder.',
-                        line=i,
-                    ))
+                    findings.append(
+                        finding(
+                            check_id='referenced_paths_exist',
+                            file=relstr,
+                            message=f'Referenced path `{candidate}` does not exist in repo.',
+                            fix_hint='Update the reference or restore the file/folder.',
+                            line=i,
+                        )
+                    )
     return findings
 
 
@@ -892,19 +1059,23 @@ def check_orphan_skill_scripts(root: Path) -> list[dict[str, Any]]:
             dir_parts = f.relative_to(scripts).parts[:-1]
             if any(p == '__pycache__' or p.startswith('.') for p in dir_parts):
                 continue
-            if f.name.startswith('.'):  # dotfiles (e.g. .gitkeep) are not scripts
+            if f.name.startswith(
+                '.'
+            ):  # dotfiles (e.g. .gitkeep) are not scripts
                 continue
             if f.suffix in skip_suffixes:
                 continue
             rel = str(f.relative_to(root))
             if rel in referenced:
                 continue
-            findings.append(finding(
-                check_id='orphan_skill_scripts',
-                file=rel,
-                message='Skill script is not referenced by any SKILL.md (likely orphan).',
-                fix_hint="Reference it from the owning skill's SKILL.md, or remove the file.",
-            ))
+            findings.append(
+                finding(
+                    check_id='orphan_skill_scripts',
+                    file=rel,
+                    message='Skill script is not referenced by any SKILL.md (likely orphan).',
+                    fix_hint="Reference it from the owning skill's SKILL.md, or remove the file.",
+                )
+            )
     return findings
 
 
@@ -931,16 +1102,38 @@ def _under_standalone_skill(path: Path, root: Path) -> bool:
     currently empty, so this returns False for every path.
     """
     parts = path.relative_to(root).parts
-    return (len(parts) >= 3 and parts[0] == '.claude'
-            and parts[1] == 'skills' and parts[2] in STANDALONE_SKILL_NAMES)
+    return (
+        len(parts) >= 3
+        and parts[0] == '.claude'
+        and parts[1] == 'skills'
+        and parts[2] in STANDALONE_SKILL_NAMES
+    )
 
 
 def check_personal_info_leakage(root: Path) -> list[dict[str, Any]]:
     findings = []
-    excluded_top = {'.git', '0-raw', 'a-archive', '2-outputs', '.obsidian',
-                    'about', 'about-me'}
-    text_exts = {'.md', '.py', '.sh', '.css', '.json', '.yaml', '.yml',
-                 '.txt', '.toml', '.cfg', '.ini'}
+    excluded_top = {
+        '.git',
+        '0-raw',
+        'a-archive',
+        '2-outputs',
+        '.obsidian',
+        'about',
+        'about-me',
+    }
+    text_exts = {
+        '.md',
+        '.py',
+        '.sh',
+        '.css',
+        '.json',
+        '.yaml',
+        '.yml',
+        '.txt',
+        '.toml',
+        '.cfg',
+        '.ini',
+    }
     seen: set[tuple[str, str]] = set()
     for f in sorted(root.rglob('*')):
         if not f.is_file():
@@ -961,36 +1154,48 @@ def check_personal_info_leakage(root: Path) -> list[dict[str, Any]]:
             continue
         try:
             content = f.read_text(encoding='utf-8')
-        except (UnicodeDecodeError, IsADirectoryError, PermissionError, OSError):
+        except (
+            UnicodeDecodeError,
+            IsADirectoryError,
+            PermissionError,
+            OSError,
+        ):
             continue
         rel = str(f.relative_to(root))
         for i, line in enumerate(content.splitlines(), start=1):
             for m in EMAIL_RE.finditer(line):
-                if m.group(0).split('@', 1)[0].lower() in EMAIL_ALLOWLIST_LOCALPARTS:
+                if (
+                    m.group(0).split('@', 1)[0].lower()
+                    in EMAIL_ALLOWLIST_LOCALPARTS
+                ):
                     continue
                 key = (rel, 'email:' + m.group(0))
                 if key in seen:
                     continue
                 seen.add(key)
-                findings.append(finding(
-                    check_id='personal_info_leakage',
-                    file=rel,
-                    message=f'Possible personal information (email): {m.group(0)}',
-                    fix_hint='Move to the about-me page (a-archive/about-me/about-me.md) or redact.',
-                    line=i,
-                ))
+                findings.append(
+                    finding(
+                        check_id='personal_info_leakage',
+                        file=rel,
+                        message=f'Possible personal information (email): {m.group(0)}',
+                        fix_hint='Move to the about-me page (a-archive/about-me/about-me.md) or redact.',
+                        line=i,
+                    )
+                )
             for m in PHONE_RE.finditer(line):
                 key = (rel, 'phone:' + m.group(0))
                 if key in seen:
                     continue
                 seen.add(key)
-                findings.append(finding(
-                    check_id='personal_info_leakage',
-                    file=rel,
-                    message=f'Possible personal information (phone): {m.group(0)}',
-                    fix_hint='Move to the about-me page (a-archive/about-me/about-me.md) or redact.',
-                    line=i,
-                ))
+                findings.append(
+                    finding(
+                        check_id='personal_info_leakage',
+                        file=rel,
+                        message=f'Possible personal information (phone): {m.group(0)}',
+                        fix_hint='Move to the about-me page (a-archive/about-me/about-me.md) or redact.',
+                        line=i,
+                    )
+                )
     return findings
 
 
@@ -1000,11 +1205,33 @@ def check_personal_info_leakage(root: Path) -> list[dict[str, Any]]:
 # the check stays in sync as that file evolves.
 URL_RE = re.compile(r'https?://[^\s)\]]+')
 GENERIC_URL_TOKENS = {
-    'www', 'com', 'org', 'net', 'ca', 'io', 'uk', 'us',
-    'site', 'html', 'pdf', 'https', 'http',
-    'github', 'linkedin', 'google', 'scholar', 'notion', 'citations',
-    'in', 'user', 'page', 'pages', 'wiki',
-    'example', 'test', 'localhost',
+    'www',
+    'com',
+    'org',
+    'net',
+    'ca',
+    'io',
+    'uk',
+    'us',
+    'site',
+    'html',
+    'pdf',
+    'https',
+    'http',
+    'github',
+    'linkedin',
+    'google',
+    'scholar',
+    'notion',
+    'citations',
+    'in',
+    'user',
+    'page',
+    'pages',
+    'wiki',
+    'example',
+    'test',
+    'localhost',
 }
 
 
@@ -1027,10 +1254,12 @@ def _load_identity_terms(root: Path) -> tuple[set[str], set[str]]:
     # The canonical file is named about-me.md inside a-archive/about-me/.
     # Older layouts (a-archive/about/, about-me/, about/) are kept as
     # fallbacks so the check still locates the file if the layout shifts.
-    candidates = [root / 'a-archive' / 'about-me' / 'about-me.md',
-                  root / 'a-archive' / 'about' / 'about-me.md',
-                  root / 'about-me' / 'about-me.md',
-                  root / 'about' / 'about-me.md']
+    candidates = [
+        root / 'a-archive' / 'about-me' / 'about-me.md',
+        root / 'a-archive' / 'about' / 'about-me.md',
+        root / 'about-me' / 'about-me.md',
+        root / 'about' / 'about-me.md',
+    ]
     about = next((p for p in candidates if p.exists()), None)
     if about is None:
         return set(), set()
@@ -1083,21 +1312,41 @@ def check_identity_term_leakage(root: Path) -> list[dict[str, Any]]:
         # stakes personal-info scan would otherwise report clean while
         # scanning for nothing. Surface it as an advisory (a SKILL.md Step 7.3
         # non-blocking finding) so an inactive scan cannot masquerade as clean.
-        return [finding(
-            check_id='identity_term_leakage',
-            file='a-archive/about-me/about-me.md',
-            message='identity-term source could not be loaded (about-me.md '
-                    'missing/unreadable, or its ## Identity section absent or '
-                    'unparseable) — the identity-leakage scan is INACTIVE; '
-                    'populate ## Identity to activate it',
-            fix_hint='fill a-archive/about-me/about-me.md ## Identity '
-                     '(Name / Institution / Lab / Supervisors) so terms load',
-        )]
+        return [
+            finding(
+                check_id='identity_term_leakage',
+                file='a-archive/about-me/about-me.md',
+                message='identity-term source could not be loaded (about-me.md '
+                'missing/unreadable, or its ## Identity section absent or '
+                'unparseable) — the identity-leakage scan is INACTIVE; '
+                'populate ## Identity to activate it',
+                fix_hint='fill a-archive/about-me/about-me.md ## Identity '
+                '(Name / Institution / Lab / Supervisors) so terms load',
+            )
+        ]
     findings = []
-    excluded_top = {'.git', '0-raw', 'a-archive', '2-outputs', '.obsidian',
-                    'about', 'about-me'}
-    text_exts = {'.md', '.py', '.sh', '.css', '.json', '.yaml', '.yml',
-                 '.txt', '.toml', '.cfg', '.ini'}
+    excluded_top = {
+        '.git',
+        '0-raw',
+        'a-archive',
+        '2-outputs',
+        '.obsidian',
+        'about',
+        'about-me',
+    }
+    text_exts = {
+        '.md',
+        '.py',
+        '.sh',
+        '.css',
+        '.json',
+        '.yaml',
+        '.yml',
+        '.txt',
+        '.toml',
+        '.cfg',
+        '.ini',
+    }
     seen: set[tuple[str, str]] = set()
     for f in sorted(root.rglob('*')):
         if not f.is_file():
@@ -1115,7 +1364,12 @@ def check_identity_term_leakage(root: Path) -> list[dict[str, Any]]:
             continue
         try:
             content = f.read_text(encoding='utf-8')
-        except (UnicodeDecodeError, IsADirectoryError, PermissionError, OSError):
+        except (
+            UnicodeDecodeError,
+            IsADirectoryError,
+            PermissionError,
+            OSError,
+        ):
             continue
         rel = str(f.relative_to(root))
         for i, line in enumerate(content.splitlines(), start=1):
@@ -1125,13 +1379,15 @@ def check_identity_term_leakage(root: Path) -> list[dict[str, Any]]:
                     if key in seen:
                         continue
                     seen.add(key)
-                    findings.append(finding(
-                        check_id='identity_term_leakage',
-                        file=rel,
-                        message=f'Identity term `{term}` appears outside about-me/.',
-                        fix_hint='Move the mention to the about-me page (a-archive/about-me/about-me.md) or remove it.',
-                        line=i,
-                    ))
+                    findings.append(
+                        finding(
+                            check_id='identity_term_leakage',
+                            file=rel,
+                            message=f'Identity term `{term}` appears outside about-me/.',
+                            fix_hint='Move the mention to the about-me page (a-archive/about-me/about-me.md) or remove it.',
+                            line=i,
+                        )
+                    )
             lowered = line.lower()
             for handle in sorted(handles):
                 if handle.lower() in lowered:
@@ -1139,13 +1395,15 @@ def check_identity_term_leakage(root: Path) -> list[dict[str, Any]]:
                     if key in seen:
                         continue
                     seen.add(key)
-                    findings.append(finding(
-                        check_id='identity_term_leakage',
-                        file=rel,
-                        message=f'Personal URL handle `{handle}` appears outside about-me/.',
-                        fix_hint='Move the mention to the about-me page (a-archive/about-me/about-me.md) or remove it.',
-                        line=i,
-                    ))
+                    findings.append(
+                        finding(
+                            check_id='identity_term_leakage',
+                            file=rel,
+                            message=f'Personal URL handle `{handle}` appears outside about-me/.',
+                            fix_hint='Move the mention to the about-me page (a-archive/about-me/about-me.md) or remove it.',
+                            line=i,
+                        )
+                    )
     return findings
 
 
@@ -1173,8 +1431,8 @@ def check_identity_term_leakage(root: Path) -> list[dict[str, Any]]:
 # to make that call.
 PLACEHOLDER_BIBKEYS = {
     'Vaswani2017AttentionIA',  # Transformers / Attention Is All You Need
-    'Kingma2015AdamAM',        # Adam optimizer
-    'Devlin2019BERTPO',        # BERT
+    'Kingma2015AdamAM',  # Adam optimizer
+    'Devlin2019BERTPO',  # BERT
 }
 BIBKEY_RE = re.compile(r'\b[A-Z][A-Za-z]+\d{4}[A-Z][A-Za-z]+\b')
 # The agent-writable curated DATA files under a skill folder (CLAUDE.md -> Stay
@@ -1183,17 +1441,30 @@ BIBKEY_RE = re.compile(r'\b[A-Z][A-Za-z]+\d{4}[A-Z][A-Za-z]+\b')
 # per-raw pagination maps -- so a corpus bibkey in them is content, not leakage.
 # Same rationale as the `-memory.md` journals. Keep in step with CLAUDE.md when a
 # data file is added or renamed.
-AGENT_DATA_FILES = frozenset({
-    'hyphenation-lists.md',        # hyphenated_open_compound_noun (lint)
-    'unlinked-mention-ignore.md',  # unlinked_page_mention suppressions (lint)
-    'pagination-map.md',           # locator_page_mismatch / locator exemption (lint)
-})
+AGENT_DATA_FILES = frozenset(
+    {
+        'hyphenation-lists.md',  # hyphenated_open_compound_noun (lint)
+        'unlinked-mention-ignore.md',  # unlinked_page_mention suppressions (lint)
+        'pagination-map.md',  # locator_page_mismatch / locator exemption (lint)
+    }
+)
 
 
 def check_domain_literature_leakage(root: Path) -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
-    text_exts = {'.md', '.py', '.sh', '.css', '.json', '.yaml', '.yml',
-                 '.txt', '.toml', '.cfg', '.ini'}
+    text_exts = {
+        '.md',
+        '.py',
+        '.sh',
+        '.css',
+        '.json',
+        '.yaml',
+        '.yml',
+        '.txt',
+        '.toml',
+        '.cfg',
+        '.ini',
+    }
     targets: list[Path] = []
     claude = root / 'CLAUDE.md'
     if claude.exists():
@@ -1231,18 +1502,20 @@ def check_domain_literature_leakage(root: Path) -> list[dict[str, Any]]:
                 if dedup in seen:
                     continue
                 seen.add(dedup)
-                findings.append(finding(
-                    check_id='domain_literature_leakage',
-                    file=rel,
-                    message=f'Research-corpus paper citation `{key_str}` appears in '
-                    f'generic infrastructure (only placeholder papers belong here).',
-                    fix_hint='Replace with a placeholder bibkey (Vaswani2017AttentionIA '
-                    '/ Kingma2015AdamAM / Devlin2019BERTPO). If the citation is '
-                    'legitimate domain-specific content, record it as a sanctioned '
-                    'exception in consistency-memory.md. See that file for current '
-                    'exceptions.',
-                    line=i,
-                ))
+                findings.append(
+                    finding(
+                        check_id='domain_literature_leakage',
+                        file=rel,
+                        message=f'Research-corpus paper citation `{key_str}` appears in '
+                        f'generic infrastructure (only placeholder papers belong here).',
+                        fix_hint='Replace with a placeholder bibkey (Vaswani2017AttentionIA '
+                        '/ Kingma2015AdamAM / Devlin2019BERTPO). If the citation is '
+                        'legitimate domain-specific content, record it as a sanctioned '
+                        'exception in consistency-memory.md. See that file for current '
+                        'exceptions.',
+                        line=i,
+                    )
+                )
     return findings
 
 
@@ -1284,14 +1557,16 @@ def check_ai_writing_tells(root: Path) -> list[dict[str, Any]]:
         for label, severity, pattern, fix_hint in AI_TELL_PATTERNS:
             for m in pattern.finditer(text):
                 line_no = text.count('\n', 0, m.start()) + 1
-                findings.append(finding(
-                    check_id='ai_writing_tells',
-                    file=rel,
-                    message=f'AI-writing tell ({label}, {severity}): '
-                    f'`{m.group(0)[:MATCH_SNIPPET_LEN]}`',
-                    fix_hint=fix_hint,
-                    line=line_no,
-                ))
+                findings.append(
+                    finding(
+                        check_id='ai_writing_tells',
+                        file=rel,
+                        message=f'AI-writing tell ({label}, {severity}): '
+                        f'`{m.group(0)[:MATCH_SNIPPET_LEN]}`',
+                        fix_hint=fix_hint,
+                        line=line_no,
+                    )
+                )
     return findings
 
 
@@ -1313,9 +1588,20 @@ DATED_OUTPUT_RE = re.compile(
 # fall out of naming coverage. Standalone skills are exempt: their output files
 # are not bound by the dated-naming registry.
 OUTPUT_KIND_DIRS = {
-    'query', 'ingest', 'brief', 'compare', 'reflect',
-    'lint', 'audit', 'consistency', 'skill-linter', 'skill-llm-council',
-    'cleanup', 'forget', 'supersede', 'synthesis',
+    'query',
+    'ingest',
+    'brief',
+    'compare',
+    'reflect',
+    'lint',
+    'audit',
+    'consistency',
+    'skill-linter',
+    'skill-llm-council',
+    'cleanup',
+    'forget',
+    'supersede',
+    'synthesis',
 }
 # Preservation subfolders that keep original filenames and are not output kinds.
 # They now nest under their owning skill's folder — 2-outputs/forget/quarantine/
@@ -1331,18 +1617,21 @@ OUTPUT_ARCHIVE_DIRS = {'quarantine', 'preserve'}
 OUTPUT_EXEMPT_DIRS: set[str] = set()
 
 
-def _check_kebab(path: Path, root: Path,
-                 findings: list[dict[str, Any]], context: str) -> None:
+def _check_kebab(
+    path: Path, root: Path, findings: list[dict[str, Any]], context: str
+) -> None:
     stem = path.stem
     if KEBAB_RE.fullmatch(stem):
         return
-    findings.append(finding(
-        check_id='file_naming_consistency',
-        file=str(path.relative_to(root)),
-        message=f'Filename `{path.name}` is not kebab-case lowercase ({context}).',
-        fix_hint='Rename to ASCII letters/digits/hyphens, lowercase, no spaces or '
-        'underscores or uppercase.',
-    ))
+    findings.append(
+        finding(
+            check_id='file_naming_consistency',
+            file=str(path.relative_to(root)),
+            message=f'Filename `{path.name}` is not kebab-case lowercase ({context}).',
+            fix_hint='Rename to ASCII letters/digits/hyphens, lowercase, no spaces or '
+            'underscores or uppercase.',
+        )
+    )
 
 
 def _collect_raw_stems(root: Path) -> set[str]:
@@ -1380,8 +1669,12 @@ def check_file_naming_consistency(root: Path) -> list[dict[str, Any]]:
         for path in folder.glob('*.md'):
             if sub == 'sources' and path.stem in raw_stems:
                 continue
-            _check_kebab(path=path, root=root, findings=findings,
-                         context=f'1-wiki/{sub}')
+            _check_kebab(
+                path=path,
+                root=root,
+                findings=findings,
+                context=f'1-wiki/{sub}',
+            )
 
     # Wiki attachments: each `1-wiki/attachments/{stem}/` subfolder must be
     # kebab-case OR match a raw source stem (the schema uses the
@@ -1393,19 +1686,24 @@ def check_file_naming_consistency(root: Path) -> list[dict[str, Any]]:
         for sub in attachments_root.iterdir():
             if not sub.is_dir():
                 continue
-            if (sub.name not in raw_stems
-                    and not KEBAB_RE.fullmatch(sub.name)):
-                findings.append(finding(
-                    check_id='file_naming_consistency',
-                    file=str(sub.relative_to(root)),
-                    message=f'Attachment folder `{sub.name}` is not kebab-case '
-                    'lowercase and does not match a raw source stem.',
-                    fix_hint='Rename to match the source-page stem.',
-                ))
+            if sub.name not in raw_stems and not KEBAB_RE.fullmatch(sub.name):
+                findings.append(
+                    finding(
+                        check_id='file_naming_consistency',
+                        file=str(sub.relative_to(root)),
+                        message=f'Attachment folder `{sub.name}` is not kebab-case '
+                        'lowercase and does not match a raw source stem.',
+                        fix_hint='Rename to match the source-page stem.',
+                    )
+                )
             for f in sub.iterdir():
                 if f.is_file() and not f.name.startswith('.'):
-                    _check_kebab(path=f, root=root, findings=findings,
-                                 context=f'1-wiki/attachments/{sub.name}')
+                    _check_kebab(
+                        path=f,
+                        root=root,
+                        findings=findings,
+                        context=f'1-wiki/attachments/{sub.name}',
+                    )
 
     # Outputs: each `2-outputs/{kind}/` subfolder uses
     # `{kind}-YYYY-MM-DD-HHMM(-extra)?.md`. The suffix after the date is
@@ -1425,16 +1723,21 @@ def check_file_naming_consistency(root: Path) -> list[dict[str, Any]]:
                 if m and m.group('kind') == sub.name:
                     continue
                 relaxed = DATED_OUTPUT_RELAXED_RE.fullmatch(path.stem)
-                if (relaxed and relaxed.group('kind') == sub.name
-                        and relaxed.group('suffix') in raw_stems):
+                if (
+                    relaxed
+                    and relaxed.group('kind') == sub.name
+                    and relaxed.group('suffix') in raw_stems
+                ):
                     continue
-                findings.append(finding(
-                    check_id='file_naming_consistency',
-                    file=str(path.relative_to(root)),
-                    message=f'Output filename `{path.name}` does not match '
-                    f'`{sub.name}-YYYY-MM-DD-HHMM(-extra)?.md`.',
-                    fix_hint=f'Rename to `{sub.name}-YYYY-MM-DD-HHMM-...md`.',
-                ))
+                findings.append(
+                    finding(
+                        check_id='file_naming_consistency',
+                        file=str(path.relative_to(root)),
+                        message=f'Output filename `{path.name}` does not match '
+                        f'`{sub.name}-YYYY-MM-DD-HHMM(-extra)?.md`.',
+                        fix_hint=f'Rename to `{sub.name}-YYYY-MM-DD-HHMM-...md`.',
+                    )
+                )
 
     # Skill folder names: kebab-case.
     skills_root = root / '.claude/skills'
@@ -1443,12 +1746,14 @@ def check_file_naming_consistency(root: Path) -> list[dict[str, Any]]:
             if not sub.is_dir():
                 continue
             if not KEBAB_RE.fullmatch(sub.name):
-                findings.append(finding(
-                    check_id='file_naming_consistency',
-                    file=str(sub.relative_to(root)),
-                    message=f'Skill folder `{sub.name}` is not kebab-case lowercase.',
-                    fix_hint='Rename to ASCII letters/digits/hyphens.',
-                ))
+                findings.append(
+                    finding(
+                        check_id='file_naming_consistency',
+                        file=str(sub.relative_to(root)),
+                        message=f'Skill folder `{sub.name}` is not kebab-case lowercase.',
+                        fix_hint='Rename to ASCII letters/digits/hyphens.',
+                    )
+                )
 
     return findings
 
@@ -1465,8 +1770,18 @@ FILENAME_IN_BACKTICKS_RE = re.compile(
     r'`([a-z0-9][\w.-]*\.(?:md|py|sh|json|yaml|yml|css|txt|pdf))`',
     re.IGNORECASE,
 )
-FILENAME_PLACEHOLDER_TOKENS = ('yyyy', 'mm-dd', 'hhmm', '{', '}', '<', '>',
-                                '*', '...', '$')
+FILENAME_PLACEHOLDER_TOKENS = (
+    'yyyy',
+    'mm-dd',
+    'hhmm',
+    '{',
+    '}',
+    '<',
+    '>',
+    '*',
+    '...',
+    '$',
+)
 
 
 def _collect_repo_basenames(root: Path) -> set[str]:
@@ -1504,9 +1819,12 @@ def check_filename_references_resolve(root: Path) -> list[dict[str, Any]]:
     # stay in scope. Standalone skills (STANDALONE_SKILL_NAMES) are also excluded
     # — they may ship placeholder/example filenames that intentionally don't
     # resolve, the same way the leakage and catalogue checks skip their folders.
-    target_files = [p for p in target_files
-                    if 'a-archive/reference' not in str(p.relative_to(root))
-                    and not _under_standalone_skill(path=p, root=root)]
+    target_files = [
+        p
+        for p in target_files
+        if 'a-archive/reference' not in str(p.relative_to(root))
+        and not _under_standalone_skill(path=p, root=root)
+    ]
     repo_basenames = _collect_repo_basenames(root=root)
     seen: set[tuple[str, str, int]] = set()
     for path in target_files:
@@ -1533,15 +1851,17 @@ def check_filename_references_resolve(root: Path) -> list[dict[str, Any]]:
                 if key in seen:
                     continue
                 seen.add(key)
-                findings.append(finding(
-                    check_id='filename_references_resolve',
-                    file=rel,
-                    message=f'Backticked filename `{raw}` is not present anywhere '
-                    'in the repo.',
-                    fix_hint='Update the reference, remove the line, or rewrite '
-                    'as a placeholder pattern (e.g., `<bibkey>.pdf`).',
-                    line=i,
-                ))
+                findings.append(
+                    finding(
+                        check_id='filename_references_resolve',
+                        file=rel,
+                        message=f'Backticked filename `{raw}` is not present anywhere '
+                        'in the repo.',
+                        fix_hint='Update the reference, remove the line, or rewrite '
+                        'as a placeholder pattern (e.g., `<bibkey>.pdf`).',
+                        line=i,
+                    )
+                )
     return findings
 
 
@@ -1579,7 +1899,9 @@ def check_memory_file_graduation_prompt(root: Path) -> list[dict[str, Any]]:
                 continue
             mem = sub / f'{sub.name}-memory.md'
             if mem.exists():
-                memory_files.append((mem, MEMORY_FILE_ENTRY_CAP, journal_target))
+                memory_files.append(
+                    (mem, MEMORY_FILE_ENTRY_CAP, journal_target)
+                )
 
     for path, cap, target in memory_files:
         try:
@@ -1589,23 +1911,26 @@ def check_memory_file_graduation_prompt(root: Path) -> list[dict[str, Any]]:
         # Count H2 entries; MEMORY.md's "## Index" is a table of contents, not an
         # entry, so it is not counted toward the cap.
         entries = sum(
-            1 for line in lines
+            1
+            for line in lines
             if line.startswith('## ') and line.strip() != '## Index'
         )
         if entries > cap:
             rel = str(path.relative_to(root))
-            findings.append(finding(
-                check_id='memory_file_graduation_prompt',
-                file=rel,
-                message=f'Memory file has {entries} entries (soft cap: {cap}) — '
-                'candidates for graduation. Long memory files become a '
-                'per-operation token tax for every skill (or session) that '
-                'reads them.',
-                fix_hint='Run the `cleanup` skill (its memory graduation audit) for a per-entry check '
-                f'of what has already graduated into {target}, then graduate '
-                'stable rules and remove the absorbed originals. This counter '
-                'only flags the file; it does not read entry content.',
-            ))
+            findings.append(
+                finding(
+                    check_id='memory_file_graduation_prompt',
+                    file=rel,
+                    message=f'Memory file has {entries} entries (soft cap: {cap}) — '
+                    'candidates for graduation. Long memory files become a '
+                    'per-operation token tax for every skill (or session) that '
+                    'reads them.',
+                    fix_hint='Run the `cleanup` skill (its memory graduation audit) for a per-entry check '
+                    f'of what has already graduated into {target}, then graduate '
+                    'stable rules and remove the absorbed originals. This counter '
+                    'only flags the file; it does not read entry content.',
+                )
+            )
     return findings
 
 
@@ -1672,8 +1997,10 @@ def expected_tree_paths(root: Path) -> set[str]:
                 continue
             # Standalone skills' 2-outputs/ folders are kept out of the tree;
             # so are any user-owned free-form folders in OUTPUT_EXEMPT_DIRS.
-            if parent == '2-outputs' and (child.name in STANDALONE_SKILL_NAMES
-                                          or child.name in OUTPUT_EXEMPT_DIRS):
+            if parent == '2-outputs' and (
+                child.name in STANDALONE_SKILL_NAMES
+                or child.name in OUTPUT_EXEMPT_DIRS
+            ):
                 continue
             paths.add(f'{parent}/{child.name}')
 
@@ -1707,14 +2034,16 @@ def check_dir_tree_drift(root: Path) -> list[dict[str, Any]]:
             break
 
     if tree_text is None:
-        findings.append(finding(
-            check_id='dir_tree_drift',
-            file='CLAUDE.md',
-            message='Directory tree block (```text ... ``` rooted at '
-            '`llm-wiki/`) not found.',
-            fix_hint='Add a `text`-fenced ASCII tree under the '
-            '`Directory Structure` heading.',
-        ))
+        findings.append(
+            finding(
+                check_id='dir_tree_drift',
+                file='CLAUDE.md',
+                message='Directory tree block (```text ... ``` rooted at '
+                '`llm-wiki/`) not found.',
+                fix_hint='Add a `text`-fenced ASCII tree under the '
+                '`Directory Structure` heading.',
+            )
+        )
         return findings
 
     tree_paths = parse_directory_tree(tree_text=tree_text)
@@ -1723,25 +2052,29 @@ def check_dir_tree_drift(root: Path) -> list[dict[str, Any]]:
     # Tree lists a path that does not exist on disk.
     for tree_path in sorted(tree_paths):
         if not (root / tree_path).exists():
-            findings.append(finding(
-                check_id='dir_tree_drift',
-                file='CLAUDE.md',
-                message=f'Directory tree lists `{tree_path}` but it does '
-                'not exist on disk.',
-                fix_hint=f'Remove `{tree_path}` from the tree, or create '
-                'the directory if it was meant to exist.',
-            ))
+            findings.append(
+                finding(
+                    check_id='dir_tree_drift',
+                    file='CLAUDE.md',
+                    message=f'Directory tree lists `{tree_path}` but it does '
+                    'not exist on disk.',
+                    fix_hint=f'Remove `{tree_path}` from the tree, or create '
+                    'the directory if it was meant to exist.',
+                )
+            )
 
     # On-disk path that the schema tree should include but doesn't.
     for expected in sorted(expected_paths - tree_paths):
-        findings.append(finding(
-            check_id='dir_tree_drift',
-            file='CLAUDE.md',
-            message=f'`{expected}` exists on disk but is missing from '
-            "the CLAUDE.md directory tree.",
-            fix_hint=f'Add `{expected}` to the tree under its parent in '
-            '`CLAUDE.md` → Directory Structure.',
-        ))
+        findings.append(
+            finding(
+                check_id='dir_tree_drift',
+                file='CLAUDE.md',
+                message=f'`{expected}` exists on disk but is missing from '
+                'the CLAUDE.md directory tree.',
+                fix_hint=f'Add `{expected}` to the tree under its parent in '
+                '`CLAUDE.md` → Directory Structure.',
+            )
+        )
 
     return findings
 
@@ -1782,15 +2115,17 @@ def check_unbackticked_paths_resolve(root: Path) -> list[dict[str, Any]]:
                 continue
             seen.add(key)
             if not (root / token).exists():
-                findings.append(finding(
-                    check_id='unbackticked_paths_resolve',
-                    file='CLAUDE.md',
-                    message=f'Unbackticked path `{token}` referenced in '
-                    'prose does not resolve.',
-                    fix_hint='Backtick the reference (filename_references_resolve '
-                    'will then validate it), or fix the path.',
-                    line=i,
-                ))
+                findings.append(
+                    finding(
+                        check_id='unbackticked_paths_resolve',
+                        file='CLAUDE.md',
+                        message=f'Unbackticked path `{token}` referenced in '
+                        'prose does not resolve.',
+                        fix_hint='Backtick the reference (filename_references_resolve '
+                        'will then validate it), or fix the path.',
+                        line=i,
+                    )
+                )
     return findings
 
 
@@ -1810,13 +2145,15 @@ def check_operations_list_matches_skills(root: Path) -> list[dict[str, Any]]:
     text = claude.read_text(encoding='utf-8')
     start_match = OPERATIONS_HEADING_RE.search(text)
     if not start_match:
-        findings.append(finding(
-            check_id='operations_list_matches_skills',
-            file='CLAUDE.md',
-            message='`## Operations` section not found in CLAUDE.md.',
-            fix_hint='Add a top-level `## Operations` section listing the '
-            'project skills.',
-        ))
+        findings.append(
+            finding(
+                check_id='operations_list_matches_skills',
+                file='CLAUDE.md',
+                message='`## Operations` section not found in CLAUDE.md.',
+                fix_hint='Add a top-level `## Operations` section listing the '
+                'project skills.',
+            )
+        )
         return findings
 
     section_start = start_match.start()
@@ -1830,9 +2167,13 @@ def check_operations_list_matches_skills(root: Path) -> list[dict[str, Any]]:
         if bm:
             listed.add(bm.group(1))
 
-    on_disk = {p.name for p in skills_dir.iterdir()
-               if p.is_dir() and not p.name.startswith('.')
-               and (p / 'SKILL.md').exists()}
+    on_disk = {
+        p.name
+        for p in skills_dir.iterdir()
+        if p.is_dir()
+        and not p.name.startswith('.')
+        and (p / 'SKILL.md').exists()
+    }
 
     # Standalone skills are deliberately out of the Operations catalogue, so
     # neither requiring nor flagging them either way: drop them from both sides.
@@ -1840,24 +2181,28 @@ def check_operations_list_matches_skills(root: Path) -> list[dict[str, Any]]:
     on_disk -= STANDALONE_SKILL_NAMES
 
     for stale in sorted(listed - on_disk):
-        findings.append(finding(
-            check_id='operations_list_matches_skills',
-            file='CLAUDE.md',
-            message=f'Operations section lists `{stale}` but '
-            f'`.claude/skills/{stale}/` does not exist.',
-            fix_hint=f'Remove `{stale}` from `## Operations`, or create '
-            'the skill folder.',
-        ))
+        findings.append(
+            finding(
+                check_id='operations_list_matches_skills',
+                file='CLAUDE.md',
+                message=f'Operations section lists `{stale}` but '
+                f'`.claude/skills/{stale}/` does not exist.',
+                fix_hint=f'Remove `{stale}` from `## Operations`, or create '
+                'the skill folder.',
+            )
+        )
 
     for missing in sorted(on_disk - listed):
-        findings.append(finding(
-            check_id='operations_list_matches_skills',
-            file='CLAUDE.md',
-            message=f'Skill `.claude/skills/{missing}/` exists on disk '
-            'but is missing from `## Operations` in CLAUDE.md.',
-            fix_hint=f'Add `- \\`{missing}\\` - <one-line description>` '
-            'under the appropriate sub-list in `## Operations`.',
-        ))
+        findings.append(
+            finding(
+                check_id='operations_list_matches_skills',
+                file='CLAUDE.md',
+                message=f'Skill `.claude/skills/{missing}/` exists on disk '
+                'but is missing from `## Operations` in CLAUDE.md.',
+                fix_hint=f'Add `- \\`{missing}\\` - <one-line description>` '
+                'under the appropriate sub-list in `## Operations`.',
+            )
+        )
     return findings
 
 
@@ -1896,9 +2241,13 @@ def check_retired_skill_references(root: Path) -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
     skills_dir = root / '.claude/skills'
     current_skills = (
-        {p.name for p in skills_dir.iterdir()
-         if p.is_dir() and not p.name.startswith('.')}
-        if skills_dir.exists() else set()
+        {
+            p.name
+            for p in skills_dir.iterdir()
+            if p.is_dir() and not p.name.startswith('.')
+        }
+        if skills_dir.exists()
+        else set()
     )
 
     scan: list[Path] = []
@@ -1933,30 +2282,34 @@ def check_retired_skill_references(root: Path) -> list[dict[str, Any]]:
                     f'`{name}`' not in line and f'/{name}' not in line
                 ):
                     continue
-                findings.append(finding(
-                    check_id='retired_skill_references',
-                    file=rel,
-                    line=i,
-                    message=f'References merged-away skill `{name}` '
-                    '(now a mode of `ingest`).',
-                    fix_hint=f'`{name}` is no longer a separate skill — '
-                    "rephrase to `ingest` (deep mode for `ingest-deep`, "
-                    'existing-source mode for `reingest`).',
-                ))
+                findings.append(
+                    finding(
+                        check_id='retired_skill_references',
+                        file=rel,
+                        line=i,
+                        message=f'References merged-away skill `{name}` '
+                        '(now a mode of `ingest`).',
+                        fix_hint=f'`{name}` is no longer a separate skill — '
+                        'rephrase to `ingest` (deep mode for `ingest-deep`, '
+                        'existing-source mode for `reingest`).',
+                    )
+                )
             # Required-skills enumeration must resolve to current folders.
             if current_skills and SKILLS_ENUMERATION_RE.search(line):
                 for tok in BACKTICKED_SKILL_TOKEN_RE.findall(line):
                     if tok in current_skills or tok in RETIRED_SKILL_NAMES:
                         continue  # retired names reported by the guard above
-                    findings.append(finding(
-                        check_id='retired_skill_references',
-                        file=rel,
-                        line=i,
-                        message=f'Required-skills enumeration lists `{tok}`, '
-                        'which is not a current skill folder.',
-                        fix_hint=f'Add `.claude/skills/{tok}/` or remove '
-                        f'`{tok}` from the enumeration.',
-                    ))
+                    findings.append(
+                        finding(
+                            check_id='retired_skill_references',
+                            file=rel,
+                            line=i,
+                            message=f'Required-skills enumeration lists `{tok}`, '
+                            'which is not a current skill folder.',
+                            fix_hint=f'Add `.claude/skills/{tok}/` or remove '
+                            f'`{tok}` from the enumeration.',
+                        )
+                    )
     return findings
 
 
@@ -2001,7 +2354,11 @@ def _parse_claude_section_lists(
         return {}, []
     body_start = m.end()
     nxt = re.search(r'^## ', text[body_start:], re.MULTILINE)
-    body = text[body_start:body_start + nxt.start()] if nxt else text[body_start:]
+    body = (
+        text[body_start : body_start + nxt.start()]
+        if nxt
+        else text[body_start:]
+    )
     result: dict[str, list[str]] = {}
     unrecognized: list[str] = []
     current: str | None = None
@@ -2038,51 +2395,60 @@ def check_section_lists_match_schema(root: Path) -> list[dict[str, Any]]:
     if not claude.exists():
         return findings
     parsed, unrecognized = _parse_claude_section_lists(
-        text=claude.read_text(encoding='utf-8'))
+        text=claude.read_text(encoding='utf-8')
+    )
     if not parsed:
-        findings.append(finding(
-            check_id='section_lists_match_schema',
-            file='CLAUDE.md',
-            message="'### Required Callout Sections' lists not found or unparseable.",
-            fix_hint='Keep the numbered "`slug` - Name" lists under that heading so '
-            'the script can verify EXPECTED_SECTIONS against the schema.',
-        ))
+        findings.append(
+            finding(
+                check_id='section_lists_match_schema',
+                file='CLAUDE.md',
+                message="'### Required Callout Sections' lists not found or unparseable.",
+                fix_hint='Keep the numbered "`slug` - Name" lists under that heading so '
+                'the script can verify EXPECTED_SECTIONS against the schema.',
+            )
+        )
         return findings
     # A documented page type the script does not validate is a latent gap: a new
     # page type is exactly the section-template edit this check exists to catch.
     for label in unrecognized:
-        findings.append(finding(
-            check_id='section_lists_match_schema',
-            file='CLAUDE.md',
-            message=f"'### Required Callout Sections' documents a `{label}` list "
-            'the script does not validate.',
-            fix_hint='Add the page type to CLAUDE_SECTION_LABELS, EXPECTED_SECTIONS, '
-            'and the comparison loop in check_consistency.py, or remove the list.',
-        ))
+        findings.append(
+            finding(
+                check_id='section_lists_match_schema',
+                file='CLAUDE.md',
+                message=f"'### Required Callout Sections' documents a `{label}` list "
+                'the script does not validate.',
+                fix_hint='Add the page type to CLAUDE_SECTION_LABELS, EXPECTED_SECTIONS, '
+                'and the comparison loop in check_consistency.py, or remove the list.',
+            )
+        )
     # CLAUDE.md documents one shared "concept/entity" list; EXPECTED_SECTIONS
     # stores 'concept' and 'entity' identically, so compare against 'concept'.
     for kind in ('source', 'concept', 'synthesis'):
         documented = parsed.get(kind)
         expected = EXPECTED_SECTIONS[kind]
         if documented is None:
-            findings.append(finding(
-                check_id='section_lists_match_schema',
-                file='CLAUDE.md',
-                message=f'No callout list for `{kind}` pages found under '
-                "'### Required Callout Sections'.",
-                fix_hint=f'Document the {kind}-page sections, or align '
-                'EXPECTED_SECTIONS in check_consistency.py.',
-            ))
+            findings.append(
+                finding(
+                    check_id='section_lists_match_schema',
+                    file='CLAUDE.md',
+                    message=f'No callout list for `{kind}` pages found under '
+                    "'### Required Callout Sections'.",
+                    fix_hint=f'Document the {kind}-page sections, or align '
+                    'EXPECTED_SECTIONS in check_consistency.py.',
+                )
+            )
             continue
         if documented != expected:
-            findings.append(finding(
-                check_id='section_lists_match_schema',
-                file='CLAUDE.md',
-                message=f'`{kind}` callout list in CLAUDE.md ({documented}) does '
-                f'not match EXPECTED_SECTIONS in the script ({expected}).',
-                fix_hint='Reconcile CLAUDE.md and EXPECTED_SECTIONS so '
-                'body_section_order enforces the current schema.',
-            ))
+            findings.append(
+                finding(
+                    check_id='section_lists_match_schema',
+                    file='CLAUDE.md',
+                    message=f'`{kind}` callout list in CLAUDE.md ({documented}) does '
+                    f'not match EXPECTED_SECTIONS in the script ({expected}).',
+                    fix_hint='Reconcile CLAUDE.md and EXPECTED_SECTIONS so '
+                    'body_section_order enforces the current schema.',
+                )
+            )
     return findings
 
 
@@ -2095,22 +2461,28 @@ def check_output_kinds_match_disk(root: Path) -> list[dict[str, Any]]:
     outputs = root / '2-outputs'
     if not outputs.exists():
         return findings
-    on_disk = {p.name for p in outputs.iterdir()
-               if p.is_dir() and not p.name.startswith('.')
-               and p.name not in OUTPUT_ARCHIVE_DIRS
-               and p.name not in OUTPUT_EXEMPT_DIRS
-               and p.name not in STANDALONE_SKILL_NAMES}
+    on_disk = {
+        p.name
+        for p in outputs.iterdir()
+        if p.is_dir()
+        and not p.name.startswith('.')
+        and p.name not in OUTPUT_ARCHIVE_DIRS
+        and p.name not in OUTPUT_EXEMPT_DIRS
+        and p.name not in STANDALONE_SKILL_NAMES
+    }
     script_rel = '.claude/skills/consistency/scripts/check_consistency.py'
     for missing in sorted(on_disk - OUTPUT_KIND_DIRS):
-        findings.append(finding(
-            check_id='output_kinds_match_disk',
-            file=script_rel,
-            message=f'`2-outputs/{missing}/` exists but `{missing}` is not in '
-            'OUTPUT_KIND_DIRS, so its files escape the naming check.',
-            fix_hint=f"Add '{missing}' to OUTPUT_KIND_DIRS (and the SKILL.md "
-            'naming list), or move it under forget/quarantine or '
-            'supersede/preserve.',
-        ))
+        findings.append(
+            finding(
+                check_id='output_kinds_match_disk',
+                file=script_rel,
+                message=f'`2-outputs/{missing}/` exists but `{missing}` is not in '
+                'OUTPUT_KIND_DIRS, so its files escape the naming check.',
+                fix_hint=f"Add '{missing}' to OUTPUT_KIND_DIRS (and the SKILL.md "
+                'naming list), or move it under forget/quarantine or '
+                'supersede/preserve.',
+            )
+        )
     # Stale direction: only a real drift when the kind's skill still exists but
     # its output folder vanished. Output folders are created lazily by their
     # skill, so on a fresh vault a never-run kind has no folder yet — flagging
@@ -2120,14 +2492,16 @@ def check_output_kinds_match_disk(root: Path) -> list[dict[str, Any]]:
     for stale in sorted(OUTPUT_KIND_DIRS - on_disk):
         if not (skills_dir / stale).is_dir():
             continue
-        findings.append(finding(
-            check_id='output_kinds_match_disk',
-            file=script_rel,
-            message=f'OUTPUT_KIND_DIRS lists `{stale}` and the `{stale}` skill '
-            f'exists, but `2-outputs/{stale}/` does not exist on disk.',
-            fix_hint=f"Create `2-outputs/{stale}/` (with a .gitkeep), or drop "
-            f"'{stale}' from OUTPUT_KIND_DIRS.",
-        ))
+        findings.append(
+            finding(
+                check_id='output_kinds_match_disk',
+                file=script_rel,
+                message=f'OUTPUT_KIND_DIRS lists `{stale}` and the `{stale}` skill '
+                f'exists, but `2-outputs/{stale}/` does not exist on disk.',
+                fix_hint=f'Create `2-outputs/{stale}/` (with a .gitkeep), or drop '
+                f"'{stale}' from OUTPUT_KIND_DIRS.",
+            )
+        )
     return findings
 
 
@@ -2147,12 +2521,14 @@ def check_catalogue_matches_manifest(root: Path) -> list[dict[str, Any]]:
     rel = '.claude/skills/consistency/references/checks.md'
     cat = root / rel
     if not cat.exists():
-        return [finding(
-            check_id='catalogue_matches_manifest',
-            file=rel,
-            message='Per-check catalogue reference is missing.',
-            fix_hint='Restore references/checks.md or update the SKILL.md pointer.',
-        )]
+        return [
+            finding(
+                check_id='catalogue_matches_manifest',
+                file=rel,
+                message='Per-check catalogue reference is missing.',
+                fix_hint='Restore references/checks.md or update the SKILL.md pointer.',
+            )
+        ]
     text = cat.read_text(encoding='utf-8')
     actual_packets = {p: set(ids) for p, ids in PACKET_CHECKS.items()}
 
@@ -2174,34 +2550,40 @@ def check_catalogue_matches_manifest(root: Path) -> list[dict[str, Any]]:
         doc = doc_packets.get(packet, set())
         act = actual_packets.get(packet, set())
         if doc != act:
-            findings.append(finding(
-                check_id='catalogue_matches_manifest',
-                file=rel,
-                message=f'Catalogue packet `{packet}` lists {sorted(doc)} but the '
-                f'manifest has {sorted(act)}.',
-                fix_hint='Update references/checks.md to match `--list-checks`.',
-            ))
+            findings.append(
+                finding(
+                    check_id='catalogue_matches_manifest',
+                    file=rel,
+                    message=f'Catalogue packet `{packet}` lists {sorted(doc)} but the '
+                    f'manifest has {sorted(act)}.',
+                    fix_hint='Update references/checks.md to match `--list-checks`.',
+                )
+            )
 
     # Stated counts: total ('N checks across') and per-packet ('name (n)').
     tm = CATALOGUE_TOTAL_RE.search(text)
     if tm and int(tm.group(1)) != len(CHECK_MANIFEST):
-        findings.append(finding(
-            check_id='catalogue_matches_manifest',
-            file=rel,
-            message=f'Catalogue states {tm.group(1)} checks but the manifest has '
-            f'{len(CHECK_MANIFEST)}.',
-            fix_hint='Update the total count in references/checks.md.',
-        ))
+        findings.append(
+            finding(
+                check_id='catalogue_matches_manifest',
+                file=rel,
+                message=f'Catalogue states {tm.group(1)} checks but the manifest has '
+                f'{len(CHECK_MANIFEST)}.',
+                fix_hint='Update the total count in references/checks.md.',
+            )
+        )
     for m in CATALOGUE_PACKET_COUNT_RE.finditer(text):
         name, n = m.group(1), int(m.group(2))
         if name in actual_packets and n != len(actual_packets[name]):
-            findings.append(finding(
-                check_id='catalogue_matches_manifest',
-                file=rel,
-                message=f'Catalogue states packet `{name}` has {n} checks but the '
-                f'manifest has {len(actual_packets[name])}.',
-                fix_hint='Update the per-packet count in references/checks.md.',
-            ))
+            findings.append(
+                finding(
+                    check_id='catalogue_matches_manifest',
+                    file=rel,
+                    message=f'Catalogue states packet `{name}` has {n} checks but the '
+                    f'manifest has {len(actual_packets[name])}.',
+                    fix_hint='Update the per-packet count in references/checks.md.',
+                )
+            )
     return findings
 
 
@@ -2229,9 +2611,13 @@ def check_shared_reference_integrity(root: Path) -> list[dict[str, Any]]:
     if not shared_files:
         return findings
 
-    skill_dirs = [p for p in sorted(skills_dir.iterdir())
-                  if p.is_dir() and p.name != 'multi-skill'
-                  and not p.name.startswith('.')]
+    skill_dirs = [
+        p
+        for p in sorted(skills_dir.iterdir())
+        if p.is_dir()
+        and p.name != 'multi-skill'
+        and not p.name.startswith('.')
+    ]
 
     # Per-skill concatenated text (md + py) for citation scanning, and a map of
     # basename -> skill folders that hold their own references/<basename>.
@@ -2255,27 +2641,39 @@ def check_shared_reference_integrity(root: Path) -> list[dict[str, Any]]:
     for shared in shared_files:
         name = shared.name
         for owner in own_ref_copies.get(name, []):
-            findings.append(finding(
-                check_id='shared_reference_integrity',
-                file=f'{rel}/{name}',
-                message=(f'Shared reference `{name}` is also copied at '
-                         f'`.claude/skills/{owner}/references/{name}`; the shared '
-                         f'spec must exist as a single canonical copy.'),
-                fix_hint=(f'Delete `{owner}/references/{name}` and point that '
-                          f'skill at `{rel}/{name}`.'),
-            ))
+            findings.append(
+                finding(
+                    check_id='shared_reference_integrity',
+                    file=f'{rel}/{name}',
+                    message=(
+                        f'Shared reference `{name}` is also copied at '
+                        f'`.claude/skills/{owner}/references/{name}`; the shared '
+                        f'spec must exist as a single canonical copy.'
+                    ),
+                    fix_hint=(
+                        f'Delete `{owner}/references/{name}` and point that '
+                        f'skill at `{rel}/{name}`.'
+                    ),
+                )
+            )
         citing = sorted(n for n, txt in skill_text.items() if name in txt)
         if len(citing) < 2:
             who = ', '.join(citing) if citing else 'no skills'
-            findings.append(finding(
-                check_id='shared_reference_integrity',
-                file=f'{rel}/{name}',
-                message=(f'Shared reference `{name}` is cited by {len(citing)} '
-                         f'skill(s) ({who}); `multi-skill/references/` is for '
-                         f'references shared by two or more skills.'),
-                fix_hint=(f'Cite `{name}` from a second skill, or move it into '
-                          f'the one skill that uses it (its own `references/`).'),
-            ))
+            findings.append(
+                finding(
+                    check_id='shared_reference_integrity',
+                    file=f'{rel}/{name}',
+                    message=(
+                        f'Shared reference `{name}` is cited by {len(citing)} '
+                        f'skill(s) ({who}); `multi-skill/references/` is for '
+                        f'references shared by two or more skills.'
+                    ),
+                    fix_hint=(
+                        f'Cite `{name}` from a second skill, or move it into '
+                        f'the one skill that uses it (its own `references/`).'
+                    ),
+                )
+            )
     return findings
 
 
@@ -2313,8 +2711,9 @@ CHECK_FUNCTIONS = {
 def parse_check_ids(raw: str) -> list[str]:
     # Dedupe while preserving order so a copy-paste-repeated id does not run a
     # check twice and double its findings.
-    return list(dict.fromkeys(
-        part.strip() for part in raw.split(',') if part.strip()))
+    return list(
+        dict.fromkeys(part.strip() for part in raw.split(',') if part.strip())
+    )
 
 
 def _assert_manifest_consistency() -> list[str]:
@@ -2333,18 +2732,23 @@ def _assert_manifest_consistency() -> list[str]:
         problems.append(
             f'CHECK_FUNCTIONS vs CHECK_MANIFEST mismatch: '
             f'only in functions={sorted(fn_ids - manifest_set)}, '
-            f'only in manifest={sorted(manifest_set - fn_ids)}')
-    packet_union = set().union(*PACKET_CHECKS.values()) if PACKET_CHECKS else set()
+            f'only in manifest={sorted(manifest_set - fn_ids)}'
+        )
+    packet_union = (
+        set().union(*PACKET_CHECKS.values()) if PACKET_CHECKS else set()
+    )
     if fn_ids != packet_union:
         problems.append(
             f'CHECK_FUNCTIONS vs PACKET_CHECKS mismatch: '
             f'only in functions={sorted(fn_ids - packet_union)}, '
-            f'only in packets={sorted(packet_union - fn_ids)}')
+            f'only in packets={sorted(packet_union - fn_ids)}'
+        )
     if EXPECTED_SECTIONS.get('entity') != EXPECTED_SECTIONS.get('concept'):
         problems.append(
             "EXPECTED_SECTIONS['entity'] != EXPECTED_SECTIONS['concept']; "
             'section_lists_match_schema skips entity on the assumption they '
-            'are identical')
+            'are identical'
+        )
     return problems
 
 
@@ -2375,13 +2779,20 @@ def main() -> int:
     # can read) and stderr, and exit 2 (did not complete).
     wiring = _assert_manifest_consistency()
     if wiring:
-        print(json.dumps([finding(
-            check_id='manifest_parity',
-            file='(internal)',
-            message='WIRING ERROR: ' + '; '.join(wiring),
-            fix_hint='Reconcile CHECK_FUNCTIONS, CHECK_MANIFEST, and '
-            'PACKET_CHECKS in check_consistency.py.',
-        )], indent=2))
+        print(
+            json.dumps(
+                [
+                    finding(
+                        check_id='manifest_parity',
+                        file='(internal)',
+                        message='WIRING ERROR: ' + '; '.join(wiring),
+                        fix_hint='Reconcile CHECK_FUNCTIONS, CHECK_MANIFEST, and '
+                        'PACKET_CHECKS in check_consistency.py.',
+                    )
+                ],
+                indent=2,
+            )
+        )
         sys.stderr.write('manifest wiring error: ' + '; '.join(wiring) + '\n')
         return 2
 
@@ -2413,7 +2824,7 @@ def main() -> int:
             parser.error('--checks resolved to an empty selection')
     unknown = sorted(set(selected) - set(CHECK_FUNCTIONS))
     if unknown:
-        sys.stderr.write(f"unknown check id(s): {', '.join(unknown)}\n")
+        sys.stderr.write(f'unknown check id(s): {", ".join(unknown)}\n')
         return 2
 
     all_findings: list[dict[str, Any]] = []
@@ -2423,21 +2834,28 @@ def main() -> int:
             all_findings.extend(CHECK_FUNCTIONS[check_id](root))
         except Exception as exc:  # noqa: BLE001 — one check must not abort the battery
             crashed = True
-            all_findings.append(finding(
-                check_id=check_id,
-                file='(internal)',
-                message=f'CHECK CRASHED ({type(exc).__name__}): {exc}. '
-                'Treat as blocked — the battery did not run to completion.',
-                fix_hint='Fix the check or its input; rerun before trusting a '
-                'clean result.',
-            ))
+            all_findings.append(
+                finding(
+                    check_id=check_id,
+                    file='(internal)',
+                    message=f'CHECK CRASHED ({type(exc).__name__}): {exc}. '
+                    'Treat as blocked — the battery did not run to completion.',
+                    fix_hint='Fix the check or its input; rerun before trusting a '
+                    'clean result.',
+                )
+            )
 
     # Sort findings once so output order is reproducible across platforms and
     # filesystems (most checks iterate glob/iterdir, which is not order-stable).
     # A stable order is what makes a golden-output regression test possible.
-    all_findings.sort(key=lambda f: (
-        f.get('check_id') or '', f.get('file') or '',
-        f.get('line') or 0, f.get('message') or ''))
+    all_findings.sort(
+        key=lambda f: (
+            f.get('check_id') or '',
+            f.get('file') or '',
+            f.get('line') or 0,
+            f.get('message') or '',
+        )
+    )
     print(json.dumps(all_findings, indent=2))
     # Exit codes:
     #   0  clean (no findings)

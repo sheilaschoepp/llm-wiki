@@ -10,6 +10,7 @@ subset, but a newly-appearing term re-surfaces the candidate), and the
 
 The module is loaded by path so the tests do not depend on cwd or packaging.
 """
+
 from __future__ import annotations
 
 import importlib.util

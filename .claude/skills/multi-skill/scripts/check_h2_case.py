@@ -30,10 +30,28 @@ from pathlib import Path
 # prepositions, conjunctions). The first word is always capitalized
 # even if it appears here. Matches the convention in published style
 # guides (Chicago, AP) at the permissive end.
-TITLE_CASE_STOPWORDS = frozenset({
-    'a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'in', 'nor', 'of',
-    'on', 'or', 'the', 'to', 'up', 'vs', 'with',
-})
+TITLE_CASE_STOPWORDS = frozenset(
+    {
+        'a',
+        'an',
+        'and',
+        'as',
+        'at',
+        'but',
+        'by',
+        'for',
+        'in',
+        'nor',
+        'of',
+        'on',
+        'or',
+        'the',
+        'to',
+        'up',
+        'vs',
+        'with',
+    }
+)
 
 H2_RE = re.compile(r'^##\s+(.+?)\s*$')
 
@@ -90,22 +108,24 @@ def find_h2_case_issues(file_path: Path) -> list[dict]:
         heading_text = match.group(1)
         if is_title_case(heading=heading_text):
             continue
-        findings.append({
-            'severity': 'suggestion',
-            'check_id': 'h2_heading_case',
-            'file': file_path.name,
-            'line': line_index,
-            'message': (
-                f"H2 heading '## {heading_text}' uses sentence case; "
-                f"project convention is title case."
-            ),
-            'fix_hint': (
-                f"Rewrite as title case (capitalize the first letter "
-                f"of every word except short articles, prepositions, "
-                f"and conjunctions). See "
-                f".claude/skills/multi-skill/references/skill-authoring-checklist.md `h2_heading_case`."
-            ),
-        })
+        findings.append(
+            {
+                'severity': 'suggestion',
+                'check_id': 'h2_heading_case',
+                'file': file_path.name,
+                'line': line_index,
+                'message': (
+                    f"H2 heading '## {heading_text}' uses sentence case; "
+                    f'project convention is title case.'
+                ),
+                'fix_hint': (
+                    f'Rewrite as title case (capitalize the first letter '
+                    f'of every word except short articles, prepositions, '
+                    f'and conjunctions). See '
+                    f'.claude/skills/multi-skill/references/skill-authoring-checklist.md `h2_heading_case`.'
+                ),
+            }
+        )
     return findings
 
 

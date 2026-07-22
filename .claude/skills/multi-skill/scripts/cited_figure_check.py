@@ -40,6 +40,7 @@ stdout, mirroring `check_wiki.py`. `severity` is always `warning` (detect-only).
 Exit code 0 normally; 2 on a usage error (bad wiki path); 3 if PyMuPDF is
 missing (so a caller distinguishes "check could not run" from "found nothing").
 """
+
 from __future__ import annotations
 
 import argparse
@@ -73,7 +74,7 @@ WIKILINK_RE = re.compile(r'\[\[[^\]]*\]\]')
 # sentence-final `37.2.` (a dot NOT followed by a digit). A bare integer (no
 # dot, no `%`) is out of scope by construction.
 FIGURE_RE = re.compile(
-    r'(?<![\w.\-])\d+(?:\.\d+)?%'              # percentage: 40% or 37.2%
+    r'(?<![\w.\-])\d+(?:\.\d+)?%'  # percentage: 40% or 37.2%
     r'|(?<![\w.\-])\d+\.\d+(?![\w%])(?!\.\d)'  # decimal 37.2, not 3.1.4
 )
 
@@ -83,6 +84,7 @@ def mask_spans(*, line: str) -> str:
     claim figures. Each span becomes spaces of equal length to keep offsets
     stable.
     """
+
     def blank(match: re.Match[str]) -> str:
         return ' ' * len(match.group(0))
 
@@ -184,8 +186,9 @@ def check_page(
     """
     findings: list[dict[str, Any]] = []
     rel = path.relative_to(repo_root).as_posix()
-    for line_no, line in enumerate(path.read_text(encoding='utf-8').split('\n'),
-                                   start=1):
+    for line_no, line in enumerate(
+        path.read_text(encoding='utf-8').split('\n'), start=1
+    ):
         deeplinks = extract_deeplinks(line=line)
         figures = extract_figures(line=line)
         if not deeplinks or not figures:
@@ -198,18 +201,20 @@ def check_page(
         for token in dict.fromkeys(figures):
             if any(figure_present(token=token, page_text=t) for t in texts):
                 continue
-            findings.append({
-                'check_id': CHECK_ID,
-                'severity': SEVERITY,
-                'file': rel,
-                'line': line_no,
-                'message': (
-                    f'cited figure `{token}` appears on none of the cited '
-                    f'pages for this bullet ({cited}); open the cited page and '
-                    f'confirm the figure or the locator (detect-only, not '
-                    f'auto-fixed — the check cannot tell which is wrong)'
-                ),
-            })
+            findings.append(
+                {
+                    'check_id': CHECK_ID,
+                    'severity': SEVERITY,
+                    'file': rel,
+                    'line': line_no,
+                    'message': (
+                        f'cited figure `{token}` appears on none of the cited '
+                        f'pages for this bullet ({cited}); open the cited page and '
+                        f'confirm the figure or the locator (detect-only, not '
+                        f'auto-fixed — the check cannot tell which is wrong)'
+                    ),
+                }
+            )
     return findings
 
 
@@ -226,10 +231,14 @@ def iter_pages(*, wiki_root: Path) -> list[Path]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description='Detect cited numeric figures absent from their cited '
-                    'raw page (cross-source mis-location backstop).')
+        'raw page (cross-source mis-location backstop).'
+    )
     parser.add_argument(
-        'wiki_root', nargs='?', default='1-wiki',
-        help='path to the wiki root (default: 1-wiki)')
+        'wiki_root',
+        nargs='?',
+        default='1-wiki',
+        help='path to the wiki root (default: 1-wiki)',
+    )
     args = parser.parse_args(argv)
 
     wiki_root = Path(args.wiki_root).resolve()
@@ -245,13 +254,16 @@ def main(argv: list[str] | None = None) -> int:
             'error: PyMuPDF (fitz) is required and not installed. Run '
             '`conda activate llm-wiki` (setup.sh provisions it). The '
             'cited-figure check could not run.',
-            file=sys.stderr)
+            file=sys.stderr,
+        )
         return 3
 
     cache = RawTextCache(repo_root=repo_root)
     findings: list[dict[str, Any]] = []
     for page in iter_pages(wiki_root=wiki_root):
-        findings.extend(check_page(path=page, repo_root=repo_root, cache=cache))
+        findings.extend(
+            check_page(path=page, repo_root=repo_root, cache=cache)
+        )
 
     print(json.dumps(findings, indent=2))
     return 0

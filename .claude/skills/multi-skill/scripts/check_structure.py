@@ -98,12 +98,13 @@ def load_skill_md(
         return None, 0, lines
 
     frontmatter_text = '\n'.join(lines[1:end_idx])
-    body_lines = lines[end_idx + 1:]
+    body_lines = lines[end_idx + 1 :]
 
     # Try parsing with PyYAML; fall back to a tiny key:value parser.
     fm: dict[str, Any] | None
     try:
         import yaml  # type: ignore
+
         try:
             parsed = yaml.safe_load(frontmatter_text)
             fm = parsed if isinstance(parsed, dict) else None
@@ -150,124 +151,140 @@ def check_frontmatter(
     """Validate the YAML frontmatter against the documented schema."""
     findings: list[dict[str, Any]] = []
     if fm is None:
-        findings.append({
-            'severity': 'error',
-            'check_id': 'frontmatter_missing',
-            'file': skill_md_rel,
-            'line': 1,
-            'message': (
-                "SKILL.md has no parseable YAML frontmatter "
-                "(must start with '---' and close with '---')."
-            ),
-            'fix_hint': (
-                'Add a YAML frontmatter block at the top of SKILL.md '
-                "with at least 'name' and 'description'."
-            ),
-        })
+        findings.append(
+            {
+                'severity': 'error',
+                'check_id': 'frontmatter_missing',
+                'file': skill_md_rel,
+                'line': 1,
+                'message': (
+                    'SKILL.md has no parseable YAML frontmatter '
+                    "(must start with '---' and close with '---')."
+                ),
+                'fix_hint': (
+                    'Add a YAML frontmatter block at the top of SKILL.md '
+                    "with at least 'name' and 'description'."
+                ),
+            }
+        )
         return findings
 
     # name
     name = fm.get('name')
     if not isinstance(name, str) or not name.strip():
-        findings.append({
-            'severity': 'error',
-            'check_id': 'name_missing',
-            'file': skill_md_rel,
-            'line': None,
-            'message': "Frontmatter is missing the required 'name' field.",
-            'fix_hint': (
-                "Add a 'name' field "
-                '(lowercase letters, digits, hyphens; ≤64 chars).'
-            ),
-        })
+        findings.append(
+            {
+                'severity': 'error',
+                'check_id': 'name_missing',
+                'file': skill_md_rel,
+                'line': None,
+                'message': "Frontmatter is missing the required 'name' field.",
+                'fix_hint': (
+                    "Add a 'name' field "
+                    '(lowercase letters, digits, hyphens; ≤64 chars).'
+                ),
+            }
+        )
     else:
         if len(name) > NAME_MAX_CHARS:
-            findings.append({
-                'severity': 'error',
-                'check_id': 'name_too_long',
-                'file': skill_md_rel,
-                'line': None,
-                'message': (
-                    f"Frontmatter 'name' is {len(name)} characters; "
-                    f'the maximum is {NAME_MAX_CHARS}.'
-                ),
-                'fix_hint': 'Shorten the name to ≤64 characters.',
-            })
+            findings.append(
+                {
+                    'severity': 'error',
+                    'check_id': 'name_too_long',
+                    'file': skill_md_rel,
+                    'line': None,
+                    'message': (
+                        f"Frontmatter 'name' is {len(name)} characters; "
+                        f'the maximum is {NAME_MAX_CHARS}.'
+                    ),
+                    'fix_hint': 'Shorten the name to ≤64 characters.',
+                }
+            )
         if not re.fullmatch(r'[a-z0-9]+(-[a-z0-9]+)*', name):
-            findings.append({
-                'severity': 'error',
-                'check_id': 'name_invalid_chars',
-                'file': skill_md_rel,
-                'line': None,
-                'message': (
-                    "Frontmatter 'name' must be lowercase kebab-case "
-                    '(letters, digits, single hyphens).'
-                ),
-                'fix_hint': (
-                    'Rename to use only [a-z0-9-], '
-                    'no leading/trailing/double hyphens.'
-                ),
-            })
+            findings.append(
+                {
+                    'severity': 'error',
+                    'check_id': 'name_invalid_chars',
+                    'file': skill_md_rel,
+                    'line': None,
+                    'message': (
+                        "Frontmatter 'name' must be lowercase kebab-case "
+                        '(letters, digits, single hyphens).'
+                    ),
+                    'fix_hint': (
+                        'Rename to use only [a-z0-9-], '
+                        'no leading/trailing/double hyphens.'
+                    ),
+                }
+            )
         if any(reserved in name.lower() for reserved in RESERVED_NAME_WORDS):
-            findings.append({
-                'severity': 'error',
-                'check_id': 'name_reserved_word',
-                'file': skill_md_rel,
-                'line': None,
-                'message': (
-                    f"Frontmatter 'name' contains a reserved word "
-                    f"({', '.join(RESERVED_NAME_WORDS)})."
-                ),
-                'fix_hint': (
-                    "Rename the skill so it doesn't contain "
-                    "'anthropic' or 'claude'."
-                ),
-            })
+            findings.append(
+                {
+                    'severity': 'error',
+                    'check_id': 'name_reserved_word',
+                    'file': skill_md_rel,
+                    'line': None,
+                    'message': (
+                        f"Frontmatter 'name' contains a reserved word "
+                        f'({", ".join(RESERVED_NAME_WORDS)}).'
+                    ),
+                    'fix_hint': (
+                        "Rename the skill so it doesn't contain "
+                        "'anthropic' or 'claude'."
+                    ),
+                }
+            )
 
     # description
     desc = fm.get('description')
     if not isinstance(desc, str) or not desc.strip():
-        findings.append({
-            'severity': 'error',
-            'check_id': 'description_missing',
-            'file': skill_md_rel,
-            'line': None,
-            'message': (
-                "Frontmatter is missing the required 'description' field."
-            ),
-            'fix_hint': (
-                "Add a non-empty 'description' that says what the skill "
-                'does AND when to use it.'
-            ),
-        })
-    else:
-        if len(desc) > DESCRIPTION_MAX_CHARS:
-            findings.append({
+        findings.append(
+            {
                 'severity': 'error',
-                'check_id': 'description_too_long',
+                'check_id': 'description_missing',
                 'file': skill_md_rel,
                 'line': None,
                 'message': (
-                    f"Frontmatter 'description' is {len(desc)} characters;"
-                    f' the maximum is {DESCRIPTION_MAX_CHARS}.'
+                    "Frontmatter is missing the required 'description' field."
                 ),
                 'fix_hint': (
-                    'Trim the description to ≤1024 characters; '
-                    'move detail into the SKILL.md body.'
+                    "Add a non-empty 'description' that says what the skill "
+                    'does AND when to use it.'
                 ),
-            })
+            }
+        )
+    else:
+        if len(desc) > DESCRIPTION_MAX_CHARS:
+            findings.append(
+                {
+                    'severity': 'error',
+                    'check_id': 'description_too_long',
+                    'file': skill_md_rel,
+                    'line': None,
+                    'message': (
+                        f"Frontmatter 'description' is {len(desc)} characters;"
+                        f' the maximum is {DESCRIPTION_MAX_CHARS}.'
+                    ),
+                    'fix_hint': (
+                        'Trim the description to ≤1024 characters; '
+                        'move detail into the SKILL.md body.'
+                    ),
+                }
+            )
         if '<' in desc or '>' in desc:
-            findings.append({
-                'severity': 'error',
-                'check_id': 'description_xml_tags',
-                'file': skill_md_rel,
-                'line': None,
-                'message': (
-                    "Frontmatter 'description' contains '<' or '>' "
-                    'which are disallowed (XML tags break injection).'
-                ),
-                'fix_hint': 'Remove or rephrase to avoid angle brackets.',
-            })
+            findings.append(
+                {
+                    'severity': 'error',
+                    'check_id': 'description_xml_tags',
+                    'file': skill_md_rel,
+                    'line': None,
+                    'message': (
+                        "Frontmatter 'description' contains '<' or '>' "
+                        'which are disallowed (XML tags break injection).'
+                    ),
+                    'fix_hint': 'Remove or rephrase to avoid angle brackets.',
+                }
+            )
 
         # First-person red flag: the description gets injected into the
         # system prompt, so 'I' / 'we' / 'you can use this' is a known
@@ -279,20 +296,22 @@ def check_frontmatter(
             flags=re.IGNORECASE,
         )
         if first_person_match:
-            findings.append({
-                'severity': 'warning',
-                'check_id': 'description_first_person',
-                'file': skill_md_rel,
-                'line': None,
-                'message': (
-                    'Description appears to be written in first or '
-                    'second person; descriptions should be third person.'
-                ),
-                'fix_hint': (
-                    'Rewrite as a third-person statement of capability, '
-                    "e.g. 'Processes X and produces Y'."
-                ),
-            })
+            findings.append(
+                {
+                    'severity': 'warning',
+                    'check_id': 'description_first_person',
+                    'file': skill_md_rel,
+                    'line': None,
+                    'message': (
+                        'Description appears to be written in first or '
+                        'second person; descriptions should be third person.'
+                    ),
+                    'fix_hint': (
+                        'Rewrite as a third-person statement of capability, '
+                        "e.g. 'Processes X and produces Y'."
+                    ),
+                }
+            )
 
     return findings
 
@@ -338,20 +357,22 @@ def check_body_length(
         )
     else:
         tail = ' The word count is within budget; the line budget tripped.'
-    return [{
-        'severity': 'warning',
-        'check_id': 'body_over_length',
-        'file': skill_md_rel,
-        'line': frontmatter_end_line + n_lines,
-        'message': (
-            f'SKILL.md body is {"; ".join(parts)}; a dense body eats '
-            f'context.{tail}'
-        ),
-        'fix_hint': (
-            'Move detail into separate files under references/ '
-            'and link from SKILL.md.'
-        ),
-    }]
+    return [
+        {
+            'severity': 'warning',
+            'check_id': 'body_over_length',
+            'file': skill_md_rel,
+            'line': frontmatter_end_line + n_lines,
+            'message': (
+                f'SKILL.md body is {"; ".join(parts)}; a dense body eats '
+                f'context.{tail}'
+            ),
+            'fix_hint': (
+                'Move detail into separate files under references/ '
+                'and link from SKILL.md.'
+            ),
+        }
+    ]
 
 
 # Match Markdown links of the form [text](target) where target is a
@@ -371,16 +392,86 @@ WINDOWS_PATH_RE = re.compile(
 # false positives.
 HTML_TAG_RE = re.compile(r'<\s*/?\s*([A-Za-z][A-Za-z0-9:-]*)\b[^>]*>')
 HTML_TAGS = {
-    'a', 'abbr', 'address', 'article', 'aside', 'audio', 'b', 'blockquote',
-    'br', 'button', 'caption', 'cite', 'code', 'col', 'colgroup', 'dd',
-    'del', 'details', 'dfn', 'dialog', 'div', 'dl', 'dt', 'em', 'figcaption',
-    'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-    'header', 'hr', 'i', 'iframe', 'img', 'input', 'ins', 'kbd', 'label',
-    'legend', 'li', 'main', 'mark', 'nav', 'ol', 'option', 'p', 'picture',
-    'pre', 'q', 's', 'samp', 'script', 'section', 'select', 'small',
-    'source', 'span', 'strong', 'sub', 'summary', 'sup', 'svg', 'table',
-    'tbody', 'td', 'textarea', 'tfoot', 'th', 'thead', 'time', 'tr', 'u',
-    'ul', 'var', 'video',
+    'a',
+    'abbr',
+    'address',
+    'article',
+    'aside',
+    'audio',
+    'b',
+    'blockquote',
+    'br',
+    'button',
+    'caption',
+    'cite',
+    'code',
+    'col',
+    'colgroup',
+    'dd',
+    'del',
+    'details',
+    'dfn',
+    'dialog',
+    'div',
+    'dl',
+    'dt',
+    'em',
+    'figcaption',
+    'figure',
+    'footer',
+    'form',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'header',
+    'hr',
+    'i',
+    'iframe',
+    'img',
+    'input',
+    'ins',
+    'kbd',
+    'label',
+    'legend',
+    'li',
+    'main',
+    'mark',
+    'nav',
+    'ol',
+    'option',
+    'p',
+    'picture',
+    'pre',
+    'q',
+    's',
+    'samp',
+    'script',
+    'section',
+    'select',
+    'small',
+    'source',
+    'span',
+    'strong',
+    'sub',
+    'summary',
+    'sup',
+    'svg',
+    'table',
+    'tbody',
+    'td',
+    'textarea',
+    'tfoot',
+    'th',
+    'thead',
+    'time',
+    'tr',
+    'u',
+    'ul',
+    'var',
+    'video',
 }
 
 # Bash process substitution `<(...)` outside a code fence is rejected by the
@@ -416,36 +507,40 @@ def check_html_tags(
             tag = match.group(1).lower()
             if tag not in HTML_TAGS:
                 continue
-            findings.append({
-                'severity': 'warning',
-                'check_id': 'html_tag',
-                'file': file_rel,
-                'line': line_offset + i + 1,
-                'message': (
-                    f"Line contains raw HTML tag '<{tag}>'; "
-                    'skill text should stay portable Markdown.'
-                ),
-                'fix_hint': (
-                    'Replace the raw HTML with plain Markdown, a normal '
-                    'heading, or a fenced code example.'
-                ),
-            })
+            findings.append(
+                {
+                    'severity': 'warning',
+                    'check_id': 'html_tag',
+                    'file': file_rel,
+                    'line': line_offset + i + 1,
+                    'message': (
+                        f"Line contains raw HTML tag '<{tag}>'; "
+                        'skill text should stay portable Markdown.'
+                    ),
+                    'fix_hint': (
+                        'Replace the raw HTML with plain Markdown, a normal '
+                        'heading, or a fenced code example.'
+                    ),
+                }
+            )
             break
         if PROC_SUBST_RE.search(prose):
-            findings.append({
-                'severity': 'error',
-                'check_id': 'process_substitution',
-                'file': file_rel,
-                'line': line_offset + i + 1,
-                'message': (
-                    'Line contains bash process substitution `<(...)`; the '
-                    'skill-upload pipeline rejects it as a malformed HTML tag.'
-                ),
-                'fix_hint': (
-                    'Replace `<(...)` with a temp file or a pipe '
-                    '(CLAUDE.md -> Skill Authoring).'
-                ),
-            })
+            findings.append(
+                {
+                    'severity': 'error',
+                    'check_id': 'process_substitution',
+                    'file': file_rel,
+                    'line': line_offset + i + 1,
+                    'message': (
+                        'Line contains bash process substitution `<(...)`; the '
+                        'skill-upload pipeline rejects it as a malformed HTML tag.'
+                    ),
+                    'fix_hint': (
+                        'Replace `<(...)` with a temp file or a pipe '
+                        '(CLAUDE.md -> Skill Authoring).'
+                    ),
+                }
+            )
     return findings
 
 
@@ -469,18 +564,20 @@ def check_paths(
         if in_code_fence:
             continue
         if WINDOWS_PATH_RE.search(line):
-            findings.append({
-                'severity': 'warning',
-                'check_id': 'windows_path',
-                'file': skill_md_rel,
-                'line': frontmatter_end_line + i + 1,
-                'message': (
-                    'Line contains a Windows-style path '
-                    '(backslash separators); use forward slashes for '
-                    'cross-platform compatibility.'
-                ),
-                'fix_hint': "Replace '\\' with '/' in the path on this line.",
-            })
+            findings.append(
+                {
+                    'severity': 'warning',
+                    'check_id': 'windows_path',
+                    'file': skill_md_rel,
+                    'line': frontmatter_end_line + i + 1,
+                    'message': (
+                        'Line contains a Windows-style path '
+                        '(backslash separators); use forward slashes for '
+                        'cross-platform compatibility.'
+                    ),
+                    'fix_hint': "Replace '\\' with '/' in the path on this line.",
+                }
+            )
     return findings
 
 
@@ -496,29 +593,29 @@ def check_reference_depth_and_toc(
     direct_refs: list[Path] = []
     for m in MD_LINK_RE.finditer(body_text):
         target = m.group(1).split('#', 1)[0]  # strip anchors
-        if not target or target.startswith(
-            ('http://', 'https://', 'mailto:')
-        ):
+        if not target or target.startswith(('http://', 'https://', 'mailto:')):
             continue
         # Only check .md targets (we don't follow into scripts/).
         if not target.endswith('.md'):
             continue
         ref_path = (skill_dir / target).resolve()
         if not ref_path.exists():
-            findings.append({
-                'severity': 'warning',
-                'check_id': 'broken_md_link',
-                'file': 'SKILL.md',
-                'line': None,
-                'message': (
-                    f"SKILL.md links to '{target}' but the file "
-                    "doesn't exist in the skill directory."
-                ),
-                'fix_hint': (
-                    f"Either create '{target}' or update the link to "
-                    'point to an existing file.'
-                ),
-            })
+            findings.append(
+                {
+                    'severity': 'warning',
+                    'check_id': 'broken_md_link',
+                    'file': 'SKILL.md',
+                    'line': None,
+                    'message': (
+                        f"SKILL.md links to '{target}' but the file "
+                        "doesn't exist in the skill directory."
+                    ),
+                    'fix_hint': (
+                        f"Either create '{target}' or update the link to "
+                        'point to an existing file.'
+                    ),
+                }
+            )
             continue
         if not ref_path.is_relative_to(skill_dir):
             # A reference resolving outside the skill folder (e.g. a
@@ -551,21 +648,23 @@ def check_reference_depth_and_toc(
             ):
                 continue
             if target.endswith('.md'):
-                findings.append({
-                    'severity': 'warning',
-                    'check_id': 'nested_reference',
-                    'file': rel,
-                    'line': None,
-                    'message': (
-                        f"Reference file links to another markdown file "
-                        f"('{target}'); references should be one level "
-                        'deep from SKILL.md.'
-                    ),
-                    'fix_hint': (
-                        f"Move '{target}' so it's linked directly from "
-                        'SKILL.md, or inline the relevant content.'
-                    ),
-                })
+                findings.append(
+                    {
+                        'severity': 'warning',
+                        'check_id': 'nested_reference',
+                        'file': rel,
+                        'line': None,
+                        'message': (
+                            f'Reference file links to another markdown file '
+                            f"('{target}'); references should be one level "
+                            'deep from SKILL.md.'
+                        ),
+                        'fix_hint': (
+                            f"Move '{target}' so it's linked directly from "
+                            'SKILL.md, or inline the relevant content.'
+                        ),
+                    }
+                )
                 break  # one finding per file is enough
 
         # TOC check on long files.
@@ -574,30 +673,32 @@ def check_reference_depth_and_toc(
             # Heuristic: a TOC is a '## Contents' / '## Table of
             # contents' heading OR a bulleted list near the top whose
             # items reference subsequent headings.
-            head = '\n'.join(
-                content.splitlines()[:TOC_PREVIEW_LINES]
-            ).lower()
-            has_toc_heading = bool(re.search(
-                r'^\s*##\s+(contents|table of contents|toc)\b',
-                head,
-                re.MULTILINE,
-            ))
+            head = '\n'.join(content.splitlines()[:TOC_PREVIEW_LINES]).lower()
+            has_toc_heading = bool(
+                re.search(
+                    r'^\s*##\s+(contents|table of contents|toc)\b',
+                    head,
+                    re.MULTILINE,
+                )
+            )
             if not has_toc_heading:
-                findings.append({
-                    'severity': 'suggestion',
-                    'check_id': 'missing_toc',
-                    'file': rel,
-                    'line': 1,
-                    'message': (
-                        f'Reference file is {line_count} lines but has '
-                        'no table of contents; Claude may only '
-                        'partially read it.'
-                    ),
-                    'fix_hint': (
-                        "Add a '## Contents' section near the top "
-                        'listing the major sections.'
-                    ),
-                })
+                findings.append(
+                    {
+                        'severity': 'suggestion',
+                        'check_id': 'missing_toc',
+                        'file': rel,
+                        'line': 1,
+                        'message': (
+                            f'Reference file is {line_count} lines but has '
+                            'no table of contents; Claude may only '
+                            'partially read it.'
+                        ),
+                        'fix_hint': (
+                            "Add a '## Contents' section near the top "
+                            'listing the major sections.'
+                        ),
+                    }
+                )
 
     return findings
 
@@ -658,9 +759,7 @@ def _is_bare_skill_ref(token: str, repo_root: Path) -> bool:
     return (repo_root / '.claude' / 'skills' / first_segment).is_dir()
 
 
-def _skill_ref_resolves(
-    token: str, skill_dir: Path, repo_root: Path
-) -> bool:
+def _skill_ref_resolves(token: str, skill_dir: Path, repo_root: Path) -> bool:
     """True if `token` resolves under the repo root, .claude/skills/,
     or the skill dir.
     """
@@ -696,14 +795,10 @@ def check_inline_code_refs(
                     # Drop an anchor, leading brackets, and trailing
                     # sentence punctuation — but NOT a leading '.', which is
                     # part of `.claude/…` paths.
-                    token = (
-                        raw.split('#', 1)[0].lstrip('([').rstrip('.,;:)]')
-                    )
+                    token = raw.split('#', 1)[0].lstrip('([').rstrip('.,;:)]')
                     if not (
                         _looks_like_skill_ref(token=token)
-                        or _is_bare_skill_ref(
-                            token=token, repo_root=repo_root
-                        )
+                        or _is_bare_skill_ref(token=token, repo_root=repo_root)
                     ):
                         continue
                     if _skill_ref_resolves(
@@ -713,22 +808,24 @@ def check_inline_code_refs(
                     if token in seen:
                         continue
                     seen.add(token)
-                    findings.append({
-                        'severity': 'warning',
-                        'check_id': 'broken_inline_ref',
-                        'file': file_rel,
-                        'line': line_offset + i + 1,
-                        'message': (
-                            f"Inline-code path '{token}' references a skill "
-                            'file that resolves nowhere on disk (checked repo '
-                            'root, .claude/skills/, and the skill dir).'
-                        ),
-                        'fix_hint': (
-                            f"Fix the path to an existing file, or if "
-                            f"'{token}' is illustrative, put it in a fenced "
-                            'code block.'
-                        ),
-                    })
+                    findings.append(
+                        {
+                            'severity': 'warning',
+                            'check_id': 'broken_inline_ref',
+                            'file': file_rel,
+                            'line': line_offset + i + 1,
+                            'message': (
+                                f"Inline-code path '{token}' references a skill "
+                                'file that resolves nowhere on disk (checked repo '
+                                'root, .claude/skills/, and the skill dir).'
+                            ),
+                            'fix_hint': (
+                                f'Fix the path to an existing file, or if '
+                                f"'{token}' is illustrative, put it in a fenced "
+                                'code block.'
+                            ),
+                        }
+                    )
     return findings
 
 

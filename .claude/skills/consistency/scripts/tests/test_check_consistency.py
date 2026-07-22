@@ -8,6 +8,7 @@ misattribution) plus the script's own wiring invariants. Run from anywhere:
 
 The module is loaded by path so the tests do not depend on cwd or packaging.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -21,8 +22,10 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 HERE = Path(__file__).resolve()
-SCRIPT = HERE.parents[1] / 'check_consistency.py'        # scripts/check_consistency.py
-REPO = HERE.parents[5]                                   # repo root
+SCRIPT = (
+    HERE.parents[1] / 'check_consistency.py'
+)  # scripts/check_consistency.py
+REPO = HERE.parents[5]  # repo root
 
 spec = importlib.util.spec_from_file_location('check_consistency', SCRIPT)
 cc = importlib.util.module_from_spec(spec)
@@ -69,12 +72,18 @@ class TestCheckConsistency(unittest.TestCase):
         assert findings == [], findings
 
     def test_battery_output_is_deterministic_and_clean(self) -> None:
-        r1 = subprocess.run([sys.executable, str(SCRIPT), str(REPO)],
-                            capture_output=True, text=True)
-        r2 = subprocess.run([sys.executable, str(SCRIPT), str(REPO)],
-                            capture_output=True, text=True)
+        r1 = subprocess.run(
+            [sys.executable, str(SCRIPT), str(REPO)],
+            capture_output=True,
+            text=True,
+        )
+        r2 = subprocess.run(
+            [sys.executable, str(SCRIPT), str(REPO)],
+            capture_output=True,
+            text=True,
+        )
         assert r1.returncode == 0
-        assert r1.stdout == r2.stdout          # stable order, not just stable set
+        assert r1.stdout == r2.stdout  # stable order, not just stable set
 
     def test_catalogue_matches_manifest_clean(self) -> None:
         assert cc.check_catalogue_matches_manifest(REPO) == []
@@ -85,8 +94,9 @@ class TestCheckConsistency(unittest.TestCase):
         wiki = self.tmp / '1-wiki'
         wiki.mkdir()
         (wiki / 'index.md').write_text(
-            '## Sources\n## Entities\n## Concepts\n## Syntheses\n')
-        (wiki / 'sources').mkdir()           # entities/concepts/syntheses absent
+            '## Sources\n## Entities\n## Concepts\n## Syntheses\n'
+        )
+        (wiki / 'sources').mkdir()  # entities/concepts/syntheses absent
         # Must return a list, not raise FileNotFoundError.
         assert isinstance(cc.check_index_vs_files_drift(self.tmp), list)
 
@@ -98,18 +108,25 @@ class TestCheckConsistency(unittest.TestCase):
         (skill / 'SKILL.md').write_text('---\nname: dummy\n---\n')
         (self.tmp / 'README.md').write_text(
             '```python\nx = ".claude/nope/fake.py"\n```\n\n'
-            '`0-raw/real-fake.md` outside a fence.\n')
-        msgs = [f['message'] for f in cc.check_referenced_paths_exist(self.tmp)]
-        assert any('0-raw/real-fake.md' in m for m in msgs)   # out-of-fence flagged
-        assert not any('fake.py' in m for m in msgs)          # in-fence suppressed
+            '`0-raw/real-fake.md` outside a fence.\n'
+        )
+        msgs = [
+            f['message'] for f in cc.check_referenced_paths_exist(self.tmp)
+        ]
+        assert any(
+            '0-raw/real-fake.md' in m for m in msgs
+        )  # out-of-fence flagged
+        assert not any('fake.py' in m for m in msgs)  # in-fence suppressed
 
     # --- regression: section-list parser misattribution ---
 
     def test_section_parser_does_not_misattribute_stray_list(self) -> None:
-        txt = ('### Required Callout Sections\n\n'
-               'Source pages:\n\n1. `tldr` - TL;DR\n\n'
-               'Glossary pages:\n\n1. `term` - Term\n2. `definition` - Definition\n\n'
-               '## Next\n')
+        txt = (
+            '### Required Callout Sections\n\n'
+            'Source pages:\n\n1. `tldr` - TL;DR\n\n'
+            'Glossary pages:\n\n1. `term` - Term\n2. `definition` - Definition\n\n'
+            '## Next\n'
+        )
         parsed, unrecognized = cc._parse_claude_section_lists(txt)
         assert parsed.get('source') == ['tldr']
         assert 'glossary pages' in unrecognized
@@ -117,15 +134,18 @@ class TestCheckConsistency(unittest.TestCase):
         assert 'term' not in flat and 'definition' not in flat
 
     def test_section_parser_surfaces_malformed_slug(self) -> None:
-        txt = ('### Required Callout Sections\n\nSource pages:\n\n'
-               '1. `tldrX` - TL;DR\n\n## Next\n')
+        txt = (
+            '### Required Callout Sections\n\nSource pages:\n\n'
+            '1. `tldrX` - TL;DR\n\n## Next\n'
+        )
         parsed, _ = cc._parse_claude_section_lists(txt)
-        assert parsed['source'] == ['tldrX']   # raw token captured, not dropped
+        assert parsed['source'] == ['tldrX']  # raw token captured, not dropped
 
     def test_section_check_detects_drift(self) -> None:
         src = (REPO / 'CLAUDE.md').read_text()
         (self.tmp / 'CLAUDE.md').write_text(
-            src.replace('1. `tldr` - TL;DR', '1. `summary` - TL;DR', 1))
+            src.replace('1. `tldr` - TL;DR', '1. `summary` - TL;DR', 1)
+        )
         out = cc.check_section_lists_match_schema(self.tmp)
         assert any('source' in f['message'] for f in out)
 
@@ -137,18 +157,26 @@ class TestCheckConsistency(unittest.TestCase):
         # vault's own -- e.g. pagination-map.md sections are keyed on the vault's
         # raw stems, every one a corpus bibkey. Requiring placeholder bibkeys
         # there is incoherent; same rationale as the `-memory.md` journals.
-        leaked = _synthetic_bibkey(author='Corpus', year='2097', title='GammaEF')
+        leaked = _synthetic_bibkey(
+            author='Corpus', year='2097', title='GammaEF'
+        )
         lint = self.tmp / '.claude' / 'skills' / 'lint'
         lint.mkdir(parents=True)
         (lint / 'SKILL.md').write_text('A lint skill.\n')
         for name in cc.AGENT_DATA_FILES:
-            (lint / name).write_text(f'## 0-raw/papers/{leaked}.pdf\n- 1 = 1\n')
-        flagged = {f['file'] for f in cc.check_domain_literature_leakage(self.tmp)}
+            (lint / name).write_text(
+                f'## 0-raw/papers/{leaked}.pdf\n- 1 = 1\n'
+            )
+        flagged = {
+            f['file'] for f in cc.check_domain_literature_leakage(self.tmp)
+        }
         for name in cc.AGENT_DATA_FILES:
             assert f'.claude/skills/lint/{name}' not in flagged, name
         # ...but an ordinary file in the SAME folder is still scanned.
         (lint / 'references.md').write_text(f'See `{leaked}`.\n')
-        flagged = {f['file'] for f in cc.check_domain_literature_leakage(self.tmp)}
+        flagged = {
+            f['file'] for f in cc.check_domain_literature_leakage(self.tmp)
+        }
         assert '.claude/skills/lint/references.md' in flagged
 
     def test_agent_data_files_constant_matches_disk(self) -> None:
@@ -159,17 +187,28 @@ class TestCheckConsistency(unittest.TestCase):
         # skills that read check_wiki.py), not lint/.
         data_dir = REPO / '.claude' / 'skills' / 'multi-skill'
         for name in cc.AGENT_DATA_FILES:
-            assert (data_dir / name).exists(), f'{name} declared exempt but not on disk'
+            assert (data_dir / name).exists(), (
+                f'{name} declared exempt but not on disk'
+            )
 
     def test_domain_literature_leakage_flags_and_exempts(self) -> None:
-        placeholder = next(iter(cc.PLACEHOLDER_BIBKEYS))      # allowlisted, fetched at runtime
-        leaked_a = _synthetic_bibkey(author='Corpus', year='2099', title='AlphaAB')
-        leaked_b = _synthetic_bibkey(author='Corpus', year='2098', title='BetaCD')
-        exempt_mem = _synthetic_bibkey(author='Corpus', year='2096', title='DeltaGH')
+        placeholder = next(
+            iter(cc.PLACEHOLDER_BIBKEYS)
+        )  # allowlisted, fetched at runtime
+        leaked_a = _synthetic_bibkey(
+            author='Corpus', year='2099', title='AlphaAB'
+        )
+        leaked_b = _synthetic_bibkey(
+            author='Corpus', year='2098', title='BetaCD'
+        )
+        exempt_mem = _synthetic_bibkey(
+            author='Corpus', year='2096', title='DeltaGH'
+        )
         # CLAUDE.md: a placeholder (ok) plus a leaked corpus citation (flag).
         (self.tmp / 'CLAUDE.md').write_text(
             f'Example source `{placeholder}` is fine.\n'
-            f'But `{leaked_a}` is corpus literature.\n')
+            f'But `{leaked_a}` is corpus literature.\n'
+        )
         skills = self.tmp / '.claude' / 'skills'
         # A skill leaking a corpus citation in its script -> flagged (scripts scanned).
         normal = skills / 'dummy'
@@ -178,13 +217,18 @@ class TestCheckConsistency(unittest.TestCase):
         (normal / 'scripts' / 'run.py').write_text(f'KEY = "{leaked_b}"\n')
         # A memory journal citing a real past paper -> the one structural exemption.
         (skills / 'multi-skill-memory.md').write_text(
-            f'During the `{exempt_mem}` ingest we learned X.\n')
+            f'During the `{exempt_mem}` ingest we learned X.\n'
+        )
 
-        flagged = {(f['file'], f['message']) for f in
-                   cc.check_domain_literature_leakage(self.tmp)}
+        flagged = {
+            (f['file'], f['message'])
+            for f in cc.check_domain_literature_leakage(self.tmp)
+        }
         files = {f for f, _ in flagged}
-        assert 'CLAUDE.md' in files                              # leaked key flagged
-        assert '.claude/skills/dummy/scripts/run.py' in files    # script scanned + flagged
+        assert 'CLAUDE.md' in files  # leaked key flagged
+        assert (
+            '.claude/skills/dummy/scripts/run.py' in files
+        )  # script scanned + flagged
         # The memory journal and the placeholder produce no findings.
         assert not any('memory.md' in f for f in files)
         assert not any(placeholder in m for _, m in flagged)
@@ -196,20 +240,28 @@ class TestCheckConsistency(unittest.TestCase):
         skill = skills / 'dummy'
         (skill / 'scripts').mkdir(parents=True)
         # A backticked, referenced script -> not orphan.
-        (skill / 'SKILL.md').write_text('Run `scripts/run.py` to do the thing.\n')
+        (skill / 'SKILL.md').write_text(
+            'Run `scripts/run.py` to do the thing.\n'
+        )
         (skill / 'scripts' / 'run.py').write_text('print("hi")\n')
         # Transient pytest cache under scripts/ -> must be skipped, not flagged.
         cache = skill / 'scripts' / '.pytest_cache' / 'v' / 'cache'
         cache.mkdir(parents=True)
-        (skill / 'scripts' / '.pytest_cache' / 'CACHEDIR.TAG').write_text('x\n')
+        (skill / 'scripts' / '.pytest_cache' / 'CACHEDIR.TAG').write_text(
+            'x\n'
+        )
         (cache / 'lastfailed').write_text('{}\n')
         # A genuinely unreferenced script -> still flagged.
         (skill / 'scripts' / 'orphan.py').write_text('print("orphan")\n')
 
         files = {f['file'] for f in cc.check_orphan_skill_scripts(self.tmp)}
-        assert '.claude/skills/dummy/scripts/orphan.py' in files       # real orphan flagged
-        assert not any('.pytest_cache' in f for f in files)            # cache skipped
-        assert '.claude/skills/dummy/scripts/run.py' not in files      # referenced, not orphan
+        assert (
+            '.claude/skills/dummy/scripts/orphan.py' in files
+        )  # real orphan flagged
+        assert not any('.pytest_cache' in f for f in files)  # cache skipped
+        assert (
+            '.claude/skills/dummy/scripts/run.py' not in files
+        )  # referenced, not orphan
 
     # --- regression: output-kind coverage ---
 
@@ -226,9 +278,12 @@ class TestCheckConsistency(unittest.TestCase):
 
     def test_catalogue_detects_count_drift(self) -> None:
         import re
-        src = (REPO / '.claude/skills/consistency/references/checks.md').read_text()
+
+        src = (
+            REPO / '.claude/skills/consistency/references/checks.md'
+        ).read_text()
         broken = re.sub(r'\d+ checks across', '99 checks across', src, count=1)
-        assert broken != src           # the substitution actually landed
+        assert broken != src  # the substitution actually landed
         dest = self.tmp / '.claude/skills/consistency/references'
         dest.mkdir(parents=True)
         (dest / 'checks.md').write_text(broken)
@@ -238,8 +293,11 @@ class TestCheckConsistency(unittest.TestCase):
     # --- exit codes ---
 
     def test_bad_path_exits_2(self) -> None:
-        r = subprocess.run([sys.executable, str(SCRIPT), '/no/such/path'],
-                           capture_output=True, text=True)
+        r = subprocess.run(
+            [sys.executable, str(SCRIPT), '/no/such/path'],
+            capture_output=True,
+            text=True,
+        )
         assert r.returncode == 2
         # The empty-stdout-on-invocation-error is the trap audit's `result:`
         # gate depends on: a genuinely clean run prints '[]' (exit 0), so an
@@ -248,10 +306,16 @@ class TestCheckConsistency(unittest.TestCase):
         assert r.stderr.strip() != ''
 
     def test_bad_packet_and_bad_checks_exit_2(self) -> None:
-        for args in (['.', '--packet', 'no-such-packet'],
-                     ['.', '--checks', 'no_such_check']):
-            r = subprocess.run([sys.executable, str(SCRIPT), *args],
-                               capture_output=True, text=True, cwd=str(REPO))
+        for args in (
+            ['.', '--packet', 'no-such-packet'],
+            ['.', '--checks', 'no_such_check'],
+        ):
+            r = subprocess.run(
+                [sys.executable, str(SCRIPT), *args],
+                capture_output=True,
+                text=True,
+                cwd=str(REPO),
+            )
             assert r.returncode == 2, args
             assert r.stdout.strip() == '', args
 
@@ -263,7 +327,10 @@ class TestCheckConsistency(unittest.TestCase):
         for value in (',', '   '):
             r = subprocess.run(
                 [sys.executable, str(SCRIPT), '.', '--checks', value],
-                capture_output=True, text=True, cwd=str(REPO))
+                capture_output=True,
+                text=True,
+                cwd=str(REPO),
+            )
             assert r.returncode == 2, value
             assert r.stdout.strip() == '', value
 
@@ -280,8 +347,12 @@ class TestCheckConsistency(unittest.TestCase):
         old_argv = sys.argv
         buf = io.StringIO()
         try:
-            sys.argv = ['check_consistency.py', str(REPO),
-                        '--checks', 'gitkeep_coverage']
+            sys.argv = [
+                'check_consistency.py',
+                str(REPO),
+                '--checks',
+                'gitkeep_coverage',
+            ]
             with redirect_stdout(buf):
                 rc = cc.main()
         finally:
@@ -313,28 +384,42 @@ class TestCheckConsistency(unittest.TestCase):
         # Real addresses — subdomains, +tags, uppercase — still match after
         # the alphabetic-TLD guard was added. Composed via _addr so no literal
         # address sits in this source (personal_info_leakage scans it).
-        for addr in (_addr('sschoepp', 'ualberta.ca'), _addr('user', 'example.com'),
-                     _addr('first.last+tag', 'mail.example.co.uk'),
-                     _addr('noreply', 'github.com'), _addr('USER', 'EXAMPLE.COM')):
+        for addr in (
+            _addr('sschoepp', 'ualberta.ca'),
+            _addr('user', 'example.com'),
+            _addr('first.last+tag', 'mail.example.co.uk'),
+            _addr('noreply', 'github.com'),
+            _addr('USER', 'EXAMPLE.COM'),
+        ):
             assert cc.EMAIL_RE.search(addr), f'should match: {addr}'
 
     def test_email_re_rejects_numeric_tld_metric_notation(self) -> None:
         # The guard's purpose: metric notation like acc@5.2 or mAP@0.5 has a
         # numeric final label, so it must not be misread as an email.
-        for token in ('acc@5', 'acc@5.2', 'mAP@0.5', 'recall@0.95',
-                      'hits@10.5', 'foo@bar.123', 'x@y.3'):
+        for token in (
+            'acc@5',
+            'acc@5.2',
+            'mAP@0.5',
+            'recall@0.95',
+            'hits@10.5',
+            'foo@bar.123',
+            'x@y.3',
+        ):
             assert not cc.EMAIL_RE.search(token), f'should not match: {token}'
 
     def test_personal_info_leakage_ignores_metric_notation(self) -> None:
         # End to end: metric notation raises no email finding, a real address
         # still does.
         (self.tmp / 'note.md').write_text(
-            'Top-5 result mAP@0.5 and recall@0.95 improved.\n', encoding='utf-8')
+            'Top-5 result mAP@0.5 and recall@0.95 improved.\n',
+            encoding='utf-8',
+        )
         assert cc.check_personal_info_leakage(self.tmp) == []
 
         target = _addr('jane.doe', 'example.com')
         (self.tmp / 'leak.md').write_text(
-            f'Reach me at {target} please.\n', encoding='utf-8')
+            f'Reach me at {target} please.\n', encoding='utf-8'
+        )
         msgs = [f['message'] for f in cc.check_personal_info_leakage(self.tmp)]
         assert any(target in m for m in msgs), msgs
 

@@ -73,10 +73,12 @@ def strip_inline_code(text: str) -> str:
     later character offset and line count unchanged, so the imperative's
     reported line stays correct.
     """
+
     def _blank(match: re.Match) -> str:
         return ''.join(
             '\n' if char == '\n' else ' ' for char in match.group(0)
         )
+
     return re.sub(r'`[^`]*`', _blank, text)
 
 
@@ -92,7 +94,7 @@ def load_body_with_offsets(skill_md: Path) -> tuple[str, int]:
     for i in range(1, len(lines)):
         if lines[i].strip() == '---':
             # +2: line after the closing ---
-            return '\n'.join(lines[i + 1:]), i + 2
+            return '\n'.join(lines[i + 1 :]), i + 2
     return text, 1
 
 
@@ -118,9 +120,7 @@ def split_paragraphs(
         if stripped.startswith('```'):
             # Flush any in-progress paragraph before/after a fence.
             if current_lines:
-                paragraphs.append(
-                    (current_start, '\n'.join(current_lines))
-                )
+                paragraphs.append((current_start, '\n'.join(current_lines)))
                 current_lines = []
             in_code_fence = not in_code_fence
             current_start = line_no + 1
@@ -131,9 +131,7 @@ def split_paragraphs(
 
         if not stripped:
             if current_lines:
-                paragraphs.append(
-                    (current_start, '\n'.join(current_lines))
-                )
+                paragraphs.append((current_start, '\n'.join(current_lines)))
                 current_lines = []
             current_start = line_no + 1
             continue
@@ -167,27 +165,29 @@ def find_unexplained_imperatives(skill_md: Path) -> list[dict]:
         # a useful pointer. prose_text preserves para_text's offsets and
         # newlines, so this line math stays correct.
         first = imperatives[0]
-        line_offset = prose_text[:first.start()].count('\n')
+        line_offset = prose_text[: first.start()].count('\n')
         line_in_file = para_start_line + line_offset
         words = sorted({m.group(0) for m in imperatives})
-        findings.append({
-            'severity': 'suggestion',
-            'check_id': 'heavy_handed_must_candidate',
-            'file': 'SKILL.md',
-            'line': line_in_file,
-            'message': (
-                f"Paragraph contains all-caps imperative(s) "
-                f"({', '.join(words)}) but no obvious explanation of why."
-            ),
-            'fix_hint': (
-                "If the rule has a non-obvious reason, add a brief "
-                "'because ...' or '— otherwise ...' so the model reading "
-                'this understands the why. Models follow well-justified '
-                'rules more reliably than bare directives. If the '
-                'reasoning is already obvious from context, you can '
-                'drop this candidate.'
-            ),
-        })
+        findings.append(
+            {
+                'severity': 'suggestion',
+                'check_id': 'heavy_handed_must_candidate',
+                'file': 'SKILL.md',
+                'line': line_in_file,
+                'message': (
+                    f'Paragraph contains all-caps imperative(s) '
+                    f'({", ".join(words)}) but no obvious explanation of why.'
+                ),
+                'fix_hint': (
+                    'If the rule has a non-obvious reason, add a brief '
+                    "'because ...' or '— otherwise ...' so the model reading "
+                    'this understands the why. Models follow well-justified '
+                    'rules more reliably than bare directives. If the '
+                    'reasoning is already obvious from context, you can '
+                    'drop this candidate.'
+                ),
+            }
+        )
     return findings
 
 

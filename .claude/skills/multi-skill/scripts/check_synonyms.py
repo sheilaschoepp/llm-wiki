@@ -100,9 +100,7 @@ def load_synonym_ignore(skill_name: str) -> list[frozenset[str]]:
             continue
         # Drop a trailing ' — rationale' or ' - rationale' tail.
         terms_part = re.split(r'\s+[—-]\s+', bullet.group(1), maxsplit=1)[0]
-        terms = {
-            t.strip().lower() for t in terms_part.split('/') if t.strip()
-        }
+        terms = {t.strip().lower() for t in terms_part.split('/') if t.strip()}
         if len(terms) >= 2:
             groups.append(frozenset(terms))
     return groups
@@ -142,23 +140,25 @@ def find_synonym_clashes(
             terms_str = ', '.join(f"'{t}' ({n}x)" for t, n in present)
             # Arbitrary choice; the agent should make the real call.
             primary = present[0][0]
-            findings.append({
-                'severity': 'suggestion',
-                'check_id': 'terminology_candidate',
-                'file': 'SKILL.md',
-                'line': None,
-                'message': (
-                    f'Body uses multiple near-synonyms that may refer '
-                    f'to the same concept: {terms_str}.'
-                ),
-                'fix_hint': (
-                    f"If these all refer to the same thing in your "
-                    f"skill's domain, pick one term (e.g., '{primary}') "
-                    f'and use it consistently throughout. If they refer '
-                    f"to distinct things, briefly distinguish them so a "
-                    f"reader doesn't have to guess."
-                ),
-            })
+            findings.append(
+                {
+                    'severity': 'suggestion',
+                    'check_id': 'terminology_candidate',
+                    'file': 'SKILL.md',
+                    'line': None,
+                    'message': (
+                        f'Body uses multiple near-synonyms that may refer '
+                        f'to the same concept: {terms_str}.'
+                    ),
+                    'fix_hint': (
+                        f'If these all refer to the same thing in your '
+                        f"skill's domain, pick one term (e.g., '{primary}') "
+                        f'and use it consistently throughout. If they refer '
+                        f'to distinct things, briefly distinguish them so a '
+                        f"reader doesn't have to guess."
+                    ),
+                }
+            )
     return findings
 
 
@@ -170,7 +170,7 @@ def load_body(path: Path) -> str:
         return text
     for i in range(1, len(lines)):
         if lines[i].strip() == '---':
-            return '\n'.join(lines[i + 1:])
+            return '\n'.join(lines[i + 1 :])
     # Malformed frontmatter — return whole text rather than nothing.
     return text
 
