@@ -16,7 +16,7 @@ Steps:
 3. Group the work into logical chunks — one commit per coherent change, not one catch-all commit. For each chunk, stage just its content, then commit it before moving to the next:
    - `all` scope: stage with `git add -p` / `git add <path>` so each commit holds one logical change.
    - `session` scope: stage only the hunks you wrote this session. You know the exact before/after of your own Edit/Write edits, so write those hunks — including the `diff --git` / `---` / `+++` headers — to a patch file and stage with `git apply --cached --recount /tmp/cp.patch`. Do **not** use `git add -A`, `git add .`, `git add <file>`, or `git commit -a` in this scope — they sweep in other sessions' hunks.
-4. Before each commit, run `git diff --staged` to confirm only that chunk is staged. Write a concise imperative one-line message (short body only if it needs explaining), ending with the `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>` trailer. Commit with `git commit` (no `-a`).
+4. Before each commit, run `git diff --staged` to confirm only that chunk is staged. Write a concise imperative one-line message (short body only if it needs explaining), ending with a `Co-Authored-By: Claude <model> <noreply@anthropic.com>` trailer, where `<model>` is the model you are running as — take it from your environment rather than hard-coding a version. Commit with `git commit` (no `-a`).
 5. Push with `git push` (or `git push -u origin HEAD` if there's no upstream).
 6. Report each commit hash with the files it covered, and confirm the push succeeded.
 
