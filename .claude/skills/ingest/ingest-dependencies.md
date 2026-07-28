@@ -9,6 +9,7 @@ Reference map of every file `ingest` relies on to run, grouped by where the file
 - `references/planning-questions.md` — Step 3 context-post catalogue and the per-decision question types.
 - `references/source-page-writing.md` — per-callout source-page writing guidance, inline-embed format, citation rules.
 - `references/attachments.md` — figure extraction and crop mechanics (point-space clip, render→inspect→crop loop).
+- `references/report-shapes.md` — Step 8 report body templates (new-source and reingest) and the `Recommended next ingests` spec. Ingest-only, so it lives here rather than in the shared verification spec every authoring skill loads.
 - `ingest-memory.md` — per-skill corrections, read at Step 1.
 
 ## Multi-skill folder (`.claude/skills/multi-skill/`, shared)

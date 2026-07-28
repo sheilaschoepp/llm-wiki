@@ -1911,6 +1911,74 @@ if __name__ == '__main__':
     unittest.main()
 
 
+class TestAuditBurndown(unittest.TestCase):
+    """audit_burndown_stalled — the deterministic burn-down gate over the
+    newest audit reports' `markers_pending:` / `inherited_cleared:` frontmatter
+    (audit SKILL.md, the Worklist ledger). Fires on a stalled clear (0 of I>0)
+    or a growing queue with nothing cleared; skips field-less reports."""
+
+    def _run(self, reports: dict[str, str]) -> list[dict]:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / '1-wiki').mkdir()
+            audit_dir = root / '2-outputs' / 'audit'
+            audit_dir.mkdir(parents=True)
+            for name, fm in reports.items():
+                (audit_dir / name).write_text(fm, encoding='utf-8')
+            return cw.check_audit_burndown(wiki_root=root / '1-wiki')
+
+    @staticmethod
+    def _report(cleared: int, inherited: int, pending: int) -> str:
+        return (f'---\ntype: audit\ndate: 2026-07-26\nmode: partial\n'
+                f'markers_pending: {pending}\n'
+                f'inherited_cleared: "{cleared} of {inherited}"\n---\n\n# Audit\n')
+
+    def test_stalled_clear_fires(self) -> None:
+        out = self._run({'audit-2026-07-26-0100.md': self._report(0, 12, 40)})
+        self.assertEqual([f['check_id'] for f in out], ['audit_burndown_stalled'])
+        self.assertEqual(out[0]['severity'], 'warning')
+        self.assertIn('0 of 12', out[0]['message'])
+
+    def test_progress_is_clean(self) -> None:
+        out = self._run({'audit-2026-07-26-0100.md': self._report(5, 12, 40)})
+        self.assertEqual(out, [])
+
+    def test_zero_inherited_is_clean(self) -> None:
+        out = self._run({'audit-2026-07-26-0100.md': self._report(0, 0, 3)})
+        self.assertEqual(out, [])
+
+    def test_growing_queue_with_no_clear_fires(self) -> None:
+        out = self._run({
+            'audit-2026-07-25-0100.md': self._report(2, 2, 10),
+            'audit-2026-07-26-0100.md': self._report(0, 0, 25),
+        })
+        self.assertEqual([f['check_id'] for f in out], ['audit_burndown_stalled'])
+        self.assertIn('10 -> 25', out[0]['message'])
+
+    def test_fieldless_reports_are_skipped(self) -> None:
+        out = self._run({
+            'audit-2026-07-24-0100.md': '# Audit - 2026-07-24-0100\n\nno frontmatter\n',
+        })
+        self.assertEqual(out, [])
+        out2 = self._run({
+            'audit-2026-07-24-0100.md': '---\nmarkers_pending: {N}\ninherited_cleared: "{C} of {I}"\n---\n',
+        })
+        self.assertEqual(out2, [])
+
+    def test_newest_fieldbearing_report_wins(self) -> None:
+        out = self._run({
+            'audit-2026-07-25-0100.md': self._report(0, 9, 30),
+            'audit-2026-07-26-0100.md': self._report(3, 9, 27),
+        })
+        self.assertEqual(out, [])
+
+    def test_no_audit_dir_is_clean(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / '1-wiki').mkdir()
+            self.assertEqual(cw.check_audit_burndown(wiki_root=root / '1-wiki'), [])
+
+
 class TestDistinctWorks(unittest.TestCase):
     """`source_count` counts distinct underlying works, not `sources:` entries
     (CLAUDE.md -> Concepts and Entities). Two source pages are one work when
@@ -1979,3 +2047,41 @@ class TestDistinctWorks(unittest.TestCase):
 
     def test_registry_has_duplicate_entry_check(self) -> None:
         self.assertEqual(cw.CHECKS.get('sources_duplicate_entry'), 'warning')
+
+
+class TestVerifiedSourcesChanged(unittest.TestCase):
+    """verified_sources_changed — the git-HEAD diff-guard over `sources:` on a
+    page verified at HEAD and now. `sources:` is frontmatter, so it sits outside
+    `verified_hash` and the committed-state backstop cannot see a support-level
+    shift; this catches it whether or not the `Sources` callout was synced."""
+
+    @staticmethod
+    def _page(status: str, sources: list[str]) -> str:
+        entries = ''.join(f'  - "[[1-wiki/sources/{s}.md|{s}]]"\n' for s in sources)
+        return (f'---\ntype: concept\nsources:\n{entries}'
+                f'source_count: {len(sources)}\nstatus: {status}\n---\n\n# C\n')
+
+    def test_registered_as_warning(self) -> None:
+        """Warning, not Critical: audit's authored worklist is lint's Warning
+        output, and a Critical would both wedge audit's clean-lint precondition
+        and hide the finding from the only skill that can act on it."""
+        self.assertEqual(cw.CHECKS.get('verified_sources_changed'), 'warning')
+
+    def test_no_git_head_is_silent(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / 'c.md'
+            text = self._page('verified', ['A', 'B'])
+            p.write_text(text, encoding='utf-8')
+            fm, _ = cw.parse_frontmatter(text=text)
+            self.assertEqual(
+                cw.check_verified_sources_changed(
+                    text=text, fm=fm, rel='1-wiki/concepts/c.md'),
+                [])
+
+    def test_non_verified_page_is_skipped(self) -> None:
+        text = self._page('draft', ['A'])
+        fm, _ = cw.parse_frontmatter(text=text)
+        self.assertEqual(
+            cw.check_verified_sources_changed(
+                text=text, fm=fm, rel='1-wiki/concepts/c.md'),
+            [])

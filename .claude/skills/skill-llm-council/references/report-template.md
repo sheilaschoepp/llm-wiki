@@ -32,7 +32,9 @@ Related context: {which related skills and repo files the councils were given, a
 
 ### Step 2 responses
 Independence: confirm the five Step-2 calls were issued in parallel in a single message (the launch that keeps the reads independent); note any that were not.
-{Each role's FINDINGS / PROPOSED EDITS / CONFIDENCE / DO-NOT-IGNORE, one block per role.}
+Ground check: {every finding dropped for a failed or missing ground line — quote the finding's own claim as the reviewer wrote it, then its ground line, then how it failed: quote not found in the file, claimed-absent string actually present, or no ground line returned. Name any edits dropped with it. "None dropped" when every finding grounded. Quote the claim, not only the ground line: the check is unbenchmarked, so a false drop is discoverable only from what this record preserved.}
+Ungroundable: {each finding a reviewer returned as `ground: ungroundable`, with its reason — carried flagged, never the sole support for a load-bearing edit. "None" when there were none.}
+{Each role's FINDINGS / PROPOSED EDITS / CONFIDENCE / DO-NOT-IGNORE, one block per role, verbatim — a ground-dropped finding stays in place marked `[dropped: ground]` rather than being cut, so the block is still the response the agent actually returned.}
 
 ### Anonymization
 {A–E → role mapping for this council.}
@@ -53,7 +55,7 @@ Independence: confirm the five Step-2 calls were issued in parallel in a single 
 
 ## Completed changes
 
-Adversarial verification (load-bearing edits): {each refuter verdict — holds / refuted — with a one-line ground-truth reason; refuted edits were demoted to `[needs-review]` proposals, listed under Cross-file proposals.}
+Adversarial verification (load-bearing edits): {per edit, BOTH verdicts — locator: holds/refuted, entailment: holds/refuted — each with its one-line ground-truth reason. Name which lens refuted when one did: a locator refutation means the council misquoted its ground, an entailment refutation means it quoted correctly and inferred wrongly, and the two call for different follow-up. Note any refutation discarded because its returned quote failed the re-grep, and any third refuter spent, with the escalation trigger that justified it. Refuted edits were demoted to `[needs-review]` proposals, listed under Cross-file proposals.}
 
 Applied in-folder, smallest reasonable edit each:
 

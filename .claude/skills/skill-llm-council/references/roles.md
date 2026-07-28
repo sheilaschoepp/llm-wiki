@@ -133,10 +133,16 @@ Each Step-2 subagent returns, in this shape:
 
 ```text
 FINDINGS
-- <finding>: <one or two sentences, specific to this skill>
+- F1. <finding>: <one or two sentences, specific to this skill>
+  ground: quote "<verbatim text, copied from the file — not retyped>" (file: <path>) — reading: <what you take that text to mean>
+- F2. <finding>: <a finding whose defect is an omission>
+  ground: absent "<a literal string the file would contain if the thing were there>" (file: <path>, searched: <heading>) — section says: "<verbatim text actually present there>"
+- F3. <finding>: <a finding whose defect is a relation between two places>
+  ground: quote "<verbatim text, first place>" (file: <path>) — reading: <…>
+  ground: quote "<verbatim text, second place>" (file: <path>) — reading: <…>
 
 PROPOSED EDITS
-- file: <path> | anchor: <heading, line, or quoted phrase> | change: <for a load-bearing edit, quote the actual old → new text, not just a description; a precise description alone is acceptable only for a trivial wording or mechanical fix>
+- file: <path> | from: <F1, or "standalone"> | anchor: <heading, line, or quoted phrase> | change: <for a load-bearing edit, quote the actual old → new text, not just a description; a precise description alone is acceptable only for a trivial wording or mechanical fix>
 
 CONFIDENCE: <high | medium | low>, with one line of why.
 
@@ -144,3 +150,13 @@ DO-NOT-IGNORE: <the single thing the chair should not lose>
 ```
 
 Keep it compact and concrete. A proposed edit the chair cannot locate or act on is worthless — always give an anchor and the actual change, not just "improve the description".
+
+Every finding carries at least one `ground` line — one per place the finding ranges over, so a defect that lives in a *relation* between two passages (two stating one rule two ways, a step out of order against another, one redundant with another) grounds both poles rather than pinning the claim on one innocent quote. Three forms:
+
+- **quote** — the file says something wrong. Paste the text verbatim, copied not retyped, and add a `reading:` clause saying what you take it to mean.
+- **absent** — the file omits something. Name a **literal string** the file would have to contain if the thing were there (`quorum`, `advisor floor`) — never a rule in your own words, because a paraphrase cannot fail a grep, so an `absent` grounded on one passes automatically and establishes nothing. Add a verbatim quote of the section you searched, as proof you opened it. An omission finding is not weaker than a quote finding; it is grounded the other way round.
+- **ungroundable** — the defect is in a count, an ordering, or an execution path rather than in a span of text. Write `ground: ungroundable — <why>` and report it anyway. This is a first-class, expected outcome, never penalized: it is carried forward flagged rather than dropped, and simply cannot be the sole support for a load-bearing edit. Naming it is what stops this contract from making an invented quote the only way a real finding survives.
+
+The orchestrator re-checks each ground against the real file before the finding goes further, and a failed ground drops the finding **and any edit whose `from:` names only it**. Report everything you find, including low-confidence findings — filtering is the orchestrator's job downstream, not yours while writing.
+
+Know what grounding proves: that the text exists, not that your reading of it is right. The costlier error is a verbatim quote carrying a wrong inference — it grounds cleanly, passes every mechanical check, and can still collect a unanimous council that is wrong. That is why the `reading:` clause is required: the quote is what the orchestrator can verify, and the reading is what a peer reviewer or chair can actually argue with.

@@ -288,6 +288,7 @@ CHECKS: dict[str, str | None] = {
     'attachment_duplicate_basename': 'info',
     'attachment_orphan': 'info',
     'attachments_file_unlisted': 'warning',
+    'audit_burndown_stalled': 'warning',
     'attachments_frontmatter_missing_file': 'warning',
     'bare_basename_link': 'info',
     'callout_block_id': 'warning',
@@ -341,6 +342,7 @@ CHECKS: dict[str, str | None] = {
     'vague_source_referent': 'warning',
     'verified_anchor_unaudited': 'error',
     'verified_hash_mismatch': 'warning',
+    'verified_sources_changed': 'warning',
     'wikilink_display_uncapitalized': 'warning',
     'wikilink_pipe_spacing': 'warning',
     'zero_source_page': None,
@@ -1259,6 +1261,57 @@ def _distinct_works(stems: set[str], wiki_root: Path) -> int:
     return len(keys)
 
 
+def check_verified_sources_changed(text: str, fm: dict[str, Any],
+                                   rel: str) -> list[dict[str, Any]]:
+    """Flag a `sources:` set that changed on a page `verified` at HEAD and now.
+
+    A `Sources` / `sources:` entry added or removed is a support-level shift
+    rather than a clean addition, so it demotes the page it lands on
+    (CLAUDE.md -> Page Status). But `sources:` is frontmatter, which sits outside
+    `verified_hash`, so the committed-state backstop cannot see it and the page
+    keeps its stamp silently.
+
+    This is the diff-guard for that case. It fires whether or not the `Sources`
+    callout was kept in sync, which `sources_callout_desync` cannot: that check
+    compares the callout against the frontmatter, so a skill that updates both
+    and forgets only the demotion passes it clean.
+
+    Gated on `verified` at HEAD as well as now, mirroring the anchor diff-guard's
+    promotion carve-out: a page audit promotes this run is not flagged for the
+    sources it was promoted with. Best-effort — a silent no-op without git.
+    """
+    if fm.get('status') != 'verified':
+        return []
+    head = _git_show_head(rel=rel)
+    if head is None:
+        return []
+    head_fm, _ = parse_frontmatter(text=head)
+    if (head_fm or {}).get('status') != 'verified':
+        return []
+    current = _sources_stems(fm=fm)
+    previous = _sources_stems(fm=head_fm or {})
+    if current == previous:
+        return []
+    added = sorted(current - previous)
+    removed = sorted(previous - current)
+    parts = []
+    if added:
+        parts.append(f'added: {added}')
+    if removed:
+        parts.append(f'removed: {removed}')
+    return [finding(
+        check='verified_sources_changed',
+        file=rel,
+        message=(f'`sources:` changed on a `verified` page since HEAD '
+                 f"({'; '.join(parts)})."),
+        fix_hint=('A `sources:` entry added or removed is a support-level shift a '
+                  'claim marker cannot carry: the page demotes to `draft` (strip '
+                  '`verified_hash:`), or `audit` re-earns it in this run\'s scope '
+                  '(CLAUDE.md -> Page Status; audit references/apply-fixes.md, the '
+                  'link-sync disposition). Not a lint auto-fix.'),
+    )]
+
+
 def check_verified_hash(path: Path, fm: dict[str, Any],
                         rel: str) -> list[dict[str, Any]]:
     """Mechanism 2 (the committed-state backstop): flag a `status: verified` page
@@ -1393,6 +1446,7 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
     # locator section/figure anchor was added or changed vs HEAD without re-
     # verification (check_id: verified_anchor_unaudited). Git-aware, best-effort.
     findings.extend(check_verified_anchor_change(text=text, fm=fm, rel=rel))
+    findings.extend(check_verified_sources_changed(text=text, fm=fm, rel=rel))
     findings.extend(check_verified_hash(path=path, fm=fm, rel=rel))
 
     # source_count vs distinct works (input to lint's auto-fix).
@@ -3780,6 +3834,75 @@ def check_chronology(wiki_root: Path) -> list[dict[str, Any]]:
     return findings
 
 
+AUDIT_INHERITED_RE = re.compile(r'^inherited_cleared:\s*"?(\d+)\s+of\s+(\d+)"?', re.M)
+AUDIT_PENDING_RE = re.compile(r'^markers_pending:\s*(\d+)\s*$', re.M)
+
+
+def check_audit_burndown(*, wiki_root: Path) -> list[dict[str, Any]]:
+    """Deterministic burn-down gate over the newest audit reports' frontmatter.
+
+    Audit reports carry `markers_pending:` and `inherited_cleared: "{C} of {I}"`
+    (audit SKILL.md, the Worklist ledger). Fires when the newest field-bearing
+    report shows a stalled burn-down — zero inherited markers cleared against a
+    nonzero inherited set (the parked-backlog state the ledger exists to
+    prevent) — or when the marker queue grew across the two newest
+    field-bearing reports while nothing inherited was cleared. Reports
+    predating the fields (or with templated, non-numeric values) are skipped;
+    no field-bearing report means no finding.
+    """
+    findings: list[dict[str, Any]] = []
+    repo_root = wiki_root.parent
+    audit_dir = repo_root / '2-outputs' / 'audit'
+    if not audit_dir.exists():
+        return findings
+    parsed: list[tuple[Path, int | None, int | None, int | None]] = []
+    for report in sorted(audit_dir.glob('audit-*.md'), reverse=True):
+        try:
+            head = report.read_text(encoding='utf-8')[:2000]
+        except OSError:
+            continue
+        m_ic = AUDIT_INHERITED_RE.search(head)
+        m_mp = AUDIT_PENDING_RE.search(head)
+        if m_ic is None and m_mp is None:
+            continue
+        cleared = int(m_ic.group(1)) if m_ic else None
+        inherited = int(m_ic.group(2)) if m_ic else None
+        pending = int(m_mp.group(1)) if m_mp else None
+        parsed.append((report, cleared, inherited, pending))
+        if len(parsed) == 2:
+            break
+    if not parsed:
+        return findings
+    newest, cleared, inherited, pending = parsed[0]
+    rel = str(newest.relative_to(repo_root))
+    if cleared is not None and inherited is not None and inherited > 0 and cleared == 0:
+        findings.append(finding(
+            check='audit_burndown_stalled',
+            file=rel,
+            message=(
+                f'newest audit report cleared 0 of {inherited} inherited '
+                '*[unverified]* markers — the burn-down stalled; the Worklist '
+                'ledger requires the inherited count to fall strictly while '
+                'above zero.'),
+            fix_hint=(
+                'The next audit run clears inherited markers (or names the '
+                'per-class blocker in its ledger); parking the backlog for a '
+                'dedicated pass is not a disposition.')))
+    elif (len(parsed) == 2 and pending is not None and parsed[1][3] is not None
+          and pending > parsed[1][3] and (cleared or 0) == 0):
+        findings.append(finding(
+            check='audit_burndown_stalled',
+            file=rel,
+            message=(
+                f'the *[unverified]* marker queue grew ({parsed[1][3]} -> '
+                f'{pending}) across the two newest audit reports with no '
+                'inherited marker cleared — arrivals are outpacing clearing.'),
+            fix_hint=(
+                'The next audit run clears inherited markers before minting '
+                'new ones, or records why the queue must grow this run.')))
+    return findings
+
+
 def check_pagination_registration(wiki_root: Path) -> list[dict[str, Any]]:
     """A raw cited somewhere with a `#page=N` deep-link but absent from the
     pagination map. The citation still lints — the locator-completeness checks
@@ -3859,6 +3982,7 @@ def main() -> int:
     findings.extend(check_bare_basename_links(wiki_root=wiki_root))
     findings.extend(check_unlinked_page_mentions(wiki_root=wiki_root))
     findings.extend(check_pagination_registration(wiki_root=wiki_root))
+    findings.extend(check_audit_burndown(wiki_root=wiki_root))
 
     print(json.dumps(findings, indent=2))
     # Exit non-zero only on blocking errors so CI / hooks can gate. Standing

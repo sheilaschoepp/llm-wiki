@@ -8,7 +8,7 @@ This file holds the operational detail for the workflow in `SKILL.md`. The roste
 - Step 3 — anonymization and the peer-review prompt
 - Step 4 — the chair prompt
 - Step 5 — the meta-chair prompt
-- Step 6 — the adversarial-verification (refuter) prompt
+- Step 6 — the adversarial-verification refuter prompts (paired locator and entailment lenses)
 - Why no self-revision round
 - Why no convergence loop
 
@@ -20,7 +20,7 @@ Subagents read and reason only. They do not edit files. Spawn every Step-2 subag
 
 If a subagent fails to return, continue with the responses you have, as long as the council keeps at least three advisors plus its chair (the chair is not spawned until Step 4 — this rule reserves a quorum of three advisor responses so that synthesis has enough independent reads to chair). If it drops below that, re-run the failed role rather than synthesizing from a thin council, and note the re-run in the report. Do not re-run the same role more than once: if the re-run also fails, proceed with the under-quorum council and flag it explicitly as reduced-confidence in that council's report section; if both councils fall below quorum, stop the run and report the failure rather than synthesizing a final change-set from two thin councils.
 
-Three further failure paths beyond a missing advisor: (a) a chair subagent that fails or returns no locatable change-set is re-run once; if the re-run also fails, stop the run and report it rather than applying edits from an unsynthesized council. (b) A refuter that fails to return counts as `refuted` — its edit is demoted to `[needs-review]`, never applied on a missing verdict. (c) If exactly one council falls to zero usable advisors while the other is healthy, do not silently proceed on the one: stop, or proceed single-council only after demoting every auto-apply edit to a proposal and flagging the independence downgrade in the report — a one-council run has lost the two-independent-reads guarantee the whole design rests on.
+Three further failure paths beyond a missing advisor: (a) a chair subagent that fails or returns no locatable change-set is re-run once; if the re-run also fails, stop the run and report it rather than applying edits from an unsynthesized council. (b) A refuter that fails to return counts as `refuted` for the lens it carried — its edit is demoted to `[needs-review]`, never applied on a missing verdict, and never rescued by re-running the other lens, which checks a different thing (Step 6). (c) If exactly one council falls to zero usable advisors while the other is healthy, do not silently proceed on the one: stop, or proceed single-council only after demoting every auto-apply edit to a proposal and flagging the independence downgrade in the report — a one-council run has lost the two-independent-reads guarantee the whole design rests on.
 
 A response that returns but whose proposed edits carry no locatable anchor (no file plus a findable heading or old-text) has those unusable edits discarded — never apply an edit whose anchor cannot be located in the target; re-anchor it or drop it, and note the drop in the report. Whether the response still counts toward the advisor floor turns on its findings, not its edits: a response carrying usable findings counts toward the floor even when every edit it proposed was unanchored (discard the edits only, keep the findings for the chair); only a response with neither a usable finding nor a single anchored edit is a non-return. Re-run the role if dropping a genuine non-return would put the council below three usable advisors plus a chair.
 
@@ -71,8 +71,8 @@ The orchestrating agent runs this over both chair syntheses to produce the singl
 You are the meta-chair over two independent councils that reviewed the same skill — a cognitive-lens council and a skill-specialist council. You receive both chairs' consolidated change-sets, clashes, and dissents.
 
 Produce the final change-set. The dominant operation is merge-and-dedupe, not conflict arbitration:
-- First merge the two change-sets: where both councils propose the same edit (even if worded differently), collapse it to one. Before tagging anything as cross-council agreement, check whether both councils surfaced it only because their rosters overlap (e.g. both carry an adversarial angle) — shared-roster coverage is not independent confirmation, so do not upgrade a finding to high confidence on duplicate coverage alone.
-- A change both councils support → include it, high confidence.
+- First merge the two change-sets: where both councils propose the same edit (even if worded differently), collapse it to one. Before tagging anything as cross-council agreement, check whether both councils surfaced it only because their rosters overlap (e.g. both carry an adversarial angle) — shared-roster coverage is not independent confirmation, so do not upgrade a finding to high confidence on duplicate coverage alone. Roster overlap is only one cause of shared coverage, and the weaker one: both councils are the same model, so they can converge from *disjoint* rosters on a shared training-data misconception or a shared misreading of the target — different angles do not buy different blind spots. So a disjoint-roster convergence is not the corroboration it looks like either, and cross-council agreement never substitutes for a finding's ground check (SKILL.md Step 2). Where the target skill's own subject is verification, independence, or safety, treat convergence as a reason to look harder rather than a confidence upgrade: the model's misconceptions about verification are exactly the ones both councils inherit, so unanimity is at its least informative on the skills where a wrong edit costs the most.
+- A change both councils support → include it. Its confidence comes from its ground line and the strength of its argument, not from the fact of agreement: two same-model councils agreeing on an ungrounded or thinly-argued change is one error twice, not corroboration.
 - A well-argued change from only one council → include it, and record the reasoning that earned its place.
 - A direct conflict between the councils → resolve it on the merits, state which side wins and why; do not average them into a vague middle.
 - Dissent worth keeping → carry it into the report even when you apply or drop the related change.
@@ -86,26 +86,55 @@ Each edit must either quote the chair-synthesis line it derives from or be marke
 
 ## Step 6 — The Adversarial-Verification (Refuter) Prompt
 
-Before Step 6 applies the change-set, each load-bearing in-folder judgement edit is checked by one refuter subagent, run in parallel and independent of the meta-chair. This is the independent check the meta-chair cannot be, since the meta-chair both decides the final set and applies it. The refuter's job is to kill a weak edit before it reaches disk, so an edit does not ship on the meta-chair's say-so alone.
+Before Step 6 applies the change-set, each load-bearing in-folder judgement edit is checked by refuter subagents, run in parallel and independent of the meta-chair. This is the independent check the meta-chair cannot be, since the meta-chair both decides the final set and applies it. The refuters' job is to kill a weak edit before it reaches disk, so an edit does not ship on the meta-chair's say-so alone.
+
+**Two lenses, not two reads.** A load-bearing edit can fail in two unrelated ways, and one refuter asked to watch for both reliably finds the first and stops. So the edit faces two *role-specialized* refuters — a **locator** refuter, asking whether the ground the edit cites exists and says what the edit claims, and an **entailment** refuter, asking whether that ground actually licenses *this* edit. Both must hold. This is the shape `multi-skill/references/verification.md` specifies for a non-obvious claim, and its warning applies here unchanged: do not run two refuters on the same lens and call it a pair — two locator reads leave every distortion uncovered. The entailment lens is the one that catches a correctly-quoted ground carrying a wrong inference, which is the failure a locator read passes by construction.
+
+Run both on every load-bearing edit. One lens alone is correct only where the other is genuinely inapplicable — an edit citing no ground at all has nothing to locate, so it takes the entailment refuter and its missing ground is scored there as absent support. An edit that touches safety, independence, or quorum text always takes both.
+
+The locator refuter:
 
 ```text
-You are an independent verifier reviewing ONE proposed edit to a Claude Code skill, before it is applied. Your job is to REFUTE the edit, not to be fair to it. Default to "refuted" unless the edit clearly holds up against the ground truth.
+You are an independent verifier checking ONE proposed edit to a Claude Code skill, before it is applied. You have ONE job: decide whether the ground the edit cites actually exists and actually says what the edit claims. You are not judging whether the edit is a good idea — another verifier has that job. Default to "refuted" unless the ground checks out.
 
-You are given: the edit (file, anchor, old → new) and the reason the council gave for it. You also have read access to fetch your own ground truth — open the current target file and the rule or reference the edit claims to satisfy (CLAUDE.md, the Anthropic skill-authoring best practices, or the style files) and read the relevant part yourself. Do not rely on excerpts handed to you: a curated excerpt can pre-frame the check, so read the source. A cited rule the edit misattributes — the rule does not actually say what the edit claims — is itself grounds to refute.
+You are given: the edit (file, anchor, old → new) and the reason the council gave for it. You have read access to fetch your own ground truth — open the current target file and the rule or reference the edit claims to satisfy (CLAUDE.md, the Anthropic skill-authoring best practices, or the style files) and read the relevant part yourself. Do not rely on excerpts handed to you: a curated excerpt can pre-frame the check, so read the source.
 
-Check against the ground truth, not against the edit's own wording:
-1. Is the claim the edit rests on actually true in the file or rule it cites? Quote the part of the ground truth that confirms or contradicts it.
-2. Does the edit contradict another part of the skill, weaken a safety / independence / quorum mechanism, or merely restate something already covered?
-3. Would the edit read correctly in context, or does it depend on something that is not there?
-
-If your answer to question 2 is that the edit weakens a safety, independence, or quorum mechanism, the verdict is `refuted` regardless of your answer to question 1 — a safety-weakening edit does not ship on this skill's own say-so, even when the edit is internally well-argued.
+Check, in order:
+1. Does the text the edit quotes or paraphrases appear in the file it names, at the anchor it names? Quote what is actually there.
+2. Does the cited rule say what the edit claims it says? A rule the edit misattributes is grounds to refute even when the rule exists.
+3. Is the anchor locatable at all — can an applying agent find the exact place this edit modifies?
 
 Return:
 VERDICT: holds | refuted
-WHY: one or two sentences, quoting the ground truth you checked.
+QUOTE: the verbatim ground-truth text you read, with its file and heading. If the point is that something is ABSENT, quote the section you searched instead, so the reader can see you opened it.
+WHY: one or two sentences.
 ```
 
-An edit a refuter marks "refuted" is demoted to a `[needs-review]` proposal in Step 6, not applied; record the verdict and the one-line reason in the report. Absence of ground-truth support for a load-bearing edit is itself a refutation, not a pass. This is not a self-revision round — the refuters are fresh agents attacking a claim, the opposite of authors caving to the group (see "Why No Self-Revision Round" below); it is also where ground-truth checking happens, so there is no separate ground-truth pass.
+The entailment refuter:
+
+```text
+You are an independent verifier checking ONE proposed edit to a Claude Code skill, before it is applied. GRANT that the ground the edit cites exists and says what the edit claims — a separate verifier is checking that, and it is not your job. Your job is to REFUTE the inference: does that ground actually license THIS edit? Default to "refuted" unless the step from ground to edit clearly holds.
+
+You are given: the edit (file, anchor, old → new), the reason the council gave for it, and the ground it rests on. You have read access to open the target file and read around the edit site yourself.
+
+Check, in order:
+1. Does the new text actually fix the defect the reason names? An edit that describes the problem correctly and then changes something that does not address it is refuted.
+2. Does the new wording claim MORE than the ground supports — wider scope, greater strength, a mechanism or causal reason the ground never states? Quote the overreaching phrase.
+3. Is the new text true of this repository as it actually is? Check any factual assertion the edit makes about how files are formatted, what another step does, or what a rule requires — an edit whose stated rationale is false is refuted even when the change it makes is harmless.
+4. Does the edit contradict another part of this skill, leave a now-false sentence standing elsewhere, weaken a safety / independence / quorum mechanism, or merely restate something already covered?
+5. Would the edit read correctly in context, or does it depend on something that is not there?
+
+If your answer to question 4 is that the edit weakens a safety, independence, or quorum mechanism, the verdict is `refuted` regardless of every other answer — a safety-weakening edit does not ship on this skill's own say-so, even when the edit is internally well-argued.
+
+Return:
+VERDICT: holds | refuted
+QUOTE: the verbatim text you read that decided it — from the edit's new wording, or from the part of the skill it contradicts.
+WHY: one or two sentences.
+```
+
+**Adjudication is on evidence, not verdict count.** Re-grep every quote a refuter returns before acting on its verdict (fixed-string, whitespace-collapsed, exactly as at Step 2): a refutation whose quote does not verify where claimed is discarded, not a refutation, and never drives a demotion — a fabricated objection that overwrites a correct edit is the refuter's own failure mode, and it is why the pair is capped at two rather than raised to three. An edit ships only when **both** surviving verdicts hold. Either one refuting demotes it to a `[needs-review]` proposal, not applied; record both verdicts and the one-line reason in the report, naming which lens refuted. A refuter that fails to return counts as `refuted` for its lens. Absence of ground-truth support for a load-bearing edit is itself a refutation, not a pass.
+
+A third refuter is spent only on a named escalation trigger — the two lenses disagree in a way that turns on a reading neither settles, or a destructive edit (one removing existing text) drew a refutation whose quote verified. An edit whose ground simply cannot be read is not a trigger: a third refuter cannot read what two could not, and the edit is demoted. This is not a self-revision round — the refuters are fresh agents attacking a claim, the opposite of authors caving to the group (see "Why No Self-Revision Round" below); it is the second of two ground-truth checks: SKILL.md Step 2 greps each finding's ground line as the finding enters, and this gate re-opens the file against the edit the councils built on it. Re-grep the quote a refuter returns before acting on its verdict — a refutation whose quote does not verify in the file at the place claimed is discarded, not a refutation, and never drives a demotion.
 
 ## Why No Self-Revision Round
 

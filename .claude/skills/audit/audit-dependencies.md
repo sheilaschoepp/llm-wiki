@@ -9,6 +9,7 @@ Reference map of every file `audit` relies on to run, grouped by where the file 
 - `references/apply-fixes.md` — Step 7 fix mechanics (per-check dispositions, distortion-disposition rule, guards).
 - `references/verification-spec.md` — Step 5 verification: coverage gate, tiered refuter gate, per-page-type checklist, citation check.
 - `references/verify-and-set-status.md` — Step 8 pre-stamp checks and status-setting.
+- `references/report-template.md` — Step 6 report body template, filename, and timestamp rule.
 - `audit-memory.md` — per-skill corrections, read at Step 3.
 
 ## Multi-skill folder (`.claude/skills/multi-skill/`, shared)
