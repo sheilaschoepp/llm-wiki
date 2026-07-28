@@ -16,7 +16,7 @@ The calling skill defines what *material* means in its context (a removal that d
 ## Source-support bookkeeping (every touched page)
 
 - Update `sources:` — drop a removed source page; add a replacement only if the page genuinely draws on it.
-- Recompute `source_count` as the length of the resulting `sources:` list — never a blind ±1.
+- Recompute `source_count` as the distinct works behind the resulting `sources:` list — two entries whose source pages' `file:` resolves to the same raw (a chapter split) count once — never a blind ±1, and never the list length.
 - Keep the `Sources` callout in sync with `sources:`.
 - Reconcile any body bullet that attributed a claim to a now-removed or now-changed source.
 
@@ -29,7 +29,7 @@ Verification is claim-level for additions (see `CLAUDE.md` → Page Status). Whe
 ## Under-supported pages
 
 - **Zero-source page** (including an author entity left with no surviving source it authored): surface via `AskUserQuestion` — quarantine it (`forget`), re-source it, or set `status: needs-update` with a `needs_update_reason:` naming the missing support. A zero-source page cannot sit as a clean draft.
-- **Synthesis dropping to one source**: this violates the two-source rule unless made an explicit stub. Surface via `AskUserQuestion` — set `single_source_stub: true`, re-source it, or hand off to `forget`. Never leave a lint-failing single-source synthesis behind.
+- **Synthesis dropping to one source**: judged on distinct works, so it can fire while `sources:` still lists two entries (a chapter-split pair of one book). This violates the two-source rule unless made an explicit stub. Surface via `AskUserQuestion` — set `single_source_stub: true`, re-source it, or hand off to `forget`. Never leave a lint-failing single-source synthesis behind.
 
 ## Approval and reciprocity
 

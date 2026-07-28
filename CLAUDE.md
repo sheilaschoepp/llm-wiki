@@ -362,6 +362,8 @@ status: draft
 ---
 ```
 
+`source_count:` is the number of **distinct underlying works** the page rests on — not the number of `sources:` entries. Two entries are one work when their source pages' `file:` resolves to the same raw, so a book split across `X-ch01` / `X-ch02` counts once and `source_count: 1` sits above a two-entry list. This is the meaning everywhere the number is used — the synthesis two-source floor, `brief`'s single-versus-multi-source read, `reflect`'s compounding tier, and `supersede`'s merge-survivor tiebreak all mean distinct works. `lint`'s `source_count_mismatch` derives it and carries the number in its fix hint, so no skill re-derives it by hand. One limit, stated rather than worked around: sameness is decided by `file:` resolution alone, so a single work deliberately curated as several separate raw files counts once per raw — curate one raw per work. An entry whose source page is missing or carries no `file:` counts as its own work, so a broken graph can only inflate the count, never deflate it.
+
 `aliases:` lists alternate names, acronyms, or older terminology for the same concept or entity. Obsidian uses it natively for search and `[[wikilink]]` autocomplete. Default empty; populate when the concept genuinely has alternate names ("Ashish Vaswani" / "Vaswani"; "Adam" / "Adaptive Moment Estimation"). No rendered Aliases section — frontmatter only.
 
 Concept/entity page rules:
@@ -412,11 +414,11 @@ status: draft
 ---
 ```
 
-`single_source_stub:` is optional and defaults to `false`. Lint warns when a synthesis page has exactly one source and this flag is not set to `true` — the schema requires synthesis pages to have at least two distinct sources (distinct underlying works; see the Synthesis rules below) unless the user explicitly creates a stub. Omit the field entirely on synthesis pages with ≥ 2 sources.
+`single_source_stub:` is optional and defaults to `false`. Lint warns when a synthesis page has exactly one source and this flag is not set to `true` — the schema requires synthesis pages to rest on at least two distinct works (the same count `source_count:` carries; see the Synthesis rules below) unless the user explicitly creates a stub. Omit the field entirely on synthesis pages with ≥ 2 sources.
 
 Synthesis rules:
 
-- Must use at least two distinct sources, unless the user explicitly asks for a single-source synthesis stub. Distinct means distinct underlying works: chapter- or section-split source pages sharing a base stem (`X-ch01` / `X-ch02`), and two source pages whose `file:` resolves to the same raw, each count once — two chapters of one book do not clear the floor. `lint`'s `synthesis_under_supported` counts `len(sources)`, so a chapter-split pair passes the structural check; the distinct-works floor is enforced by `synthesis` at author/merge time.
+- Must use at least two distinct sources, unless the user explicitly asks for a single-source synthesis stub. Distinct means distinct underlying works — the same count `source_count:` carries (see Concepts and Entities): two source pages whose `file:` resolves to the same raw count once, so two chapters of one book do not clear the floor. `lint`'s `synthesis_under_supported` is keyed on that derived count, so the floor is enforced mechanically rather than left to `synthesis` at author/merge time.
 - May be created from a focused topic request or from `/synthesis` discovery mode, which scans `hot.md`, `index.md`, and connected wiki pages for candidate topic entry points.
 - Keep the answer clear and source-grounded.
 - Use `Scope` to qualify *where* the answer applies — domains it covers, domains explicitly excluded, regimes the cross-source evidence does not yet reach. Synthesis pages aggregate sources and risk sounding more universal than they should; Scope keeps the answer honest.

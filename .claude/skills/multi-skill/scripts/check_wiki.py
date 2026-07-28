@@ -7,7 +7,7 @@ module; run `check_wiki.py --list-checks` to print it as JSON (the machine-
 readable target the consistency skill / docs diff the SKILL.md Checks section
 against). Covers the deterministic subset Claude shouldn't have to do by hand:
 - frontmatter completeness per page-type (check_id: `frontmatter_missing`)
-- source_count vs len(sources) mismatch (input to lint's auto-fix)
+- source_count vs distinct works behind sources: (input to lint's auto-fix)
 - body section order via callout slugs (check_id: `section_order`)
 - callout block IDs present, correct, and last-line (check_id: `callout_block_id`)
 - page locators carry `#page=N` raw-file deep-links (check_id: `page_locator_unlinked`)
@@ -327,6 +327,7 @@ CHECKS: dict[str, str | None] = {
     'source_locator_incomplete': 'warning',
     'source_stem_mismatch': 'info',
     'sources_callout_desync': 'warning',
+    'sources_duplicate_entry': 'warning',
     'stale_draft': 'info',
     'stale_mention_ignore': 'warning',
     'stale_needs_update': 'warning',
@@ -1198,6 +1199,66 @@ def check_verified_anchor_change(text: str, fm: dict[str, Any],
                                   head_status=(head_fm or {}).get('status'))
 
 
+def _sources_stems(fm: dict[str, Any]) -> set[str]:
+    """The identity stems of a page's `sources:` frontmatter entries.
+
+    Entries are path-qualified wikilinks (`"[[1-wiki/sources/X.md|X]]"`);
+    `_link_stem` tolerates older bare forms too. Shared by the callout-sync
+    check, the distinct-works derivation, and the sources diff-guard so all
+    three key on identity the same way.
+    """
+    stems = set()
+    entries = fm.get('sources')
+    for entry in entries if isinstance(entries, list) else []:
+        if not isinstance(entry, str):
+            continue
+        m = WIKILINK_BASENAME_RE.match(entry.strip())
+        stem = _link_stem(raw=m.group(1) if m else entry.strip())
+        if stem:
+            stems.add(stem)
+    return stems
+
+
+def _distinct_works(stems: set[str], wiki_root: Path) -> int:
+    """How many distinct underlying works a set of source-page stems represents.
+
+    `source_count` counts works, not list entries (CLAUDE.md -> Concepts and
+    Entities): a book split across `X-ch01` / `X-ch02` is one work. Two source
+    pages are the same work when their `file:` frontmatter resolves to the same
+    raw, keyed on the FULL repo-relative path — two raws in different categories
+    can share a basename, which basename keying would silently collapse.
+
+    Base-stem matching is deliberately NOT used. `source_stem_mismatch` allows
+    any `<raw-stem>-<suffix>` source page, so a prefix rule both over-matches
+    (`gpt-3` / `gpt-4`) and under-matches (a book curated as separate per-chapter
+    raws). `file:`-resolution is exact; the residual limit is stated in the
+    schema — curate one raw per work.
+
+    An entry whose source page is missing, unparseable, or carries no usable
+    `file:` counts as its own work, so a broken graph can only inflate the count,
+    never deflate it. Each of those states already has its own finding
+    (`source_link_unresolved`, `frontmatter_missing_field`, `file_field_unresolved`),
+    so this adds no new failure mode.
+    """
+    keys: set[tuple[str, str]] = set()
+    for stem in stems:
+        key: tuple[str, str] = ('unresolved', stem)
+        src = wiki_root / 'sources' / f'{stem}.md'
+        if src.is_file():
+            try:
+                src_fm, _ = parse_frontmatter(text=src.read_text(encoding='utf-8'))
+            except (OSError, UnicodeDecodeError):
+                src_fm = None
+            file_field = (src_fm or {}).get('file')
+            if isinstance(file_field, str) and file_field.strip():
+                m = WIKILINK_BASENAME_RE.match(file_field.strip())
+                target = (m.group(1) if m else file_field.strip()).strip()
+                if target:
+                    key = ('raw', target)
+        keys.add(key)
+    return len(keys)
+
+
 def check_verified_hash(path: Path, fm: dict[str, Any],
                         rel: str) -> list[dict[str, Any]]:
     """Mechanism 2 (the committed-state backstop): flag a `status: verified` page
@@ -1334,7 +1395,7 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
     findings.extend(check_verified_anchor_change(text=text, fm=fm, rel=rel))
     findings.extend(check_verified_hash(path=path, fm=fm, rel=rel))
 
-    # source_count vs len(sources) (input to lint's auto-fix).
+    # source_count vs distinct works (input to lint's auto-fix).
     if 'sources' in fm and 'source_count' in fm:
         sources = fm['sources'] if isinstance(fm['sources'], list) else []
         try:
@@ -1342,12 +1403,32 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
         except (TypeError, ValueError):
             declared = -1
         actual = len(sources)
-        if declared != actual:
+        stems = _sources_stems(fm=fm)
+        # source_count counts distinct underlying works, not list entries: a book
+        # split across `X-ch01` / `X-ch02` is one work (CLAUDE.md -> Concepts and
+        # Entities). The derived number rides in message and fix_hint so lint stays
+        # a transcriber and never has to do cross-page resolution itself.
+        works = _distinct_works(stems=stems, wiki_root=wiki_root)
+        if declared != works:
             findings.append(finding(
                 check='source_count_mismatch',
                 file=rel,
-                message=f"`source_count: {declared}` doesn't match `len(sources) = {actual}`.",
-                fix_hint=f'Set `source_count: {actual}` (lint auto-fix territory).',
+                message=(f"`source_count: {declared}` doesn't match the "
+                         f'{works} distinct work(s) behind its {actual} '
+                         f'`sources:` entr{"y" if actual == 1 else "ies"}.'),
+                fix_hint=f'Set `source_count: {works}` (lint auto-fix territory).',
+            ))
+        # A duplicated `sources:` entry (check_id: sources_duplicate_entry). The
+        # callout-sync check compares sets and the works count dedups by
+        # construction, so nothing else would ever see it.
+        if len(stems) != actual:
+            findings.append(finding(
+                check='sources_duplicate_entry',
+                file=rel,
+                message=(f'`sources:` lists {actual} entries but only '
+                         f'{len(stems)} distinct source page(s) — an entry is '
+                         f'duplicated.'),
+                fix_hint='Remove the duplicate entry and re-sync the `Sources` callout.',
             ))
         # Zero-source pages (check_id: zero_source_page).
         if actual == 0 and kind in {'entity', 'concept', 'synthesis'}:
@@ -1364,7 +1445,13 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
         # CLAUDE.md requires synthesis pages to have ≥ 2 sources unless the
         # user explicitly creates a single-source stub via the
         # `single_source_stub: true` frontmatter field.
-        if kind == 'synthesis' and actual == 1:
+        # Keyed on distinct works, not list entries: a synthesis resting on two
+        # chapter pages of one book has never cleared the schema's two-distinct-
+        # sources floor, and counting entries let it pass. CLAUDE.md's carve-out
+        # ("lint counts len(sources), so a chapter-split pair passes the
+        # structural check") is retired by this — the floor is now mechanically
+        # enforced rather than left to `synthesis` at author/merge time.
+        if kind == 'synthesis' and works == 1:
             stub_flag = fm.get('single_source_stub')
             is_stub = (stub_flag is True or
                        (isinstance(stub_flag, str)
@@ -1374,8 +1461,10 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
                     check='synthesis_under_supported',
                     file=rel,
                     message=(
-                        'Synthesis page has only 1 source; schema requires ≥ 2 '
-                        'unless `single_source_stub: true` is set in frontmatter.'
+                        f'Synthesis page rests on only 1 distinct work (across '
+                        f'{actual} `sources:` entr'
+                        f'{"y" if actual == 1 else "ies"}); schema requires ≥ 2 '
+                        f'unless `single_source_stub: true` is set in frontmatter.'
                     ),
                     fix_hint=(
                         'Add a second supporting source page, mark the page as '

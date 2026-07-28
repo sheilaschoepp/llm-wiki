@@ -12,7 +12,7 @@ The boundary (SKILL.md Step 3): auto-fix only when the correction is uniquely de
 
 ## Determinate Fixes
 
-- Correct `source_count` to match `sources:`.
+- Correct `source_count` to the number `source_count_mismatch` names in its fix hint — the count of distinct underlying works behind `sources:`, not the list length (two entries resolving to the same raw count once). The script does the cross-page resolution; lint transcribes the number.
 - Touch `updated:` when a page was mechanically changed.
 - Fix `1-wiki/index.md` drift: add an `index_missing_entry` page to its section (`## Sources` / `## Entities` / `## Concepts` / `## Syntheses`, chosen by the page's folder) as a path-qualified wikilink whose display is the page's H1 title; delete an `index_stale_entry` line whose target file no longer exists. Both are determinate from disk. Rule: CLAUDE.md → Hot, Index, And Log; Workflow Rules.
 - Insert missing required callouts with the page-type's empty placeholder (`> - None noted` for source pages, `> - None yet` for concept/entity and synthesis pages). Trigger: any `section_order` finding whose message begins with `Missing required sections`. Insertion point — deterministic anchor walk. Let `SCHEMA` be the ordered `REQUIRED_SECTIONS` list for the page type in `.claude/skills/multi-skill/scripts/check_wiki.py` (the canonical order). Process missing sections in `SCHEMA` order, one at a time, re-reading the body after each insert so anchors reflect prior inserts in the same run:

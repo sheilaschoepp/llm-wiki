@@ -1909,3 +1909,73 @@ class RawIntegrityBooksTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestDistinctWorks(unittest.TestCase):
+    """`source_count` counts distinct underlying works, not `sources:` entries
+    (CLAUDE.md -> Concepts and Entities). Two source pages are one work when
+    their `file:` resolves to the same raw, so a book split across `X-ch01` /
+    `X-ch02` counts once. Keyed on the full repo-relative raw path, since two
+    raws in different categories can share a basename."""
+
+    @staticmethod
+    def _src_fm(raw: str) -> str:
+        return (f'type: book\ntitle: "T"\nauthors: []\nvenue: P\nyear: 2020\n'
+                f'file: "[[{raw}]]"\nattachments: []\ntags: []\nframes: []\n'
+                f'created: 2026-01-01\nupdated: 2026-01-01\nstatus: draft')
+
+    def _works(self, tmp: Path, sources: list[str], pages: dict[str, str]) -> int:
+        for stem, raw in pages.items():
+            _write_page(tmp, 'sources', f'{stem}.md', self._src_fm(raw), '# S')
+        fm = {'sources': [f'[[1-wiki/sources/{s}.md|{s}]]' for s in sources]}
+        return cw._distinct_works(stems=cw._sources_stems(fm=fm),
+                                  wiki_root=tmp / '1-wiki')
+
+    def test_chapter_split_of_one_book_counts_once(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            self.assertEqual(
+                self._works(tmp, ['B-ch01', 'B-ch02'],
+                            {'B-ch01': '0-raw/books/B.pdf',
+                             'B-ch02': '0-raw/books/B.pdf'}),
+                1)
+
+    def test_two_different_works_count_twice(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            self.assertEqual(
+                self._works(tmp, ['A', 'B'],
+                            {'A': '0-raw/papers/A.pdf',
+                             'B': '0-raw/papers/B.pdf'}),
+                2)
+
+    def test_same_basename_different_category_are_distinct(self) -> None:
+        """Basename keying would silently collapse these into one work."""
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            self.assertEqual(
+                self._works(tmp, ['P-X', 'B-X'],
+                            {'P-X': '0-raw/papers/X.pdf',
+                             'B-X': '0-raw/books/X.pdf'}),
+                2)
+
+    def test_unresolvable_entry_counts_as_its_own_work(self) -> None:
+        """A missing source page can only inflate the count, never deflate it —
+        and `source_link_unresolved` reports the dangler independently."""
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            self.assertEqual(
+                self._works(tmp, ['A', 'ghost'], {'A': '0-raw/papers/A.pdf'}),
+                2)
+
+    def test_source_page_without_file_field_counts_as_its_own_work(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            _write_page(tmp, 'sources', 'nofile.md',
+                        'type: paper\ntitle: "T"\nstatus: draft', '# S')
+            self.assertEqual(
+                self._works(tmp, ['A', 'nofile'], {'A': '0-raw/papers/A.pdf'}),
+                2)
+
+    def test_registry_has_duplicate_entry_check(self) -> None:
+        self.assertEqual(cw.CHECKS.get('sources_duplicate_entry'), 'warning')
