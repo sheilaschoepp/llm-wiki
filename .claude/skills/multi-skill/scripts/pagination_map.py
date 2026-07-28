@@ -18,7 +18,6 @@ Usage:
 Requires PyMuPDF (`fitz`), which ships in the `llm-wiki` conda env. Prints an
 error and exits 3 if it is missing, rather than guessing.
 """
-
 from __future__ import annotations
 
 import re
@@ -30,8 +29,7 @@ try:
 except ImportError:
     sys.stderr.write(
         'pagination_map.py needs PyMuPDF (fitz); activate the llm-wiki conda '
-        'env (`conda activate llm-wiki`) or install it (`pip install pymupdf`).\n'
-    )
+        'env (`conda activate llm-wiki`) or install it (`pip install pymupdf`).\n')
     raise SystemExit(3)
 
 # Fraction of page height, measured up from the bottom edge, treated as the
@@ -50,7 +48,7 @@ def raw_key(pdf: Path) -> str:
     from the first `0-raw` component, else the path as given."""
     parts = pdf.parts
     if '0-raw' in parts:
-        return '/'.join(parts[parts.index('0-raw') :])
+        return '/'.join(parts[parts.index('0-raw'):])
     return str(pdf)
 
 
@@ -85,9 +83,7 @@ def propose(pdf: Path) -> str:
     try:
         lines = [f'## {raw_key(pdf=pdf)}']
         for i in range(doc.page_count):
-            lines.append(
-                f'- {i + 1} = {propose_printed(footer=footer_text(page=doc[i]))}'
-            )
+            lines.append(f'- {i + 1} = {propose_printed(footer=footer_text(page=doc[i]))}')
     finally:
         doc.close()
     return '\n'.join(lines)
@@ -103,8 +99,7 @@ def verify(pdf: Path, outdir: Path) -> None:
             r = page.rect
             band = fitz.Rect(r.x0, r.y1 - r.height * FOOTER_BAND, r.x1, r.y1)
             page.get_pixmap(clip=band, dpi=200).save(
-                str(outdir / f'footer-{i + 1:03d}.png')
-            )
+                str(outdir / f'footer-{i + 1:03d}.png'))
     finally:
         doc.close()
     sys.stderr.write(f'Rendered {count} footer crops to {outdir}\n')
@@ -119,8 +114,7 @@ def main() -> int:
         print(propose(pdf=Path(args[0])))
         return 0
     sys.stderr.write(
-        'usage: pagination_map.py <raw.pdf> | --verify <raw.pdf> <outdir>\n'
-    )
+        'usage: pagination_map.py <raw.pdf> | --verify <raw.pdf> <outdir>\n')
     return 2
 
 
