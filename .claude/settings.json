@@ -1,5 +1,5 @@
 {
-  "model": "opus[1m]",
+  "model": "claude-opus-5[1m]",
   "env": {
     "CLAUDE_CODE_EFFORT_LEVEL": "max"
   },
@@ -16,42 +16,14 @@
       "Bash(python -m pip uninstall:*)",
       "Bash(python3 -m pip install:*)",
       "Bash(python3 -m pip uninstall:*)",
-      "Bash(conda install:*)",
-      "Bash(conda update:*)",
-      "Bash(apt update:*)",
-      "Bash(apt-get update:*)",
-      "Bash(apt-get install:*)",
-      "Bash(apt-get upgrade:*)",
-      "Bash(sudo apt update:*)",
-      "Bash(sudo apt-get update:*)",
-      "Bash(sudo apt-get install:*)",
-      "Bash(sudo apt-get upgrade:*)"
+      "Bash(conda install -n:*)",
+      "Bash(conda install -p:*)",
+      "Bash(conda update -n:*)",
+      "Bash(conda update -p:*)"
     ],
     "deny": [
-      "Bash(brew install:*)",
-      "Bash(brew reinstall:*)",
-      "Bash(brew upgrade:*)",
-      "Bash(brew uninstall:*)",
-      "Bash(uv pip install:*)",
-      "Bash(uv pip uninstall:*)",
-      "Bash(uv add:*)",
-      "Bash(uv remove:*)",
-      "Bash(pipx install:*)",
-      "Bash(pipx uninstall:*)",
-      "Bash(conda remove:*)",
-      "Bash(mamba install:*)",
-      "Bash(mamba update:*)",
-      "Bash(mamba remove:*)",
-      "Bash(npm install:*)",
-      "Bash(npm i:*)",
-      "Bash(npm update:*)",
-      "Bash(npm up:*)",
-      "Bash(npm upgrade:*)",
-      "Bash(npm uninstall:*)",
-      "Bash(npm un:*)",
-      "Bash(npm remove:*)",
-      "Bash(npm rm:*)",
-      "Bash(npm r:*)",
+      "Bash(conda install -n base:*)",
+      "Bash(conda update -n base:*)",
       "Bash(apt remove:*)",
       "Bash(apt purge:*)",
       "Bash(apt autoremove:*)",
@@ -119,6 +91,7 @@
     ],
     "Stop": [
       {
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
