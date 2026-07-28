@@ -1907,10 +1907,6 @@ class RawIntegrityBooksTests(unittest.TestCase):
         self.assertNotIn('raw_without_source_page', ids)
 
 
-if __name__ == '__main__':
-    unittest.main()
-
-
 class TestAuditBurndown(unittest.TestCase):
     """audit_burndown_stalled — the deterministic burn-down gate over the
     newest audit reports' `markers_pending:` / `inherited_cleared:` frontmatter
@@ -2085,3 +2081,7 @@ class TestVerifiedSourcesChanged(unittest.TestCase):
             cw.check_verified_sources_changed(
                 text=text, fm=fm, rel='1-wiki/concepts/c.md'),
             [])
+
+
+if __name__ == '__main__':
+    unittest.main()
