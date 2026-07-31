@@ -43,58 +43,81 @@
             "Bash(conda update -p:*)"
         ],
         // ── DENY: always blocked ──────────────────────────────────────
-        // Scope: commands with no undo. Anything reversible is left off this
-        // list on purpose — unlisted commands still prompt, so nothing runs
-        // unapproved either way, and deny is reserved for what must not be
-        // waved through by reflex. Reinstalling a package is recoverable;
-        // a deleted file or a rewritten history is not.
+        // Scope: commands with no undo, plus anything run as root. Reversible
+        // commands are otherwise left off this list on purpose — unlisted
+        // commands still prompt, so nothing runs unapproved either way, and
+        // deny is reserved for what must not be waved through by reflex.
+        // Reinstalling a package is recoverable; a deleted file or a
+        // rewritten history is not.
         //
-        // These rules apply on both the Mac and the Linux server, so entries
-        // stay listed even where the command doesn't exist on one of them.
+        // sudo is the deliberate exception to "irreversible only": root turns
+        // a recoverable mistake into an unrecoverable one, so the whole prefix
+        // is blocked rather than the individual subcommands. Cost, accepted
+        // knowingly — `sudo apt install`, `sudo systemctl`, and `sudo chmod`
+        // are blocked too, with no in-session override, since a deny rule
+        // can't be approved at the prompt, only edited out of this file.
+        //
+        // The root, file-deletion, and git rules apply on both the Mac and the
+        // Linux server. Package-manager coverage is deliberately Mac-only:
+        // brew is listed, apt is not, so `apt remove` on the Linux server
+        // prompts rather than being blocked outright.
+        //
+        // Ordered most severe first, by how much unrecoverable work the
+        // command destroys. The order is for reading only — a deny match is a
+        // deny match wherever it sits, so nothing here depends on position.
+        // settings.json is the file Claude Code actually reads and holds the
+        // same rules in a different order; this copy mirrors that rule set,
+        // not its line order.
         "deny": [
+            // ── 1. Root: unbounded, and reaches outside the repo ──
+            // Anything as root. Subsumes the sudo forms of the apt and rm
+            // rules below, and catches variants a per-subcommand rule misses
+            // (`sudo -u root apt purge`, `sudo apt -y remove`) — matching is
+            // by prefix, so any flag ahead of the subcommand defeats a
+            // narrower rule. Not airtight: `bash -c "sudo ..."`, or a script
+            // that calls sudo internally, is opaque to string matching.
+            "Bash(sudo:*)",
+            // ── 2. Permanent file deletion: no undo anywhere ──
+            "Bash(rm:*)",
+            // ── 3. Destroys uncommitted work: git holds no copy of it ──
+            "Bash(git clean -f:*)", // untracked files — never in git at all
+            "Bash(git reset --hard:*)", // whole tree, and moves HEAD
+            "Bash(git checkout --force:*)", // whole tree, on switching refs
+            "Bash(git checkout -f:*)", // same, short form
+            "Bash(git checkout .:*)", // current dir only, so narrower
+            "Bash(git restore .:*)", // modern equivalent of the above
+            // ── 4. Overwrites the remote: the two-machine hazard ──
+            // Working on both the Mac and the Linux server means the remote
+            // can hold commits this machine has never fetched. Force-pushing
+            // over them destroys the only copy — a local reflog can't help
+            // with work that was never local.
+            "Bash(git push --force:*)",
+            "Bash(git push -f:*)", // same, short form
+            "Bash(git push --force-with-lease:*)", // mildest: refuses if the remote moved
+            // ── 5. Destroys stashes: recoverable only via git fsck ──
+            "Bash(git stash clear:*)", // ALL stashes
+            "Bash(git stash drop:*)", // one stash
+            // ── 6. Deletes local refs: the commits survive in the reflog ──
+            "Bash(git branch -D:*)", // force-delete, orphaning unmerged commits
+            "Bash(git tag -d:*)",
+            "Bash(git tag --delete:*)", // same, long form
+            // ── 7. System packages: reinstallable, so lower ──
+            // Homebrew, the Mac package manager. Both the mutating installs
+            // and the removal are listed, since an upgrade can pull a working
+            // toolchain out from under a running project just as an uninstall
+            // can. The sudo forms fall under the blanket rule above.
+            "Bash(brew install:*)",
+            "Bash(brew reinstall:*)",
+            "Bash(brew upgrade:*)",
+            "Bash(brew uninstall:*)",
+            // ── 8. Environment mutation: rebuildable ──
             // Counterpart to the conda -n allow rule above: base is not a
             // project environment. Deny beats allow, so these win.
             "Bash(conda install -n base:*)",
             "Bash(conda update -n base:*)",
-            // Debian package removal — both front-ends (apt and apt-get), each
-            // with and without sudo, since either can uninstall system packages.
-            "Bash(apt remove:*)",
-            "Bash(apt purge:*)",
-            "Bash(apt autoremove:*)",
-            "Bash(apt-get remove:*)",
-            "Bash(apt-get purge:*)",
-            "Bash(apt-get autoremove:*)",
-            "Bash(sudo apt remove:*)",
-            "Bash(sudo apt purge:*)",
-            "Bash(sudo apt autoremove:*)",
-            "Bash(sudo apt-get remove:*)",
-            "Bash(sudo apt-get purge:*)",
-            "Bash(sudo apt-get autoremove:*)",
-            // File deletion — no removing or trashing files unprompted, and
-            // not as root either.
-            "Bash(rm:*)",
-            "Bash(rmdir:*)",
-            "Bash(trash:*)",
-            "Bash(sudo rm:*)",
-            "Bash(sudo rmdir:*)",
-            // Destructive git — commands that discard commits, uncommitted
-            // work, tags, or stashes with no recovery.
-            "Bash(git clean -f:*)", // delete untracked files
-            "Bash(git branch -D:*)", // force-delete a branch (unmerged commits lost)
-            "Bash(git tag -d:*)", // delete a tag
-            "Bash(git tag --delete:*)", // same, long form
-            "Bash(git stash clear:*)", // wipe ALL stashes
-            "Bash(git stash drop:*)", // delete one stash
-            "Bash(git reset --hard:*)", // discard all uncommitted changes
-            "Bash(git checkout --force:*)", // switch refs, discarding local changes
-            "Bash(git checkout -f:*)", // same, short form
-            "Bash(git checkout .:*)", // revert tracked files in current dir
-            "Bash(git restore .:*)", // modern equivalent of the above
-            // Force-push — rewrites published history. --force-with-lease is
-            // safer than --force but still overwrites the remote, so it's out.
-            "Bash(git push --force:*)",
-            "Bash(git push -f:*)",
-            "Bash(git push --force-with-lease:*)"
+            // ── 9. Recoverable deletion: listed to keep the family whole ──
+            "Bash(trash:*)", // macOS Trash — restorable
+            "Bash(rmdir:*)" // empty directories only, so nothing is lost
         ]
     },
     // ── HOOKS: fire a macOS desktop notification (terminal-notifier)
