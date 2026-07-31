@@ -2,14 +2,21 @@
 
 The verify-and-stamp mechanics for `audit` Step 8 — the terminal writes each in-scope page receives. SKILL.md Step 8 is the overview; this file is the detail. The scope model, the terminal-verification invariant, and the marker/hash mechanics are in SKILL.md → Verification Model; the fact-check spec (the tiered refuter gate, coverage gate, claim axes, citation-at-page rule) is in `references/verification-spec.md`.
 
-Step 8 runs after every content edit from Step 7 (`references/apply-fixes.md`) has landed. Verification is terminal: this is the last write each page receives — no content edit follows the stamp.
+Step 8 runs after every remaining content edit from Step 7 (`references/apply-fixes.md`) has landed and the final relationship-integrity epoch is current. Verification is terminal: this is the last write each page receives — no content edit follows the stamp.
 
 ## Contents
 
+- Final Relationship-Epoch Gate
 - Re-Fact-Check Anything You Rewrote
 - Central Locator-Format Pass
 - Execution Order For A Rewritten Page
 - Set The Status
+
+## Final Relationship-Epoch Gate
+
+Before any Step 8 refuter or stamp, confirm the run has a current successful `READY(n)` record from SKILL.md → Verification Model / Step 4b: post-repair consistency, complete lint including its LLM walk, and the whole-inventory relationship sweep all succeeded; the required unresolved-target count is zero; the evidence is present and parseable; and no target, support/provenance, page-add/remove/rename, or relationship edit postdates it. Every coverage probe and refuter verdict used below must have been launched in that final epoch.
+
+If the record is missing, failed, empty, incomplete, unparseable, stale, or followed by a graph-affecting edit, stamp nothing. Return the whole run to Step 4b, invalidate the earlier current-run verification, recompute the mode scope, and restart cold; do not demote one touched page and continue certifying unaffected-looking pages from stale evidence. This gate supplements rather than replaces the per-page semantic, structural, conservation, locator, status/hash, marker, and refuter gates below.
 
 ## Re-Fact-Check Anything You Rewrote
 
@@ -32,7 +39,7 @@ Lint emits the Critical `verified_anchor_unaudited` only when a page that was `v
 
 ## Execution Order For A Rewritten Page
 
-Before any stamp: (1) apply the fixes (Step 7, `references/apply-fixes.md`); (2) re-fact-check the rewritten body against the raw; (3) the three pre-stamp checks — semantic re-check, structural re-validation, merge content conservation — within the three-round cap; (4) the central locator-format pass; (5) set status / stamp.
+Before any stamp: (1) apply the fixes (Step 7, `references/apply-fixes.md`); (2) confirm the final relationship-epoch gate above, looping through Step 4b first when stale; (3) re-fact-check the rewritten body against the raw in that epoch; (4) the three pre-stamp checks — semantic re-check, structural re-validation, merge content conservation — within the three-round cap; (5) the central locator-format pass; (6) set status / stamp.
 
 ## Set The Status
 
