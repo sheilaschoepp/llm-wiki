@@ -248,7 +248,7 @@ CHECK_MANIFEST = [
         'check_id': 'referenced_paths_exist',
         'packet': 'styles-files',
         'name': 'referenced file paths exist',
-        'scope': '.claude/skills/ and README.md',
+        'scope': '.claude/skills/ and README.md. A candidate starting with a known schema prefix (or a top-level file) is resolved as a repo path. A path-shaped candidate with no schema prefix — one written relative to a folder named in surrounding prose, e.g. `reference/foo.md` — falls back to a basename check and is flagged only when that filename exists nowhere in the repo, so a relative path to a real file never trips it.',
     },
     {
         'check_id': 'orphan_skill_scripts',
@@ -290,7 +290,7 @@ CHECK_MANIFEST = [
         'check_id': 'filename_references_resolve',
         'packet': 'styles-files',
         'name': 'filename references resolve',
-        'scope': 'CLAUDE.md, README.md, MEMORY.md, .claude/skills/**/*.md, a-archive/**/*.md, 1-wiki/**/*.md — backticked bare filenames must exist somewhere in the repo',
+        'scope': 'CLAUDE.md, README.md, MEMORY.md, .claude/skills/**/*.md, a-archive/**/*.md (EXCEPT a-archive/reference/, which quotes filenames from other systems), 1-wiki/**/*.md — bare filenames must exist somewhere in the repo. Two token forms: backticked, and unbackticked prose mentions carrying a hyphen or underscore (a bare `foo-bar.md` in a sentence). Path-shaped references are referenced_paths_exist\'s.',
     },
     {
         'check_id': 'memory_file_graduation_prompt',
@@ -732,9 +732,36 @@ def check_callout_css_coverage(root: Path) -> list[dict[str, Any]]:
 
 
 # referenced_paths_exist: backticked path references must exist on disk.
+# Extensions a path-shaped-but-unprefixed candidate must carry before the
+# basename fallback in check_referenced_paths_exist will judge it. Keeps the
+# fallback off arbitrary slash-bearing prose (version strings, ratios, URLs).
+RELATIVE_REF_EXTS = ('.md', '.py', '.sh', '.json', '.yaml', '.yml', '.css',
+                     '.txt', '.pdf')
+
+
+def _is_dead_relative_ref(candidate: str, repo_basenames: set[str]) -> bool:
+    # A reference written relative to a folder named in the surrounding prose
+    # ("`a-archive/` material: `reference/foo.md`") carries no schema prefix,
+    # so the prefix test skips it — and filename_references_resolve skips it
+    # too, because it holds a slash. That is the gap between the two checks,
+    # and dead references rode through it. Judge such a candidate by basename
+    # alone: flag only when the named file exists nowhere in the repo, so a
+    # relative path that does name a real file is never a false positive.
+    if '/' not in candidate:
+        return False
+    # A URL is slash-bearing and can end in a doc-looking suffix
+    # (https://obsidian.md), but it names nothing in this repo.
+    if '://' in candidate or candidate.lower().startswith(('http', 'www.')):
+        return False
+    if not candidate.lower().endswith(RELATIVE_REF_EXTS):
+        return False
+    return candidate.rsplit('/', 1)[-1].lower() not in repo_basenames
+
+
 def check_referenced_paths_exist(root: Path) -> list[dict[str, Any]]:
     findings = []
     seen: set[tuple[str, str]] = set()
+    repo_basenames = _collect_repo_basenames(root=root)
     # Scope: operational files where a missing referenced path is a real
     # bug. CLAUDE.md and MEMORY.md contain illustrative example paths (e.g.
     # `0-raw/papers/Vaswani2017AttentionIA.pdf`) that aren't expected to exist;
@@ -801,7 +828,9 @@ def check_referenced_paths_exist(root: Path) -> list[dict[str, Any]]:
                         continue
                     is_path = (candidate.startswith(PATH_PREFIXES)
                                or candidate in TOPLEVEL_FILES)
-                    if not is_path:
+                    if not is_path and not _is_dead_relative_ref(
+                            candidate=candidate,
+                            repo_basenames=repo_basenames):
                         continue
                     target_rel = candidate.rstrip('/')
                     target = root / target_rel
@@ -1023,6 +1052,15 @@ def _extract_personal_url_tokens(text: str) -> set[str]:
     return tokens
 
 
+def _is_placeholder(value: str) -> bool:
+    # An unfilled about-me template writes its fields as <first last>,
+    # <institution>, and so on. Such a value is not an identity term: letting
+    # one into the set defeats the empty-set guard in
+    # check_identity_term_leakage, which then scans the repo for a string that
+    # can never occur and reports clean while providing no coverage.
+    return value.startswith('<') and value.endswith('>')
+
+
 def _load_identity_terms(root: Path) -> tuple[set[str], set[str]]:
     # The canonical file is named about-me.md inside a-archive/about-me/.
     # Older layouts (a-archive/about/, about-me/, about/) are kept as
@@ -1064,11 +1102,11 @@ def _load_identity_terms(root: Path) -> tuple[set[str], set[str]]:
         if field == 'Supervisors':
             for name in re.split(r'\s+and\s+|,\s*', value):
                 name = name.strip().rstrip('.').strip()
-                if ' ' in name:
+                if ' ' in name and not _is_placeholder(value=name):
                     terms.add(name)
         else:
             value = value.strip().rstrip('.').strip()
-            if ' ' in value:
+            if ' ' in value and not _is_placeholder(value=value):
                 terms.add(value)
     handles = _extract_personal_url_tokens(text=text)
     return terms, handles
@@ -1465,6 +1503,21 @@ FILENAME_IN_BACKTICKS_RE = re.compile(
     r'`([a-z0-9][\w.-]*\.(?:md|py|sh|json|yaml|yml|css|txt|pdf))`',
     re.IGNORECASE,
 )
+# A filename can also be named bare in a sentence ("the failure modes in the
+# project's foo-bar-best-practices.md"), with no backticks and no path. Neither
+# check saw that form, so a reference to a deleted file survived there. Two
+# gates keep this conservative: the token must carry a hyphen or underscore —
+# which excludes the constantly-mentioned SKILL.md / CLAUDE.md / README.md and
+# generic names like setup.py, all of which exist anyway — and it must be
+# preceded by none of backtick, word char, `/`, `.`, `-`, `[`, `(`, so a token
+# already inside a path, wikilink, markdown link, or backtick span is left to
+# the checks that own those forms.
+FILENAME_BARE_IN_PROSE_RE = re.compile(
+    r'(?<![`\w./\-\[(])'
+    r'([a-z0-9]+(?:[-_][a-z0-9]+)+\.(?:md|py|sh|json|yaml|yml|css|txt|pdf))'
+    r'(?![\w/])',
+    re.IGNORECASE,
+)
 FILENAME_PLACEHOLDER_TOKENS = ('yyyy', 'mm-dd', 'hhmm', '{', '}', '<', '>',
                                 '*', '...', '$')
 
@@ -1482,6 +1535,18 @@ def _collect_repo_basenames(root: Path) -> set[str]:
             continue
         basenames.add(f.name.lower())
     return basenames
+
+
+def _is_prose_compound(lower: str, repo_basenames: set[str]) -> bool:
+    # Prose puts a hyphenated modifier in front of a real filename ("an
+    # in-SKILL.md roster"), which looks exactly like a kebab-case filename to
+    # the bare-token scan. Dropping leading hyphen-separated segments recovers
+    # the filename being modified, so a token whose suffix names a file that
+    # exists is prose, not a dead reference. Applied only to bare tokens: a
+    # backticked `in-SKILL.md` is a claim about a file and stays a finding.
+    parts = lower.split('-')
+    return any('-'.join(parts[cut:]) in repo_basenames
+               for cut in range(1, len(parts)))
 
 
 def check_filename_references_resolve(root: Path) -> list[dict[str, Any]]:
@@ -1522,12 +1587,19 @@ def check_filename_references_resolve(root: Path) -> list[dict[str, Any]]:
                 continue
             if in_fence:
                 continue
-            for m in FILENAME_IN_BACKTICKS_RE.finditer(line):
+            matches = [(m, True) for m in
+                       FILENAME_IN_BACKTICKS_RE.finditer(line)]
+            matches += [(m, False) for m in
+                        FILENAME_BARE_IN_PROSE_RE.finditer(line)]
+            for m, backticked in matches:
                 raw = m.group(1)
                 lower = raw.lower()
                 if any(t in lower for t in FILENAME_PLACEHOLDER_TOKENS):
                     continue
                 if lower in repo_basenames:
+                    continue
+                if not backticked and _is_prose_compound(
+                        lower=lower, repo_basenames=repo_basenames):
                     continue
                 key = (rel, lower, i)
                 if key in seen:
@@ -1536,8 +1608,8 @@ def check_filename_references_resolve(root: Path) -> list[dict[str, Any]]:
                 findings.append(finding(
                     check_id='filename_references_resolve',
                     file=rel,
-                    message=f'Backticked filename `{raw}` is not present anywhere '
-                    'in the repo.',
+                    message=f'{"Backticked" if backticked else "Bare"} filename '
+                    f'`{raw}` is not present anywhere in the repo.',
                     fix_hint='Update the reference, remove the line, or rewrite '
                     'as a placeholder pattern (e.g., `<bibkey>.pdf`).',
                     line=i,
@@ -2391,24 +2463,29 @@ def main() -> int:
 
     if not args.project_root:
         parser.error('project-root is required unless --list-checks is used')
-    if args.checks and args.packet:
+    if args.checks is not None and args.packet:
         parser.error('use either --checks or --packet, not both')
 
     root = Path(args.project_root).resolve()
-    if not root.exists():
-        sys.stderr.write(f'path not found: {root}\n')
+    required_root_files = (
+        root / 'CLAUDE.md',
+        root / '.claude/skills/consistency/SKILL.md',
+    )
+    if not root.is_dir() or not all(path.is_file()
+                                    for path in required_root_files):
+        sys.stderr.write(f'not a consistency project root: {root}\n')
         return 2
 
     selected = list(CHECK_FUNCTIONS)
     if args.packet:
         selected = PACKET_CHECKS[args.packet]
-    elif args.checks:
+    elif args.checks is not None:
         selected = parse_check_ids(raw=args.checks)
-        # A comma- or whitespace-only --checks parses to no ids. Without this
+        # An empty, comma-only, or whitespace-only --checks parses to no ids.
+        # Without this
         # guard the loop would run zero checks and exit 0 — a vacuous "clean"
-        # the audit gate (exit 0 => clean) would trust. Fail loud like the other
-        # invocation errors (exit 2, empty stdout). An empty-string --checks is
-        # falsy and never reaches here, so it correctly runs all checks.
+        # the audit gate (exit 0 => clean) would trust. Fail loud like the
+        # other invocation errors (exit 2, empty stdout).
         if not selected:
             parser.error('--checks resolved to an empty selection')
     unknown = sorted(set(selected) - set(CHECK_FUNCTIONS))

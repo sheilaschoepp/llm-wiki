@@ -47,6 +47,19 @@ def _addr(local: str, domain: str) -> str:
 class TestCheckConsistency(unittest.TestCase):
     """Regression + wiring tests for check_consistency.py (one cohesive suite per script)."""
 
+    # The one advisory the committed repo is expected to emit. a-archive/
+    # about-me/about-me.md ships as an unfilled template (every field is a
+    # `<placeholder>`) because this repo is distributed as a starter template,
+    # and filling it would commit personal identity data. Commit 97a2f03 made
+    # identity_term_leakage fail loud whenever its `## Identity` source will not
+    # parse, so on a clean checkout that advisory always fires. Baselining it
+    # keeps the two anchors below honest for every other check.
+    EXPECTED_BASELINE_CHECK_IDS = frozenset({'identity_term_leakage'})
+    # A genuine identity leak carries the same check_id but not this wording, so
+    # matching the marker too keeps real leaks unbaselined once about-me.md is
+    # filled in and the scan goes live.
+    EXPECTED_BASELINE_MARKER = 'INACTIVE'
+
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self._tmp.cleanup)
@@ -60,20 +73,32 @@ class TestCheckConsistency(unittest.TestCase):
     def test_parse_check_ids_dedupes_preserving_order(self) -> None:
         assert cc.parse_check_ids('a, a, b ,a') == ['a', 'b']
 
-    # --- clean-state anchors (the committed repo passes) ---
+    # --- baseline-state anchors (the committed repo emits the shipped-template
+    # advisory and nothing else) ---
+
+    def _beyond_baseline(self, findings: list[dict]) -> list[dict]:
+        """Findings other than the shipped-template advisory: what the anchors assert on."""
+        return [f for f in findings
+                if f.get('check_id') not in self.EXPECTED_BASELINE_CHECK_IDS
+                or self.EXPECTED_BASELINE_MARKER not in f.get('message', '')]
 
     def test_real_repo_is_clean(self) -> None:
         findings: list = []
         for fn in cc.CHECK_FUNCTIONS.values():
             findings.extend(fn(REPO))
-        assert findings == [], findings
+        regressions = self._beyond_baseline(findings)
+        assert regressions == [], regressions
 
     def test_battery_output_is_deterministic_and_clean(self) -> None:
         r1 = subprocess.run([sys.executable, str(SCRIPT), str(REPO)],
                             capture_output=True, text=True)
         r2 = subprocess.run([sys.executable, str(SCRIPT), str(REPO)],
                             capture_output=True, text=True)
-        assert r1.returncode == 0
+        # 1 while the baseline advisory stands, 0 once about-me.md is filled in.
+        # 2 (invocation error or mid-battery crash) still fails the anchor.
+        assert r1.returncode in (0, 1), r1.stderr
+        regressions = self._beyond_baseline(json.loads(r1.stdout))
+        assert regressions == [], regressions
         assert r1.stdout == r2.stdout          # stable order, not just stable set
 
     def test_catalogue_matches_manifest_clean(self) -> None:
@@ -102,6 +127,54 @@ class TestCheckConsistency(unittest.TestCase):
         msgs = [f['message'] for f in cc.check_referenced_paths_exist(self.tmp)]
         assert any('0-raw/real-fake.md' in m for m in msgs)   # out-of-fence flagged
         assert not any('fake.py' in m for m in msgs)          # in-fence suppressed
+
+    # --- regression: the gap between the two reference checks ---
+    # A path-shaped reference with no schema prefix fell between them:
+    # filename_references_resolve skipped it (it holds a slash) and
+    # referenced_paths_exist skipped it (no known prefix), so dead references
+    # rode through. Judged by basename, and only when it resolves nowhere.
+
+    def test_referenced_paths_catches_unprefixed_relative_ref(self) -> None:
+        skill = self.tmp / '.claude' / 'skills' / 'dummy'
+        (skill / 'references').mkdir(parents=True)
+        (skill / 'references' / 'real-sibling.md').write_text('x\n')
+        (skill / 'SKILL.md').write_text(
+            '---\nname: dummy\n---\n'
+            'See `references/gone-forever.md` and `references/real-sibling.md`.\n')
+        msgs = [f['message'] for f in cc.check_referenced_paths_exist(self.tmp)]
+        assert any('gone-forever.md' in m for m in msgs)      # resolves nowhere
+        assert not any('real-sibling.md' in m for m in msgs)  # names a real file
+
+    def test_referenced_paths_relative_fallback_ignores_urls(self) -> None:
+        # A URL is slash-bearing and can end in a doc-looking suffix.
+        skill = self.tmp / '.claude' / 'skills' / 'dummy'
+        skill.mkdir(parents=True)
+        (skill / 'SKILL.md').write_text('---\nname: dummy\n---\n')
+        (self.tmp / 'README.md').write_text('Built for [Obsidian](https://obsidian.md).\n')
+        msgs = [f['message'] for f in cc.check_referenced_paths_exist(self.tmp)]
+        assert not any('obsidian.md' in m for m in msgs)
+
+    # --- regression: bare (unbackticked) filename mentions in prose ---
+
+    def test_filename_references_catches_bare_prose_mention(self) -> None:
+        skill = self.tmp / '.claude' / 'skills' / 'dummy'
+        skill.mkdir(parents=True)
+        (skill / 'SKILL.md').write_text(
+            '---\nname: dummy\n---\n'
+            'Guard against the modes in the project style-guide-gone.md: drift.\n')
+        msgs = [f['message'] for f in cc.check_filename_references_resolve(self.tmp)]
+        assert any('style-guide-gone.md' in m for m in msgs)
+
+    def test_filename_references_bare_scan_excludes_prose_compounds(self) -> None:
+        # "an in-SKILL.md roster" is a hyphenated modifier on a real filename,
+        # not a reference to a file named in-SKILL.md. Nor should a token
+        # inside a path or a backtick span reach the bare scan.
+        skill = self.tmp / '.claude' / 'skills' / 'dummy'
+        skill.mkdir(parents=True)
+        (skill / 'SKILL.md').write_text(
+            '---\nname: dummy\n---\n'
+            'An in-SKILL.md roster drifts; see .claude/skills/dummy/SKILL.md.\n')
+        assert cc.check_filename_references_resolve(self.tmp) == []
 
     # --- regression: section-list parser misattribution ---
 
@@ -247,6 +320,21 @@ class TestCheckConsistency(unittest.TestCase):
         assert r.stdout.strip() == ''
         assert r.stderr.strip() != ''
 
+    def test_wrong_existing_roots_exit_2(self) -> None:
+        file_root = self.tmp / 'not-a-directory'
+        file_root.write_text('not a project root\n')
+        directory_root = self.tmp / 'not-a-project'
+        directory_root.mkdir()
+        for root in (file_root, directory_root):
+            r = subprocess.run(
+                [sys.executable, str(SCRIPT), str(root)],
+                capture_output=True,
+                text=True,
+            )
+            assert r.returncode == 2, root
+            assert r.stdout.strip() == '', root
+            assert 'not a consistency project root' in r.stderr, root
+
     def test_bad_packet_and_bad_checks_exit_2(self) -> None:
         for args in (['.', '--packet', 'no-such-packet'],
                      ['.', '--checks', 'no_such_check']):
@@ -260,12 +348,21 @@ class TestCheckConsistency(unittest.TestCase):
         # the guard the battery runs nothing and exits 0 — a vacuous "clean" the
         # audit gate would trust. It must fail loud (exit 2, empty stdout) like
         # the other invocation errors.
-        for value in (',', '   '):
+        for value in ('', ',', '   '):
             r = subprocess.run(
                 [sys.executable, str(SCRIPT), '.', '--checks', value],
                 capture_output=True, text=True, cwd=str(REPO))
             assert r.returncode == 2, value
             assert r.stdout.strip() == '', value
+        combined = subprocess.run(
+            [sys.executable, str(SCRIPT), '.', '--checks', '',
+             '--packet', 'schema-language'],
+            capture_output=True,
+            text=True,
+            cwd=str(REPO),
+        )
+        assert combined.returncode == 2
+        assert combined.stdout.strip() == ''
 
     def test_crash_exits_2_with_populated_internal_finding(self) -> None:
         # The crash-blocked path: a mid-battery crash exits 2 but prints a
@@ -310,10 +407,12 @@ class TestCheckConsistency(unittest.TestCase):
     # --- personal-info email regex: alphabetic-TLD guard ---
 
     def test_email_re_matches_real_addresses(self) -> None:
-        # Real addresses — subdomains, +tags, uppercase — still match after
-        # the alphabetic-TLD guard was added. Composed via _addr so no literal
-        # address sits in this source (personal_info_leakage scans it).
-        for addr in (_addr('sschoepp', 'ualberta.ca'), _addr('user', 'example.com'),
+        # Real-shaped addresses — ccTLDs, subdomains, +tags, uppercase — still
+        # match after the alphabetic-TLD guard was added. Composed via _addr so
+        # no literal address sits in this source (personal_info_leakage scans
+        # it). Sample values only: the regex cares about shape, not identity,
+        # so nobody's actual address needs to appear here.
+        for addr in (_addr('jdoe', 'example.ca'), _addr('user', 'example.com'),
                      _addr('first.last+tag', 'mail.example.co.uk'),
                      _addr('noreply', 'github.com'), _addr('USER', 'EXAMPLE.COM')):
             assert cc.EMAIL_RE.search(addr), f'should match: {addr}'

@@ -89,7 +89,7 @@ Unlike the synonym and musts scanners, every finding here is actionable — ther
 
 The allow-list lives in `scripts/check_kwargs.py` (`ALLOW_LIST_BUILTINS`, `ALLOW_LIST_EXCEPTIONS`, `ALLOW_LIST_OTHER`). Add to `ALLOW_LIST_OTHER` only when a real call site is flagged that the user decides should be allowed; record the reason in a one-line comment next to the entry so the allow-list stays auditable.
 
-The severity is `error` (not `suggestion`) because `coding-best-practices.md` lists keyword-only calls as a hard project rule, and `references/checklist.md` says "missing type hints, positional args at a call site that has kwargs available" are `error`-tier deviations.
+The severity is `error` (not `suggestion`) because `coding-best-practices.md` lists keyword-only calls as a hard project rule, and `skill-authoring-checklist.md` says "missing type hints, positional args at a call site that has kwargs available" are `error`-tier deviations.
 
 ## Severity Rationale
 
