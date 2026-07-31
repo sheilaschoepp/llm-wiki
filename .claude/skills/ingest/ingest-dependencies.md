@@ -5,6 +5,7 @@ Reference map of every file `ingest` relies on to run, grouped by where the file
 ## Own folder (`.claude/skills/ingest/`)
 
 - `SKILL.md` — the skill procedure.
+- `references/conventions.md` — the `CLAUDE.md` conventions recap: filename stems, wikilink form, no bold or italic, the `AskUserQuestion` rule, structural authority, status and markers.
 - `references/existing-mode.md` — existing-source (reingest) always-on checks: reason, needs-update / tentative resolution, schema-migration, frames decision, deep-purpose recovery.
 - `references/planning-questions.md` — Step 3 context-post catalogue and the per-decision question types.
 - `references/source-page-writing.md` — per-callout source-page writing guidance, inline-embed format, citation rules.
@@ -19,6 +20,8 @@ Reference map of every file `ingest` relies on to run, grouped by where the file
 - `references/inbound-reference-discovery.md` — inbound-reference rewrite on a legacy-page rename.
 - `references/quarantine-path-convention.md` — attachment quarantine path rules.
 - `references/relationship-sweep.md` — relationship-sweep catalogue (reached via `references/planning-questions.md`).
+- `references/verification-neutral-fixes.md` — defines the allowlisted legacy-rename repairs that may re-stamp a verified page.
+- `scripts/body_hash.py` — recomputes `verified_hash:` after an allowlisted legacy-rename repair.
 - `scripts/pagination_map.py` — proposes a pagination map from a PDF's headers and footers and renders both margin crops to verify; ingest runs it at Step 2.
 - `pagination-map.md` — per-raw record of what each physical page prints (curated data). ingest registers a source's entry here at Step 2; `lint` reads it (`locator_page_mismatch`, the anchor-only locator exemption).
 - `multi-skill-memory.md` — cross-skill corrections, read at Step 1.
