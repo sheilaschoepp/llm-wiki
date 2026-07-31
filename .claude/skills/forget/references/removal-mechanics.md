@@ -37,15 +37,20 @@ The `while [ -e "$dest" ]` loop retargets a same-minute name clash to `-2` (suff
 
 ## Safe Move: Single Binary Attachment
 
+`{filename}` is the exact approved basename including its extension. Collision suffixes are inserted immediately before the final extension.
+
 ```bash
 mkdir -p "2-outputs/forget/quarantine/attachments/{stem}"
-dest="2-outputs/forget/quarantine/attachments/{stem}/{name}.png"
-n=2; while [ -e "$dest" ]; do dest="2-outputs/forget/quarantine/attachments/{stem}/{name}-$n.png"; n=$((n+1)); done
-cp "1-wiki/attachments/{stem}/{name}.png" "$dest"
+filename="{filename}"
+base="${filename%.*}"
+extension="${filename##*.}"
+dest="2-outputs/forget/quarantine/attachments/{stem}/$filename"
+n=2; while [ -e "$dest" ]; do dest="2-outputs/forget/quarantine/attachments/{stem}/${base}-$n.${extension}"; n=$((n+1)); done
+cp "1-wiki/attachments/{stem}/$filename" "$dest"
 git check-ignore -q "$dest"; ignored=$?   # 0=ignored, 1=not ignored, 128+=git error
-cmp -s "1-wiki/attachments/{stem}/{name}.png" "$dest" \
+cmp -s "1-wiki/attachments/{stem}/$filename" "$dest" \
   && [ "$ignored" -eq 1 ] \
-  && rm "1-wiki/attachments/{stem}/{name}.png" \
+  && rm "1-wiki/attachments/{stem}/$filename" \
   || { echo "ABORT: attachment quarantine copy missing/truncated, on a git-ignored name, or git check-ignore errored (exit $ignored); original kept"; exit 1; }
 ```
 
