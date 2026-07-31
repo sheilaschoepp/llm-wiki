@@ -1,7 +1,7 @@
 ---
 type: lint-data
 purpose: Curated hyphenation lists for the bidirectional `hyphenated_open_compound_noun` lint check.
-updated: 2026-06-20
+updated: 2026-07-27
 ---
 
 # Hyphenation lists
@@ -18,55 +18,30 @@ Format per section:
 
 ## disallowed
 
-- tool-use = tool use
-- belief-state = belief state
+<!-- One `hyphenated-form = open form` line per slug-derived compound, added as
+     `audit` confirms a use against the raw. Empty in a fresh vault — an entry is
+     derived from a concept/entity page slug, so the entries arrive with the
+     pages. The line below is a schematic example, inert to the parser (leading
+     `#`); a real entry has no leading `#`:
+# - belief-state = belief state
+-->
 
 ## allowed
 
-- fine-tuning
-- prefix-tuning
-- adapter-tuning
-- chain-of-thought
-- theory-of-mind
-- llm-as-a-judge
-- model-based
-- foundation-model
-- multi-agent
-- single-agent
-- role-prompting
-- gpt-3
+<!-- One keep-hyphenated look-alike per line — a proper name or established term
+     the check must never flag. Empty in a fresh vault. The line below is a
+     schematic example, inert to the parser (leading `#`); a real entry has no
+     leading `#`:
+# - gpt-3
+-->
 
 ## heads
 
-- representation
-- representations
-- prompt
-- prompts
-- prompting
-- training
-- method
-- methods
-- mechanism
-- mechanisms
-- loop
-- loops
-- message
-- messages
-- content
-- paradigm
-- channel
-- channels
-- vector
-- vectors
-- module
-- modules
-- improvement
-- improvements
-- pattern
-- patterns
-- phase
-- phases
-- stage
-- stages
+<!-- One head noun per line — the direction-2 gate, marking an open compound
+     before it as a modifier rather than a bare noun. Empty in a fresh vault. The
+     line below is a schematic example, inert to the parser (leading `#`); a real
+     entry has no leading `#`:
+# - representation
+-->
 
 ## verified-ignore

@@ -23,11 +23,13 @@ from __future__ import annotations
 import importlib.util
 import json
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 from unittest import mock
 
 HERE = Path(__file__).resolve()
@@ -54,12 +56,12 @@ LOC1 = '[[0-raw/papers/X.pdf#page=1|sec. 1, p. 1]]'
 LOC2 = '[[0-raw/papers/X.pdf#page=2|fig. 1, p. 2]]'
 
 
-def square(*locs):
+def square(*locs: str) -> str:
     """The superseded square-bracket Form 2: outer literal [ ] wrap."""
     return '[' + SRC + ''.join('; ' + l for l in locs) + ']'
 
 
-def roundc(*locs):
+def roundc(*locs: str) -> str:
     """The canonical round-bracket Form 2."""
     return '(' + SRC + ''.join('; ' + l for l in locs) + ')'
 
@@ -69,11 +71,11 @@ def fix(body: str) -> str:
     return cw.SQUARE_CITATION_RE.sub(r'(\1)', body)
 
 
-def bracket_findings(body: str, end: int = 0):
+def bracket_findings(body: str, end: int = 0) -> list[dict[str, Any]]:
     return cw.check_citation_bracket_style(body=body, rel='1-wiki/concepts/x.md', end=end)
 
 
-def lineno(find):
+def lineno(find: dict[str, Any]) -> int:
     """Pull the reported line number as an int. The check's message wording may
     drift; only the `line <N>` contract is asserted on, never the surrounding
     phrasing (this is a semantic/behavioural check, not a string match)."""
@@ -82,7 +84,8 @@ def lineno(find):
     return int(m.group(1))
 
 
-def _write_page(tmp_path, folder, name, frontmatter, body):
+def _write_page(tmp_path: Path, folder: str, name: str, frontmatter: str,
+                body: str) -> Path:
     d = tmp_path / '1-wiki' / folder
     d.mkdir(parents=True, exist_ok=True)
     p = d / name
@@ -106,7 +109,7 @@ _CON_FM = ('type: concept\naliases: []\nsources:\n'
 EMB = '![[1-wiki/attachments/X/fig.png]]'
 
 
-def embed_findings(body: str, end: int = 0):
+def embed_findings(body: str, end: int = 0) -> list[dict[str, Any]]:
     return cw.check_embed_isolated(body=body, rel='1-wiki/concepts/x.md', end=end)
 
 
@@ -144,7 +147,8 @@ SOURCE_FM = ('type: paper\ntitle: "X"\nauthors: []\nyear: 2020\n'
              'frames: []\ncreated: 2026-01-01\nupdated: 2026-01-01\nstatus: draft')
 
 
-def hyphen_findings(tmp_path, folder, name, fm, body):
+def hyphen_findings(tmp_path: Path, folder: str, name: str, fm: str,
+                    body: str) -> list[dict[str, Any]]:
     p = _write_page(tmp_path, folder, name, fm, body)
     wiki = tmp_path / '1-wiki'
     return [f for f in cw.check_page(path=p, wiki_root=wiki)
@@ -157,20 +161,23 @@ LOC_PAGE_ONLY = '[[0-raw/papers/X.pdf#page=1|p. 1]]'         # page only: drift
 LOC_ANCHOR_ONLY = '[[0-raw/papers/X.pdf#page=1|sec. 1]]'     # anchor only: drift
 
 
-def loc_findings(body: str, end: int = 0):
+def loc_findings(body: str, end: int = 0) -> list[dict[str, Any]]:
     return cw.check_source_locator_complete(body=body, rel='1-wiki/sources/X.md', end=end)
 
 
 DG = '0-raw/papers/X.pdf'
 
 
-def dg(cur, head, status='verified', head_status='verified'):
+# status/head_status stay `str | None` — the widths anchor_change_findings itself
+# declares, since dg is a pass-through and a page may carry no status at all.
+def dg(cur: str, head: str, status: str | None = 'verified',
+       head_status: str | None = 'verified') -> list[dict[str, Any]]:
     return cw.anchor_change_findings(cur_text=cur, head_text=head,
                                      rel='1-wiki/sources/X.md', status=status,
                                      head_status=head_status)
 
 
-def caps_findings(body: str, end: int = 0):
+def caps_findings(body: str, end: int = 0) -> list[dict[str, Any]]:
     return cw.check_wikilink_display_caps(body=body, rel='1-wiki/concepts/x.md', end=end)
 
 
@@ -180,7 +187,8 @@ sc = importlib.util.module_from_spec(_ss)
 _ss.loader.exec_module(sc)
 
 
-def _wiki(tmp_path, log=None, hot=None):
+def _wiki(tmp_path: Path, log: str | None = None,
+          hot: str | None = None) -> Path:
     d = tmp_path / '1-wiki'
     d.mkdir(parents=True, exist_ok=True)
     if log is not None:
@@ -230,9 +238,55 @@ HOT_WITH_STRAY = ('---\ntype: hot\n---\n\n# Hot\n\n## Recent activity\n\n'
                   '## Open threads\n\n- keep me\n')
 
 
-def _noun_findings(tmp_path, body):
+# --- fixture-backed module instance for the hyphenation lists -----------------
+# The shipped hyphenation-lists.md is schematic-empty: its four lists are vault
+# vocabulary (slug-derived compounds, corpus look-alikes, corpus head nouns), and
+# this repo ships an empty wiki, so it ships no entries. The noun-check behaviour
+# still has to be pinned, so the tests below supply their OWN vocabulary via a
+# second module instance loaded against a fixture data file.
+#
+# It has to be a second instance rather than a patch: check_wiki.py resolves
+# HYPHENATION_LISTS_FILE from its own location and compiles the two derived
+# regexes ONCE at import (see its NOTE at the compile site), so rebinding the list
+# globals afterwards leaves the regexes stale. Copying the script into a temp tree
+# and loading it there is what makes the data file substitutable.
+_FIXTURE_HYPHENATION_LISTS = (
+    '# fixture hyphenation lists (test-owned; not the shipped file)\n\n'
+    '## disallowed\n\n- tool-use = tool use\n- belief-state = belief state\n\n'
+    '## allowed\n\n- fine-tuning\n- gpt-3\n\n'
+    '## heads\n\n- representation\n\n'
+    '## verified-ignore\n'
+)
+
+
+def _load_check_wiki_with_fixture_lists() -> Any:
+    """Load a private copy of check_wiki.py whose hyphenation data file is
+    `_FIXTURE_HYPHENATION_LISTS`, so the noun-check tests own their vocabulary
+    instead of depending on whatever the vault happens to have accumulated."""
+    root = Path(_FIXTURE_TREE.name).resolve() / 'multi-skill'
+    scripts = root / 'scripts'
+    scripts.mkdir(parents=True, exist_ok=True)
+    (root / 'hyphenation-lists.md').write_text(
+        _FIXTURE_HYPHENATION_LISTS, encoding='utf-8')
+    for name in ('check_wiki.py', 'body_hash.py'):
+        shutil.copy(HERE.parents[1] / name, scripts / name)
+    spec = importlib.util.spec_from_file_location(
+        'check_wiki_hyphenation_fixture', scripts / 'check_wiki.py')
+    mod = importlib.util.module_from_spec(spec)
+    assert spec and spec.loader
+    spec.loader.exec_module(mod)
+    return mod
+
+
+_FIXTURE_TREE = tempfile.TemporaryDirectory()   # torn down at interpreter exit
+cwh = _load_check_wiki_with_fixture_lists()
+
+
+def _noun_findings(tmp_path: Path, body: str) -> list[dict[str, Any]]:
+    """Findings from the FIXTURE module instance — the lists under test are the
+    fixture's, not the shipped file's."""
     p = _write_page(tmp_path, 'concepts', 'c.md', CONCEPT_FM, body)
-    return [f for f in cw.check_page(path=p, wiki_root=tmp_path / '1-wiki')
+    return [f for f in cwh.check_page(path=p, wiki_root=tmp_path / '1-wiki')
             if f['check_id'] == 'hyphenated_open_compound_noun']
 
 
@@ -1485,9 +1539,13 @@ class TestCheckWiki(unittest.TestCase):
 
     def test_open_compound_noun_lists_are_disjoint(self) -> None:
         # A term must not sit on both lists by accident (the allowed list is also a
-        # hard never-flag guard, but disjointness keeps intent clear).
-        overlap = set(cw.OPEN_COMPOUND_NOUN_SUGGEST) & cw.HYPHENATED_COMPOUND_ALLOWED
-        assert overlap == set(), overlap
+        # hard never-flag guard, but disjointness keeps intent clear). Checked on the
+        # fixture instance (populated lists, so the assertion has teeth) and on the
+        # shipped one (empty in a fresh vault, but the guard holds as it is grown).
+        for mod in (cwh, cw):
+            overlap = (set(mod.OPEN_COMPOUND_NOUN_SUGGEST)
+                       & mod.HYPHENATED_COMPOUND_ALLOWED)
+            assert overlap == set(), (mod.__name__, overlap)
 
     # --- hyphenated_open_compound_noun, direction 2: re-hyphenate an open modifier --
     # The inverse fix — an open compound directly before a curated HEAD NOUN was
@@ -1518,7 +1576,7 @@ class TestCheckWiki(unittest.TestCase):
 
     def test_open_compound_noun_verified_ignore_suppresses_both(self) -> None:
         # A phrase on the verified-ignore list is skipped (here, a direction-2 case).
-        with mock.patch.object(cw, 'HYPHENATION_VERIFIED_IGNORE',
+        with mock.patch.object(cwh, 'HYPHENATION_VERIFIED_IGNORE',
                                frozenset({'belief state representation'})):
             f = _noun_findings(
                 self.tmp,
@@ -1529,12 +1587,28 @@ class TestCheckWiki(unittest.TestCase):
     # The four lists live in .claude/skills/multi-skill/hyphenation-lists.md (audit grows
     # them autonomously). The loader must parse the sections and degrade safely.
 
-    def test_hyphenation_lists_load_from_real_data_file(self) -> None:
-        # The shipped data file populates all the lists the check depends on.
-        assert 'belief-state' in cw.OPEN_COMPOUND_NOUN_SUGGEST
-        assert cw.OPEN_COMPOUND_NOUN_SUGGEST['belief-state'] == 'belief state'
-        assert 'gpt-3' in cw.HYPHENATED_COMPOUND_ALLOWED
-        assert 'representation' in cw.COMPOUND_MODIFIER_HEADS
+    def test_shipped_hyphenation_lists_parse_to_four_empty_collections(self) -> None:
+        # The shipped file is schematic-empty (an empty wiki carries no vault
+        # vocabulary), and its schematic examples are commented so the parser skips
+        # them. Reading it must yield four EMPTY collections, not raise and not leak
+        # an example into a live list — an example that leaked would flag adopters'
+        # prose against vocabulary they never chose.
+        dis, allow, heads, ign = cw._load_hyphenation_lists()
+        assert (dis, allow, heads, ign) == ({}, frozenset(), frozenset(), frozenset())
+        # ...and the module globals derived from it agree, so the check no-ops.
+        assert cw.OPEN_COMPOUND_NOUN_SUGGEST == {}
+        assert cw.HYPHENATED_OPEN_COMPOUND_NOUN.search('a belief-state.') is None
+        assert cw.OPEN_COMPOUND_MODIFIER.search('belief state representation') is None
+
+    def test_data_file_lists_reach_the_module_globals(self) -> None:
+        # The wiring the shipped empty file cannot exercise: a POPULATED data file
+        # (the test fixture) must reach the four globals and the two regexes derived
+        # from them at import.
+        assert cwh.OPEN_COMPOUND_NOUN_SUGGEST['belief-state'] == 'belief state'
+        assert 'gpt-3' in cwh.HYPHENATED_COMPOUND_ALLOWED
+        assert 'representation' in cwh.COMPOUND_MODIFIER_HEADS
+        assert cwh.HYPHENATED_OPEN_COMPOUND_NOUN.search('a belief-state.') is not None
+        assert cwh.OPEN_COMPOUND_MODIFIER.search('belief state representation') is not None
 
     def test_hyphenation_loader_parses_sections(self) -> None:
         f = self.tmp / 'h.md'
@@ -1782,7 +1856,8 @@ class UnknownSourceTypeTests(unittest.TestCase):
     """A source page whose `type:` is not a recognized kind must be flagged and
     still checked against the common source schema — never silently skipped."""
 
-    def _ids(self, td: str, fm: str, slugs: list[str] | None = None):
+    def _ids(self, td: str, fm: str,
+             slugs: list[str] | None = None) -> list[dict[str, Any]]:
         p = _write_page(Path(td), 'sources', 'S.md', fm, _src_body(slugs))
         return [f for f in cw.check_page(path=p, wiki_root=Path(td) / '1-wiki')]
 
@@ -1875,7 +1950,7 @@ class SourceSchemaInvariantTests(unittest.TestCase):
 class RawIntegrityBooksTests(unittest.TestCase):
     """The raw index must scan 0-raw/books/ (CLAUDE.md documents the folder)."""
 
-    def _setup_raw(self, td: str):
+    def _setup_raw(self, td: str) -> Path:
         d = Path(td)
         (d / '0-raw' / 'books').mkdir(parents=True)
         (d / '1-wiki' / 'sources').mkdir(parents=True)
@@ -1905,6 +1980,10 @@ class RawIntegrityBooksTests(unittest.TestCase):
         # The book raw is found, so no false "unresolved file" and no "uningested".
         self.assertNotIn('file_field_unresolved', ids)
         self.assertNotIn('raw_without_source_page', ids)
+
+
+if __name__ == '__main__':
+    unittest.main()
 
 
 class TestAuditBurndown(unittest.TestCase):
@@ -2081,7 +2160,3 @@ class TestVerifiedSourcesChanged(unittest.TestCase):
             cw.check_verified_sources_changed(
                 text=text, fm=fm, rel='1-wiki/concepts/c.md'),
             [])
-
-
-if __name__ == '__main__':
-    unittest.main()
