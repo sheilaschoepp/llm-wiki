@@ -14,6 +14,23 @@ Format: a `## <skill-name>` section per skill; each bullet lists the slash-separ
 - route / path — the verb "routes to" vs a filesystem path
 - write / persist — "write" (emit to disk) vs "persist" (a finding or state remaining)
 
+## brief
+
+- save / write — "save the brief" (emit the file) vs "write each section" and the compound "AI-writing tells"
+
+## cleanup
+
+- record / entry / item — "record" the verb (record it `already-cleared`) and the reconciled paper trail vs a memory-journal entry vs a per-item deletion candidate
+- save / write — "save the combined report" vs "write time" and the compound "AI-writing tells"
+
+## compare
+
+- record / row / entry — "record" the verb (record each target's status) vs the table's `Support` row vs a log / `targets:` entry
+
+## consistency
+
+- save / write — "save report" vs "write time" and the compound "AI-writing tells"
+
 ## forget
 
 - record / entry — the quarantined paper trail vs a log / Recent-activity entry
@@ -32,6 +49,17 @@ Format: a `## <skill-name>` section per skill; each bullet lists the slash-separ
 - record / row / entry / item — four distinct referents
 - save / write / persist — emit to disk vs a finding/run-state remaining
 
+## query
+
+- record / entry — "record" the verb (record the stakes level, record the printed page seen) vs a hot / log entry
+- route / path — "routes a query's verification", "for the user to route" vs a filesystem path and the procedure's "answer path" / "main path" branches
+- save / write — "save the query output" vs "write time", "write `none`", and the compound "AI-writing tells"
+
+## reflect
+
+- record / entry — "the objective record" (log ops and `created:` dates a claim is grounded in) vs a log entry
+- save / write — "save the compass note" vs the compound "AI-writing tells"
+
 ## supersede
 
 - record / entry — a generic audit record vs the defined "log entry"
@@ -46,6 +74,7 @@ Format: a `## <skill-name>` section per skill; each bullet lists the slash-separ
 ## skill-llm-council
 
 - pull / get — "pull in" (load context) vs "get" (obtain a review outcome or timestamp)
+- document / file — "document" the verb ("the triggers this skill documents") and the modifier "document-handling guidance" vs "file" the artifact on disk
 
 ## skill-linter
 
