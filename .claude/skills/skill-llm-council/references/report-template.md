@@ -55,7 +55,7 @@ Ungroundable: {each finding a reviewer returned as `ground: ungroundable`, with 
 
 ## Completed changes
 
-Adversarial verification (load-bearing edits): {per edit, BOTH verdicts — locator: holds/refuted, entailment: holds/refuted — each with its one-line ground-truth reason. Name which lens refuted when one did: a locator refutation means the council misquoted its ground, an entailment refutation means it quoted correctly and inferred wrongly, and the two call for different follow-up. Note any refutation discarded because its returned quote failed the re-grep, and any third refuter spent, with the escalation trigger that justified it. Refuted edits were demoted to `[needs-review]` proposals, listed under Cross-file proposals.}
+Adversarial verification (load-bearing edits): {per edit, BOTH verdicts — locator: holds/refuted, entailment: holds/refuted — each with its one-line ground-truth reason. Name which lens refuted when one did: a locator refutation means the council misquoted its ground, an entailment refutation means it quoted correctly and inferred wrongly, and the two call for different follow-up. Note any refutation discarded because its returned quote failed the re-grep, any third refuter spent with the escalation trigger that justified it, and every authorized repair with its fresh verdicts and terminal disposition. Refuted in-folder edits were demoted to `[needs-review]` proposals in the section below.}
 
 Applied in-folder, smallest reasonable edit each:
 
@@ -65,6 +65,12 @@ Applied in-folder, smallest reasonable edit each:
 Skipped / reverted: {edits dropped at Step 5, demoted by the health gate or a refuter, or reverted on the semantic re-read — each with the one-line reason.}
 
 Post-apply sanity check: {result of running skill-linter's deterministic scripts on the edited skill, naming which scanners ran and which were not applicable.}
+
+## Needs-review proposals
+
+Not applied — these in-folder edits were demoted by the health, coherence, refuter, or semantic gate.
+
+- [needs-review] `{target path}` — {exact edit, the gate that demoted it, and why}
 
 ## Cross-file proposals
 
