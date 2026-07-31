@@ -25,4 +25,4 @@ Reference map of every file `reflect` relies on to run, grouped by where the fil
 
 ## Self-containment status
 
-Clean — no cross-skill logic dependency. reflect is a pure-output skill: every dependency is own-folder, multi-skill, `CLAUDE.md`, or `a-archive/` project reference material, and the wiki pages it samples are operands, not procedure. (It names a candidate cluster and defers the actual scan to `/synthesis` by naming that skill, not by reading its folder.)
+Clean — no cross-skill logic dependency. reflect is output-only with wiki bookkeeping: it writes one compass note under `2-outputs/reflect/` and updates `hot.md`/`log.md`, but never authors or promotes durable source, concept, entity, or synthesis pages. Every dependency is own-folder, multi-skill, `CLAUDE.md`, or `a-archive/` project reference material, and the wiki pages it samples are operands, not procedure. (It names a candidate cluster and defers the actual scan to `/synthesis` by naming that skill, not by reading its folder.)
