@@ -19,7 +19,7 @@ Reference map of every file `ingest` relies on to run, grouped by where the file
 - `references/inbound-reference-discovery.md` — inbound-reference rewrite on a legacy-page rename.
 - `references/quarantine-path-convention.md` — attachment quarantine path rules.
 - `references/relationship-sweep.md` — relationship-sweep catalogue (reached via `references/planning-questions.md`).
-- `scripts/pagination_map.py` — proposes a pagination map from a PDF's footers and renders footer crops to verify; ingest runs it at Step 2.
+- `scripts/pagination_map.py` — proposes a pagination map from a PDF's headers and footers and renders both margin crops to verify; ingest runs it at Step 2.
 - `pagination-map.md` — per-raw record of what each physical page prints (curated data). ingest registers a source's entry here at Step 2; `lint` reads it (`locator_page_mismatch`, the anchor-only locator exemption).
 - `multi-skill-memory.md` — cross-skill corrections, read at Step 1.
 

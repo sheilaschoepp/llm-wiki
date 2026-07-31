@@ -18,7 +18,7 @@ A locator states two page facts: **where** the page sits in the file (`#page=N`,
 
 The printed number is a fact about the raw, not derivable by rule, and getting it wrong yields a confidently-wrong citation that renders plausibly and passes every structural check. So it is recorded here once per raw, before any locator is written, and `locator_page_mismatch` checks every `p. M` against it.
 
-`check_wiki.py` never opens a PDF — it reads only this map — so lint stays cheap and dependency-free. `scripts/pagination_map.py` proposes a map from the PDF's rendered footers; **a human confirms each line against a rendered footer before it lands** (a wrong `none` would license stripping a correct printed page from a citation and certifying the damage), then adds the section here.
+`check_wiki.py` never opens a PDF — it reads only this map — so lint stays cheap and dependency-free. `scripts/pagination_map.py` proposes a map from the PDF's rendered headers and footers; **a human confirms each line against both rendered margins before it lands** (a wrong `none` would license stripping a correct printed page from a citation and certifying the damage), then adds the section here. A `review(header=...,footer=...)` proposal is deliberately unresolved and invalid as map data: it records every distinct bare-number candidate found in either margin, separated by `|`; inspect the full page and replace it with the actual printed folio or `none`.
 
 This file is **agent-writable data, not script logic** (`CLAUDE.md` → Stay In Your Lane). A missing or unreadable file degrades every raw to "unregistered": the locator checks fall back to the older `app.`-anchor heuristic and `locator_page_mismatch` does not run — the safe direction, recoverable from git — so keep it valid. A malformed line is skipped, never fatal.
 
@@ -42,7 +42,7 @@ One `## <raw path>` heading per raw — the path as it appears in a `#page=N` de
 ## Registered raws
 
 <!-- One `## 0-raw/…` section per registered raw, added on ingest after the
-     footers are eyeballed. Empty in a fresh vault — register a raw when you
+     headers and footers are eyeballed. Empty in a fresh vault — register a raw when you
      ingest it. The lines below are a schematic example, inert to the parser
      (leading `#`); a real entry has no leading `#` and a literal 0-raw path:
 # ## 0-raw/papers/Devlin2019BERTPO.pdf
