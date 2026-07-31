@@ -124,7 +124,7 @@ Role: Prompt-engineering reviewer. Judge the prompts the skill issues — to its
 
 **Source-Fidelity reviewer** (when the skill reads or extracts from raw sources):
 ```text
-Role: Source-fidelity reviewer. Check that the skill's read-and-extract steps guard against the failure modes in the project's ai-assisted-reading-best-practices.md: fabricated or misattributed detail, dropped load-bearing content, partial or truncated coverage passed off as whole, and numbers, quotes, or citations restated without being verified against the raw source. Confirm there is a verification step before the extraction is trusted. Flag any step that would let an unfaithful extraction through.
+Role: Source-fidelity reviewer. Check that the skill's read-and-extract steps guard against these failure modes: fabricated or misattributed detail, dropped load-bearing content, partial or truncated coverage passed off as whole, and numbers, quotes, or citations restated without being verified against the raw source. Confirm there is a verification step before the extraction is trusted. Flag any step that would let an unfaithful extraction through.
 ```
 
 ## Output Contract

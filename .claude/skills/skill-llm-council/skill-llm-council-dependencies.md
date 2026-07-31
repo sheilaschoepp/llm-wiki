@@ -20,7 +20,7 @@ Reference map of every file `skill-llm-council` relies on to run, grouped by whe
 ## Elsewhere
 
 - `CLAUDE.md` — the shared schema (the one always-allowed non-multi-skill reference). ~12 citations: the schema and workflow rules the reviewed skill must obey.
-- `a-archive/` project reference and style material (read-only project resources the councils review against, not another skill's logic): `reference/llm-council-best-practices.md` (this skill's own lineage), `reference/skill-authoring-best-practices.md`, `reference/claude-code-prompting-best-practices.md`, `reference/claude-code-context-management-best-practices.md` (the three always-loaded), plus the conditionally-loaded `reference/ai-assisted-reading-best-practices.md`, `reference/llm-wiki-best-practices.md`, `reference/smart-notes-llm-wiki-integration.md`, `reference/smart-notes-summary.md`; and `style/ai-writing-tells.md`, `style/coding-best-practices.md`.
+- `a-archive/` project reference and style material (read-only project resources the councils review against, not another skill's logic): `reference/llm-council-best-practices.md` (this skill's own lineage), `reference/skill-authoring-best-practices.md` (the always-loaded one), plus the conditionally-loaded `reference/llm-wiki-best-practices.md`, `reference/smart-notes-llm-wiki-integration.md`, `reference/smart-notes-summary.md`; and `style/ai-writing-tells.md`, `style/coding-best-practices.md`.
 
 ## Operands (subject matter, not logic dependencies)
 

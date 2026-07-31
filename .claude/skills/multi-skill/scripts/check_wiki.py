@@ -51,12 +51,12 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from body_hash import body_hash  # noqa: E402
 
-# Stale-draft threshold in days (D 11.5/6). Lint flags pages with
+# Stale-draft threshold in days. Lint flags pages with
 # status:draft and updated: older than this as Info-level. Audit's 60-day
 # stale-draft check catches them later; this is the earlier nudge.
 STALE_DRAFT_DAYS = 14
 
-# Stale needs-update threshold in days (D 5.5b). The whole point of
+# Stale needs-update threshold in days. The whole point of
 # `needs-update` is that something demands attention; a page sitting at
 # that status untouched for a month means the demand is being ignored.
 # Lint flags as Warning (higher severity than stale_draft because the
@@ -64,7 +64,7 @@ STALE_DRAFT_DAYS = 14
 STALE_NEEDS_UPDATE_DAYS = 30
 
 # Empty-placeholder bullet strings. A callout whose only non-empty body
-# bullet matches one of these is an empty placeholder (D X.4).
+# bullet matches one of these is an empty placeholder.
 EMPTY_PLACEHOLDERS = (
     '> - None noted',
     '> - None yet',
@@ -474,7 +474,7 @@ UNVERIFIED_MARKER_RE = re.compile(r'\*\[unverified\]\*')
 # Source-context phrases — concept/entity pages must read as standalone ideas,
 # not as summaries of a particular paper. These phrases tie the bullet's
 # meaning back to the source rather than expressing the idea on its own
-# terms. See D 3.11 in the design-decisions catalogue.
+# terms.
 SOURCE_CONTEXT_PHRASES = re.compile(
     r'\b(as the (?:paper|authors?|source|study|work) (?:note[sd]?|state[sd]?|'
     r'shows?|argue[sd]?|find[s]?|claim[sd]?|suggest[sd]?)|'
@@ -493,7 +493,7 @@ SOURCE_CONTEXT_PHRASES = re.compile(
 # source" / "a source" / "one framework" / "one study". These pages accrue more
 # sources over time, so an unnamed referent that is unambiguous at one source
 # becomes ambiguous at two. See CLAUDE.md -> Plain-Language Style.
-# Distinct from source_context_leak (D 3.11): that flags source-FRAMING to be
+# Distinct from source_context_leak: that flags source-FRAMING to be
 # removed ("as the paper notes" -> state the idea standalone); this flags an
 # UNNAMED source to be named. They can overlap on a definite-artifact line that
 # also carries a framing verb ("the paper notes ..."), where both fixes apply
@@ -1495,7 +1495,7 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
                          f"({'syntheses are structurally invalid without sources' if kind == 'synthesis' else 'fragile'})."),
                 fix_hint='Add source support or quarantine the page via /forget.',
             ))
-        # Single-source synthesis without explicit stub marker (D 3.3 / D X.3).
+        # Single-source synthesis without explicit stub marker.
         # CLAUDE.md requires synthesis pages to have ≥ 2 sources unless the
         # user explicitly creates a single-source stub via the
         # `single_source_stub: true` frontmatter field.
@@ -1609,7 +1609,7 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
     # Concept/entity pages should read as standalone ideas, not as summaries
     # of a specific paper. Phrases like "as the paper notes" tie the bullet's
     # meaning back to the source rather than expressing the idea on its own
-    # terms (D 3.11).
+    # terms.
     if kind in {'concept', 'entity'}:
         for m in SOURCE_CONTEXT_PHRASES.finditer(body):
             line_no = body[:m.start()].count('\n') + 1
@@ -1796,7 +1796,7 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
             fix_hint='Run /audit to fact-check the marked claims and clear them.',
         ))
 
-    # Placeholder-only page check (D X.4): if every required callout is
+    # Placeholder-only page check: if every required callout is
     # filled with only the empty-placeholder bullet, the page is a stub.
     # Flag info-level so the user can fill it or quarantine it.
     if expected_slugs and _is_placeholder_only(body=body, expected_slugs=expected_slugs):
@@ -1808,10 +1808,10 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
             fix_hint='Fill the page with real content or quarantine via /forget.',
         ))
 
-    # Stale-draft check (D 11.5/6): status:draft and updated: older than
+    # Stale-draft check: status:draft and updated: older than
     # STALE_DRAFT_DAYS. Info-level nudge before audit's 60-day stale-draft
     # threshold.
-    # Stale needs-update check (D 5.5b): status:needs-update and updated:
+    # Stale needs-update check: status:needs-update and updated:
     # older than STALE_NEEDS_UPDATE_DAYS. Warning-level — needs-update means
     # the page is known-broken, and ignored stale findings compound.
     status = fm.get('status')
@@ -2567,7 +2567,7 @@ WIKILINK_PAGE_RE = re.compile(
 
 
 def check_orphan_pages(wiki_root: Path) -> list[dict[str, Any]]:
-    """Flag wiki pages not reachable from `index.md` via wikilinks (D 9.12).
+    """Flag wiki pages not reachable from `index.md` via wikilinks.
 
     Walks the wikilink graph starting from `index.md`. Pages in
     `sources/`, `concepts/`, `entities/`, or `syntheses/` that the
@@ -2675,7 +2675,7 @@ def _extract_wikilinks(text: str) -> list[str]:
 
 
 def check_sources_callout_sync(wiki_root: Path) -> list[dict[str, Any]]:
-    """Sources callout wikilinks must match `sources:` frontmatter (D X.3a).
+    """Sources callout wikilinks must match `sources:` frontmatter.
 
     A page can drift between `sources: [[a]]` in frontmatter and a body
     `> [!sources]` callout listing `[[b]]` — the support trail and the
@@ -2775,7 +2775,7 @@ def check_source_link_resolution(wiki_root: Path) -> list[dict[str, Any]]:
 
 def check_concept_source_bidirectional(
         wiki_root: Path) -> list[dict[str, Any]]:
-    """Source ↔ concept/entity/synthesis bidirectional support (D X.3b).
+    """Source ↔ concept/entity/synthesis bidirectional support.
 
     For every wikilink in a source page's `concepts-entities` callout, the
     linked page must list the source in `sources:`. And for every source
@@ -2889,7 +2889,7 @@ def check_concept_source_bidirectional(
 
 
 def check_needs_update_reason(wiki_root: Path) -> list[dict[str, Any]]:
-    """`needs-update` pages must provide a reason (D 5.5c).
+    """`needs-update` pages must provide a reason.
 
     CLAUDE.md says a needs-update page needs either a real Contradictions or
     Tensions entry, OR a `needs_update_reason:` frontmatter field. Lint
@@ -2947,8 +2947,7 @@ def check_needs_update_reason(wiki_root: Path) -> list[dict[str, Any]]:
 
 
 def check_alias_collisions(wiki_root: Path) -> list[dict[str, Any]]:
-    """Flag duplicate aliases and aliases that shadow another page's filename
-    (D 9.13).
+    """Flag duplicate aliases and aliases that shadow another page's filename.
 
     Obsidian uses `aliases:` for search and `[[wikilink]]` autocomplete.
     Uniqueness across the vault is required for unambiguous resolution.
@@ -3029,7 +3028,7 @@ def check_alias_collisions(wiki_root: Path) -> list[dict[str, Any]]:
 
 
 def check_raw_integrity(wiki_root: Path) -> list[dict[str, Any]]:
-    """Critical checks for raw-vs-wiki integrity (D 8.17, lint checks 3 & 4).
+    """Critical checks for raw-vs-wiki integrity (lint checks 3 & 4).
 
     Check 3: every source page's `file:` frontmatter must resolve to a file
     that actually exists under `0-raw/`. A source page pointing at a deleted
@@ -3130,7 +3129,7 @@ def check_raw_integrity(wiki_root: Path) -> list[dict[str, Any]]:
 
 def check_recursive_citations(wiki_root: Path) -> list[dict[str, Any]]:
     """Flag concept/entity/synthesis pages that cite only other wiki pages
-    instead of source pages (D 3.9 / D X.3).
+    instead of source pages.
 
     The "wiki cites itself as truth" failure (BP §13) shows up structurally
     when a derived page has empty `sources:` frontmatter but its body wikilinks
@@ -3193,7 +3192,7 @@ def check_recursive_citations(wiki_root: Path) -> list[dict[str, Any]]:
                     f'non-source wiki pages ({sorted(set(body_page_links))[:3]}'
                     f"{'...' if len(set(body_page_links)) > 3 else ''}). The "
                     f'wiki risks citing itself as truth without any source '
-                    f'grounding (D 3.9 / D X.3).'
+                    f'grounding.'
                 ),
                 fix_hint=(
                     'Add at least one source page to `sources:` and the '

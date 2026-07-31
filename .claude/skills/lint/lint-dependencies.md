@@ -31,7 +31,6 @@ The wiki-checking scripts and curated data live here because audit/ingest/forget
 - `CLAUDE.md` — the shared schema (the one always-allowed non-multi-skill reference). ~68 citations: lint enforces the page-level half of the schema (frontmatter, callouts, Page Status, Bullet Markers, Source Support And Verification, Hot/Index/Log).
 - `a-archive/` project reference and style material (read-only project resources, not another skill's logic):
   - `a-archive/style/ai-writing-tells.md` — the mechanical tells scanned over wiki-page bodies (Step 2).
-  - `a-archive/reference/llm-wiki-design-decisions.md` — referenced as design provenance.
 
 ## Operands (subject matter, not logic dependencies)
 

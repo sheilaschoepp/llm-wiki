@@ -34,7 +34,7 @@ Reference map of every file `audit` relies on to run, grouped by where the file 
 - `CLAUDE.md` — the shared schema (the one always-allowed non-multi-skill reference). ~39 citations: Page Status, Bullet Markers, Source Support And Verification, Stay In Your Lane.
 - `a-archive/` project reference and style material (read-only project resources audit consults, not another skill's logic):
   - `a-archive/style/ai-writing-tells.md` — the AI-writing tells applied in the Step 4 semantic-tell check.
-  - `a-archive/reference/smart-notes-llm-wiki-integration.md`, `a-archive/reference/llm-wiki-design-decisions.md` — the foundation-design docs audit cites for the `verified`-stamp lineage (Purpose).
+  - `a-archive/reference/smart-notes-llm-wiki-integration.md` — the foundation-design doc audit cites for the `verified`-stamp lineage (Purpose).
 
 ## Notes
 
