@@ -8,10 +8,11 @@ How the outputs job sorts each `2-outputs/` file into a deletion-candidate categ
 - The Four Categories
 - Inbound-Reference Check
 - Apply The Protected Set
+- Total Inventory And Identity
 
 ## Repeatable Check Vs Working Artifact
 
-Walk `2-outputs/` and sort each file into the first category it matches, in the order below. The superseded-check-vs-aged split turns on kind: a repeatable check kind (`lint`, `consistency`, `audit`, `skill-linter`, `cleanup`) emits a fresh report each run that the next run supersedes, so only the latest is kept; a working artifact (`query`, `brief`, `compare`, `reflect`, `ingest`, `forget`, `supersede`, `synthesis`) is a unique deliverable, kept until it ages out.
+Enumerate `2-outputs/` without following symlinks and inspect each path with `lstat`-equivalent semantics. Traversal directories are not inventory items. Symlinks and other non-regular entries are listed separately as blocked and are never followed or deleted by cleanup. Apply the protected set to every regular file first; among the remainder, sort each eligible file into the first candidate category it matches, in the order below. The superseded-check-vs-aged split turns on kind: a repeatable check kind (`lint`, `consistency`, `audit`, `skill-linter`, `cleanup`) emits a fresh report each run that the next run supersedes, so only the latest is kept; a working artifact (`query`, `brief`, `compare`, `reflect`, `ingest`, `forget`, `supersede`, `synthesis`) is a unique deliverable, kept until it ages out.
 
 ## The Four Categories
 
@@ -22,8 +23,19 @@ Walk `2-outputs/` and sort each file into the first category it matches, in the 
 
 ## Inbound-Reference Check
 
-Run this before proposing any working artifact (`query`, `brief`, `compare`, `reflect`, `ingest`, `forget`, `supersede`, `synthesis`) for aged or orphaned deletion. A promoted synthesis page records where it came from in `origin:` frontmatter pointing at the report it grew from (CLAUDE.md → Synthesis frontmatter: `origin: "[[2-outputs/query/…]]"`), and a live page may wikilink a report in its body. Before proposing such a report for deletion, grep `1-wiki/` for its path — synthesis `origin:` fields first, then body wikilinks. If a live page references it, note that inbound link on the file's Step 7 per-file gate so the user removes it knowing a live page's `origin:` pointer will be left dangling. The dangler is tolerated — `forget` and `supersede` likewise leave a live-page-to-output `origin:` link frozen rather than repairing it, and CLAUDE.md already expects `log.md`/`hot.md` danglers into `2-outputs/` — so this is pre-deletion transparency, not a blocked deletion. It mirrors the inbound-reference sweep `forget` and `supersede` run before removing a wiki page.
+Run this before proposing any working artifact (`query`, `brief`, `compare`, `reflect`, `ingest`, `forget`, `supersede`, `synthesis`) for aged or orphaned deletion. A promoted synthesis page records where it came from in `origin:` frontmatter pointing at the report it grew from (CLAUDE.md → Synthesis frontmatter: `origin: "[[2-outputs/query/…]]"`), and a live page may wikilink a report in its body. Before proposing such a report for deletion, grep `1-wiki/` for its path — synthesis `origin:` fields first, then body wikilinks. If a live page references it, note that inbound link on the file's Step 7 item gate so the user removes it knowing a live page's `origin:` pointer will be left dangling. The dangler is tolerated — `forget` and `supersede` likewise leave a live-page-to-output `origin:` link frozen rather than repairing it, and CLAUDE.md already expects `log.md`/`hot.md` danglers into `2-outputs/` — so this is pre-deletion transparency, not a blocked deletion. It mirrors the inbound-reference sweep `forget` and `supersede` run before removing a wiki page.
 
 ## Apply The Protected Set
 
-Apply the protected set (Scope → Outputs cleanup) before proposing anything: never surface a `.gitkeep`, a kept-latest check report, or any file under `forget/quarantine/` or `supersede/preserve/`. Record in the report what was protected and skipped, so a sweep that holds content back reads as deliberate, not missed.
+Apply the protected set (Scope → Outputs cleanup) before proposing anything: never surface a `.gitkeep`, a kept-latest check report, any file under `forget/quarantine/` or `supersede/preserve/`, or an output file containing a complete `%%LOCKED%%` ... `%%/LOCKED%%` span. Either unmatched lock marker also fails closed and protects the whole file. Record every protected path or grouped preservation subtree in the report, so a sweep that holds content back reads as deliberate, not missed.
+
+## Total Inventory And Identity
+
+Disposition every regular file exactly once:
+
+1. **protected** — any protected-set member;
+2. **candidate** — the first matching deletion category above;
+3. **retained-current** — a recognized artifact that is neither protected nor eligible for a deletion category this run; or
+4. **unclassified-blocked** — a malformed, unknown, or ambiguous regular file that cleanup will not delete.
+
+Require `regular files scanned = candidates + protected + retained-current + unclassified-blocked` before saving the report. List symlinks and other non-regular entries separately as blocked; they are not part of the regular-file equation. Record a SHA-256 of the exact bytes for every candidate and use that same algorithm for the immediate pre-deletion comparison in Step 8.

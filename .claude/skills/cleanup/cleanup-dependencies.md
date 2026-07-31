@@ -14,19 +14,16 @@ Reference map of every file `cleanup` relies on to run, grouped by where the fil
 - `multi-skill-memory.md` — cross-skill corrections, read at Step 1.
 - `references/self-report.md` — the Self-report format the Step 5 report closes with.
 
-## Elsewhere
-
-- `CLAUDE.md` — the shared schema (the one always-allowed non-multi-skill reference). ~46 citations: the memory-tier / graduation-path model, Memory hygiene, Safety rules (file-by-file deletion), the output-kind roster, and the protected set.
-
 ## Operands (subject matter, not logic dependencies)
 
 cleanup operates *on* these files — it reads them to classify, and graduates into or prunes them — but it does not read them to learn *how* to run. They are enumerated at runtime, not fixed logic dependencies, so they are not a self-containment concern:
 
 - `MEMORY.md` — a memory tier read and graduated-into.
+- `CLAUDE.md` — the project schema and a memory-job classification/graduation target. cleanup's runtime mechanics, including the recoverability-aware deletion boundary, stay mirrored in its own folder or `multi-skill/`; an outputs-only run does not load this file as a procedural dependency.
 - `.claude/skills/*/*-memory.md` (every per-skill journal and the multi-skill journal) — the memory entries it classifies.
 - `.claude/skills/*/SKILL.md` — graduation targets for skill-procedure rules (read, and proposed-for-edit only on user approval).
 - `2-outputs/**` — the artifacts the outputs job scans and prunes.
 
 ## Self-containment status
 
-Clean — no unresolved violations. Every *procedural* dependency is own-folder, multi-skill, or `CLAUDE.md` (allowed schema reference). cleanup reaches no other skill's folder for logic; the cross-folder files it touches are operands it graduates-from or cleans, not instructions it depends on.
+Clean — no unresolved violations. Every procedural dependency is in cleanup's own folder or `multi-skill/`. cleanup reaches no other skill's folder for logic; the cross-folder files it touches are schema or content operands it classifies, graduates into, or cleans.
