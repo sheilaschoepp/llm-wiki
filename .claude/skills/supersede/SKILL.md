@@ -18,7 +18,7 @@ Two terms recur below and refer to distinct things: a **prior-view artifact** is
 - Source-page filenames match the raw source stem exactly; concept/entity/synthesis filenames are kebab-case lowercase. When a supersession also renames a source page (e.g., a legacy kebab-case stem migrating to the raw stem), surface the rename as its own `AskUserQuestion` and cascade the new wikilink to every page that references it.
 - Every wikilink is path-qualified from the repo root, includes `.md`, and uses a pipe-rendered display name: `[[1-wiki/concepts/scaled-dot-product-attention.md|Scaled Dot-Product Attention]]`. Authors: `[[1-wiki/entities/ashish-vaswani.md|Ashish Vaswani]]`. The pipe-rendered display is required on every wikilink; attachment embeds `![[...]]` take the path but no pipe.
 - No bold and no italic in the wiki body. LaTeX math and the bullet markers `*\[unverified\]*` / `*\[tentative\]*` / `*\[disputed — see Contradictions\]*` are the only structural exceptions. Inline backticks for paths and code are fine.
-- Use `AskUserQuestion` for every user-facing decision (each replacement, each cascade marking, each attachment swap). One decision per question call.
+- Use `AskUserQuestion` for every user-facing decision (each replacement, each cascade marking, each attachment swap), batching as far as the decisions allow (`CLAUDE.md` → Workflow Rules): a slate of same-type cascade markings goes out as one `multiSelect` question set with each dependent's rationale in its option `description`; each replacement decision, each attachment swap, and any merge or split are asked on their own, since each carries its own prior view and its own consequence.
 
 ## When To Invoke
 
@@ -63,7 +63,7 @@ Supersede Progress:
    - Pages whose `sources:`, `Connections`, or `Concepts and Entities` sections change.
    - For attachment replacements: which file is being replaced, where the prior file will be preserved (`2-outputs/supersede/preserve/attachments/{stem}/preserve-YYYY-MM-DD-HHMM-{name}.png`), the new extraction parameters, and which other pages embed the file.
 
-4. **Ask every decision via `AskUserQuestion`.** One decision per call, never batched; order the recommended option first and mark it `(Recommended)` in its label (CLAUDE.md → Behavioural defaults). Typical questions:
+4. **Ask every decision via `AskUserQuestion`.** Batch the same-type cascade markings and ask the rest separately (see Conventions); order the recommended option first and mark it `(Recommended)` in its label (CLAUDE.md → Behavioural defaults). Typical questions:
    1. "Apply the replacement on `{target}`?" Options: apply (Recommended) / change-the-new-content / skip / other.
    2. One question per affected dependent page, e.g., "Mark `[[1-wiki/concepts/page.md|page]]` `needs-update` because of the supersession?" Options: mark-needs-update / no-cascade-cosmetic / other.
    3. One question per attachment swap (if any), e.g., "Replace `{file}` with re-extracted version at `{params}`?" Options: replace / keep / other.

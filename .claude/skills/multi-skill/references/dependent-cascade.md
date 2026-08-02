@@ -33,7 +33,7 @@ Verification is claim-level for additions (see `CLAUDE.md` → Page Status). Whe
 
 ## Approval and reciprocity
 
-Each cascade decision is gated per the calling skill's approval rules (`AskUserQuestion`, one decision per call, never batched). The reciprocal edit on the other page is part of the approved action for that decision, not a separate later pass.
+Each cascade decision is gated per the calling skill's approval rules (`AskUserQuestion`, batched as far as the decisions allow — a slate of same-type dependent markings may share one `multiSelect` question set, each dependent's rationale in its option `description`). The reciprocal edit on the other page is part of the approved action for that decision, not a separate later pass.
 
 ## Verifying the cascade landed
 

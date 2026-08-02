@@ -17,7 +17,7 @@ Synthesis turns clusters of supported wiki pages into durable entry points. It i
 - Synthesis page filenames are kebab-case lowercase: `1-wiki/syntheses/{kebab-case-slug}.md`.
 - Every wikilink is path-qualified from the repo root, includes `.md`, and uses a pipe-rendered display name. Example: `[[1-wiki/concepts/scaled-dot-product-attention.md|Scaled Dot-Product Attention]]`. Authors: `[[1-wiki/entities/ashish-vaswani.md|Ashish Vaswani]]`. The pipe-rendered display is required on every wikilink; attachment embeds `![[...]]` take the path but no pipe.
 - No bold and no italic in the wiki body. LaTeX math and the bullet markers `*\[unverified\]*` / `*\[tentative\]*` / `*\[disputed — see Contradictions\]*` are the only structural exceptions. Inline backticks for paths and code are fine.
-- Use `AskUserQuestion` for every user-facing decision: one decision per call, never batched, and each question marks its recommended option `(Recommended)` and orders it first (or states plainly that there is no lean) (CLAUDE.md → Workflow Rules). Step 5 enumerates which decisions.
+- Use `AskUserQuestion` for every user-facing decision, batching as far as the decisions allow (CLAUDE.md → Workflow Rules): same-type include / drop slates (candidate source pages, candidate sections, retrieval tags) go out as `multiSelect` questions with each candidate's rationale in its option `description`; the question of whether to create or update the synthesis at all, each merge decision, and anything needing free-form input are asked on their own. Each question marks its recommended option `(Recommended)` and orders it first (or states plainly that there is no lean). Step 5 enumerates which decisions.
 
 ## When To Invoke
 
@@ -79,7 +79,7 @@ Synthesis Progress:
    - Reopen raw sources if a source page is too thin, the synthesis is high-stakes, or two source pages disagree on the synthesis question — in the disagreement case, confirm the tension is genuine and not an extraction artifact in one page (CLAUDE.md → Known Limitations: a source page can be wrong if its extraction was wrong) before writing it into `Tensions`.
    - Note the `status:` of each supporting page, and treat an `*[unverified]*` claim on an otherwise-`verified` page as draft content (CLAUDE.md → Page Status: verification is claim-level). Drafts are unreviewed (CLAUDE.md draft-exclusion rule), and a synthesis becomes a durable entry point, so it is higher-stakes than a transient query. Two triggers fire the isolated draft-grounding question (Step 5 item 6): more than half the supporting pages are `status: draft` (the "mostly drafts" threshold everywhere it recurs below), or any load-bearing `Answer` clause rests solely on a `draft` or `*[unverified]*` support — a single load-bearing draft counts even when the overall page fraction is under half. Surface whichever trigger fires in the Step 5 context post.
 
-5. **Propose the synthesis plan before writing, then ask every decision via `AskUserQuestion`.** Post a single chat context message first so the user sees the picture, then fire one `AskUserQuestion` per decision (one decision per call, see Conventions).
+5. **Propose the synthesis plan before writing, then ask every decision via `AskUserQuestion`.** Post a single chat context message first so the user sees the picture, then put the decisions to the user, batching the same-type slates and asking the rest separately (see Conventions).
 
    Context post (chat text, no questions yet):
    - Candidate title and reusable question.
