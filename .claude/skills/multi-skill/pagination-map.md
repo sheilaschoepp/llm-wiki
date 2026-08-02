@@ -1,7 +1,7 @@
 ---
 type: lint-data
 purpose: Curated per-raw pagination map for the locator-page lint checks.
-updated: 2026-07-12
+updated: 2026-08-01
 ---
 
 # Pagination map

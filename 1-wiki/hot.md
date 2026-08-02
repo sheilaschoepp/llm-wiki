@@ -1,6 +1,6 @@
 ---
 type: hot
-updated: 2026-06-30
+updated: 2026-07-26
 ---
 
 # Hot
