@@ -163,7 +163,7 @@ Embedding:
 - Use path-qualified Obsidian embed syntax: `![[1-wiki/attachments/{stem}/fig3-layouts.png]]`, where `{stem}` is the source page's stem. The path makes the embed unambiguous regardless of basename reuse elsewhere in the vault.
 - Source pages: any number of image embeds, placed inline in `Evidence` (for figures, tables, or charts that back a claim) or `Method` (for architecture diagrams or methodology figures that explain how the source works). Each embed sits on its own line, set off by a blank quoted line (`>`) both above and below it, so the embed is its own block and never lazy-continues the bullet above or the line below — Obsidian otherwise mis-renders an embed butted directly against surrounding callout content. The embed line is a single space after `>`, no indentation, no leading `- ` dash — neither a Markdown sub-bullet nor an indented code block (four or more spaces after `>` make the line a code block, which renders the raw `![[…]]` text instead of the image). The locator goes on the parent bullet directly above the upper blank line. Example:
   ```markdown
-  > - fig. 4, p. 7: gap between baselines
+  > - [[0-raw/papers/{stem}.pdf#page=7|fig. 4, p. 7]]: gap between baselines
   >
   > ![[1-wiki/attachments/{stem}/gap-chart.png]]
   >
@@ -331,7 +331,7 @@ Evidence pointer formats:
 When an evidence bullet has an embedded image, put the locator on the parent bullet, then a blank quoted line (`>`), then the embed on its own line, then another blank quoted line (`>`) below it. The blank lines above and below set the embed off as its own block so Obsidian renders it correctly — an embed butted directly against the bullet above or the line below mis-renders. The embed line is a single space after `>`, no indentation, no leading `- ` dash, so it is neither a Markdown sub-bullet nor an indented code block (four or more spaces after `>` render the raw `![[…]]` instead of the image):
 
 ```markdown
-> - fig. 4, p. 7: gap between baselines
+> - [[0-raw/papers/{stem}.pdf#page=7|fig. 4, p. 7]]: gap between baselines
 >
 > ![[1-wiki/attachments/{stem}/gap-chart.png]]
 >
