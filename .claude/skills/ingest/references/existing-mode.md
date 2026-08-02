@@ -6,6 +6,7 @@ The always-on checks a reingest runs once Step 1 has detected existing-source mo
 
 ## Contents
 
+- Why A Reingest Still Reads The Whole Raw
 - Confirm The Reason
 - `needs-update` Check
 - `*[tentative]*` Resolution Check
@@ -14,9 +15,21 @@ The always-on checks a reingest runs once Step 1 has detected existing-source mo
 - Depth-Purpose Check
 - Depth Is Never Auto-Instigated
 
+## Why A Reingest Still Reads The Whole Raw
+
+The full re-read is the largest fixed cost in the skill and the standing target of every efficiency proposal, so the reasons it does not move are recorded here rather than re-argued each time.
+
+- **A reingest rewrites the page; it does not patch it.** Whatever is not re-read is carried forward from the existing page — which is LLM-drafted at `status: draft`, explicitly untrusted. A scoped re-read makes the unread portion a summary of a summary, and it degrades again on every later reingest. There is no floor to that.
+- **A targeted read can only confirm the previous pass's model of what mattered.** But the reason is often that the model was wrong — `missed evidence` says so outright — so the material needed sits precisely where a scoped read would not look.
+- **Frames are additive.** Appending a lens obliges writing the newly in-scope content in the same pass, and that content is by definition outside the old frame. A scoped re-read cannot satisfy a widened `frames:`, and a `frames:` value claiming more scope than the body covers fails the Step 8 packet.
+- **Disconfirming evidence is found by reading, not by lookup** (Step 2's critical read). Nothing can be grepped for "what cuts against this source's claim"; a scoped re-read structurally cannot make that pass.
+- **No reason is exempt, including the mechanical-sounding ones.** `schema refresh` fills inserted callouts from the raw where the scope makes that natural, which authors new claims.
+
+The apparent exception — a reingest that authors nothing at all (a pagination-only registration, say) — is a mis-categorization, not a case for a partial read: an operation that writes no claim is not an ingest, and the work belongs to `lint` or `audit`. The one genuine scope reduction is the book range (SKILL.md Step 1), which redefines the read *unit* and then reads that unit in full; it is a statement about the size class of the object, never a licence to skim a paper.
+
 ## Confirm The Reason
 
-Confirm one of: `schema refresh` (to the current source-page template), `missed evidence`, `fuller write-up` (more thorough writing within the existing scope), `contradiction` surfaced by a newer source, `corrected interpretation`, or a concept/entity page that got too source-shaped and needs cleanup. The reason sets what changes on the page — schema-refresh and missed-evidence are high-level; fuller-write-up writes more; contradiction and corrected-interpretation are targeted and scope-limited. It does not change how much is read: every reingest fully re-reads the raw (Step 2) — for a book, its recorded chapter or page range (named in `title:`), re-asked only to change it, per the Step 1 read-range rule. Nor does it by itself turn on the reference-grade deep mode (a separate explicit opt-in; see SKILL.md → Depth). **No reason given → ask; reingest without a reason creates drift.**
+Confirm one of: `schema refresh` (to the current source-page template), `missed evidence`, `fuller write-up` (more thorough writing within the existing scope), `contradiction` surfaced by a newer source, `corrected interpretation`, a concept/entity page that got too source-shaped and needs cleanup, or `attachment add` (a figure-scoped ask like "pull figure 3 into the wiki" against a source page that already exists). The reason sets what changes on the page — schema-refresh and missed-evidence are high-level; fuller-write-up writes more; contradiction and corrected-interpretation are targeted and scope-limited. It does not change how much is read: every reingest fully re-reads the raw (Step 2) — for a book, its recorded chapter or page range (named in `title:`), re-asked only to change it, per the Step 1 read-range rule. Nor does it by itself turn on the reference-grade deep mode (a separate explicit opt-in; see SKILL.md → Depth). **No reason given → ask; reingest without a reason creates drift.**
 
 ## `needs-update` Check
 
@@ -38,7 +51,7 @@ Read the existing page's `frames:` frontmatter. State the chosen outcome and its
 - **append a new lens**: existing bullets stay and the new lens's content is written this pass (the full re-read makes it available).
 - **clear to unscoped** (`frames: []`): existing bullets stay and the page is rewritten to whole-source breadth.
 
-**Scope-widening test:** a change widens scope only when the new `frames:` union admits source material the old union did not (a strict superset). A reword that admits the same material, or appending a lens the body already covers, is not widening — treat it as reuse (no forced body growth, no status change). A genuine widening (an append or clear that admits new material) is substantive. It grows the body to match this pass and resets the page to `status: draft`; a `verified` page resets too, and a later `audit` re-verifies it. A genuine widening also overrides a purely targeted reason: you cannot widen `frames:` while writing only a few bullets. A `frames:` value (including `frames: []`) that claims more scope than the body covers fails the Step 8 faithfulness packet. Reframing only ever adds, then widens the body to match; narrowing (dropping a lens while keeping its content) is not a reingest operation — use `forget` or `supersede`.
+**Scope-widening test:** a change widens scope only when the new `frames:` union admits source material the old union did not (a strict superset). A reword that admits the same material, or appending a lens the body already covers, is not widening — treat it as reuse (no forced body growth, no status change). A genuine widening (an append or clear that admits new material) is substantive. It grows the body to match this pass and resets the page to `status: draft`, stripping `verified_hash:` in the same edit; a `verified` page resets too, and a later `audit` re-verifies it. A genuine widening also overrides a purely targeted reason: you cannot widen `frames:` while writing only a few bullets. A `frames:` value (including `frames: []`) that claims more scope than the body covers fails the Step 8 faithfulness packet. Reframing only ever adds, then widens the body to match; narrowing (dropping a lens while keeping its content) is not a reingest operation — use `forget` or `supersede`.
 
 ## Depth-Purpose Check
 

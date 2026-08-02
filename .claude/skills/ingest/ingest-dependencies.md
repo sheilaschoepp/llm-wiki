@@ -19,9 +19,11 @@ Reference map of every file `ingest` relies on to run, grouped by where the file
 - `references/dependent-cascade.md` — Step 7 `needs-update` cascade mechanics.
 - `references/inbound-reference-discovery.md` — inbound-reference rewrite on a legacy-page rename.
 - `references/quarantine-path-convention.md` — attachment quarantine path rules.
-- `references/relationship-sweep.md` — relationship-sweep catalogue (reached via `references/planning-questions.md`).
+- `references/relationship-sweep.md` — relationship-sweep catalogue, linked directly from SKILL.md Step 3 and gated by `references/planning-questions.md`.
+- `references/self-report.md` — the canonical `## Self-report` rule and format, written at Step 8.
 - `references/verification-neutral-fixes.md` — defines the allowlisted legacy-rename repairs that may re-stamp a verified page.
 - `scripts/body_hash.py` — recomputes `verified_hash:` after an allowlisted legacy-rename repair.
+- `scripts/check_wiki.py` — the Step 8 structural check over the pages this run wrote, filtered from its whole-wiki JSON; the same shared checker `audit`, `lint`, `forget`, `supersede`, and `synthesis` use.
 - `scripts/pagination_map.py` — proposes a pagination map from a PDF's headers and footers and renders both margin crops to verify; ingest runs it at Step 2.
 - `pagination-map.md` — per-raw record of what each physical page prints (curated data). ingest registers a source's entry here at Step 2; `lint` reads it (`locator_page_mismatch`, the anchor-only locator exemption).
 - `multi-skill-memory.md` — cross-skill corrections, read at Step 1.
