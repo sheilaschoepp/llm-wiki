@@ -84,6 +84,33 @@ def lineno(find: dict[str, Any]) -> int:
     return int(m.group(1))
 
 
+class TestInvocationGuard(unittest.TestCase):
+    def test_repo_root_shape_is_rejected_without_findings_json(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo_root = Path(td)
+            (repo_root / '1-wiki').mkdir()
+            (repo_root / '1-wiki' / 'index.md').write_text('# Index\n')
+            proc = subprocess.run(
+                [sys.executable, str(SCRIPT), str(repo_root)],
+                capture_output=True, text=True, check=False)
+
+        self.assertEqual(proc.returncode, 2)
+        self.assertEqual(proc.stdout, '')
+        self.assertIn('expected the 1-wiki directory', proc.stderr)
+
+    def test_minimal_wiki_root_is_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            wiki_root = Path(td) / '1-wiki'
+            wiki_root.mkdir()
+            (wiki_root / 'index.md').write_text('# Index\n')
+            proc = subprocess.run(
+                [sys.executable, str(SCRIPT), str(wiki_root)],
+                capture_output=True, text=True, check=False)
+
+        self.assertNotEqual(proc.returncode, 2)
+        self.assertIsInstance(json.loads(proc.stdout), list)
+
+
 def _write_page(tmp_path: Path, folder: str, name: str, frontmatter: str,
                 body: str) -> Path:
     d = tmp_path / '1-wiki' / folder

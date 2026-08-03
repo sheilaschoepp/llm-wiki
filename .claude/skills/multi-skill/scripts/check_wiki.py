@@ -4033,6 +4033,12 @@ def main() -> int:
     if not wiki_root.exists():
         sys.stderr.write(f"path not found: {wiki_root}\n")
         return 2
+    if (not wiki_root.is_dir() or wiki_root.name != '1-wiki'
+            or not (wiki_root / 'index.md').is_file()):
+        sys.stderr.write(
+            f"invalid wiki root: {wiki_root} "
+            "(expected the 1-wiki directory containing index.md)\n")
+        return 2
 
     findings: list[dict[str, Any]] = []
 
