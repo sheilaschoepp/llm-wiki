@@ -1,4 +1,4 @@
-# Integrating *How to Take Smart Notes* with the Karpathy LLM knowledge base
+# Integrating *How to Take Smart Notes* with the Karpathy LLM wiki
 
 > Foundation document combining **Ahrens's Zettelkasten discipline** (Sönke Ahrens, *How to Take Smart Notes*, 2017) with the **LLM-maintained wiki pattern** (Andrej Karpathy, [LLM Wiki gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f); [Karpathy on X](https://x.com/karpathy/status/2039805659525644595)).
 >
@@ -173,7 +173,7 @@ Tags are **question-derived, not content-derived**. Ahrens (ch. 12) warns that t
 ## 7. Folder layout
 
 ```text
-knowledge-base/
+llm-wiki/
   CLAUDE.md                          # short global rules + pointers to skills
   SCHEMA.md                          # page types, frontmatter, citation rules
   MEMORY.md                          # stable identity / conventions

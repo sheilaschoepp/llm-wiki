@@ -1,4 +1,4 @@
-# Building an LLM knowledge base: best practices
+# Building an LLM wiki: best practices
 
 > Consolidated, de-duplicated synthesis of Karpathy's "LLM Wiki" / "LLM Knowledge Bases" pattern, implementation reports, agent-context guidance, evaluation and governance practices, and the literature on multi-refuter factuality verification. Primary sources are preferred; implementation claims whose verification differs across the supplied reports are labelled conservatively.
 >
@@ -10,7 +10,7 @@
 
 ## Executive summary
 
-An LLM knowledge base is most reliable when it is treated as a **small information system**, not as a prompt and not as an opaque memory product. The stable centre of the design is:
+An LLM wiki is most reliable when it is treated as a **small information system**, not as a prompt and not as an opaque memory product. The stable centre of the design is:
 
 ```text
 immutable sources
@@ -91,7 +91,7 @@ The wiki is therefore **authoritative as a maintained synthesis**, but it is not
 
 ### 2.2 Purpose and scope are part of the architecture
 
-A schema tells the agent *how* to write. It does not tell the agent *why the knowledge base exists*. Add a short `PURPOSE.md` (or `wiki-purpose.md`) containing:
+A schema tells the agent *how* to write. It does not tell the agent *why the wiki exists*. Add a short `PURPOSE.md` (or `wiki-purpose.md`) containing:
 
 - intended audience and decisions the wiki should support;
 - core questions and research themes;
@@ -142,7 +142,7 @@ One dating caveat: the v3 writeup repeatedly dates Karpathy's gist to "2026-02,"
 A hardened but still Markdown-first layout is:
 
 ```text
-knowledge-base/
+llm-wiki/
   README.md                   # how to use and recover the system
   PURPOSE.md                  # audience, questions, exclusions, success criteria
   GOVERNANCE.md               # roles, review rules, privacy, deletion, external imports
@@ -361,7 +361,7 @@ query: <question>
 - identify the likely page types and retrieve a small candidate set
 - answer from active wiki pages first
 - inspect cited source passages when the claim is uncertain, volatile, high-stakes, or disputed
-- do not answer from model memory when the knowledge base is intended to be authoritative
+- do not answer from model memory when the wiki is intended to be authoritative
 - cite the exact wiki pages and source locators used
 - exclude draft, rejected, and unresolved-review pages by default
 - state missing evidence, contradictions, and the date scope of the answer
@@ -492,7 +492,7 @@ A **refuter** is an agent assigned to challenge a specific claim and determine w
 - a fact checker retrieves external evidence;
 - an adjudicator decides which objections justify a change.
 
-For an LLM knowledge base, the refuter should have a narrow contract: **assess an atomic claim against identified evidence and return a structured verdict**. It should not silently rewrite the page, and it should be allowed to report `no valid refutation found`.
+For an LLM wiki, the refuter should have a narrow contract: **assess an atomic claim against identified evidence and return a structured verdict**. It should not silently rewrite the page, and it should be allowed to report `no valid refutation found`.
 
 ### 12.2 What the literature supports
 
@@ -664,7 +664,7 @@ After a correction is drafted, re-run a concise check against the accepted evide
 
 Save the claim, evidence pack, refuter outputs, adjudication, revision diff, model/tool versions, cost, and final status under `review/refutations/` or as a structured report. The audit record is not ordinary wiki content; it is the evidence for why the active page changed.
 
-### 12.6 Where the refuter layer belongs in the knowledge-base lifecycle
+### 12.6 Where the refuter layer belongs in the wiki lifecycle
 
 | Lifecycle point | What to verify | Default policy |
 |---|---|---|
@@ -709,7 +709,7 @@ A wiki that "feels useful" can still be drifting. Evaluation should separate **s
 
 ### 13.1 Build a fixed evaluation set
 
-Maintain a versioned set of questions and claim checks representing the work the knowledge base must support:
+Maintain a versioned set of questions and claim checks representing the work the wiki must support:
 
 ```yaml
 - id: q-001
@@ -905,7 +905,7 @@ Add a takedown/deletion workflow and avoid assuming that an exported wiki may in
 
 ### 14.5 Memory poisoning and untrusted imports
 
-A persistent knowledge base creates a temporal security risk: malicious or simply wrong content can be written now and activated in a later, unrelated query. Treat external compiled wikis, agent memories, session histories, web captures, and shared bundles as untrusted inputs.
+A persistent wiki creates a temporal security risk: malicious or simply wrong content can be written now and activated in a later, unrelated query. Treat external compiled wikis, agent memories, session histories, web captures, and shared bundles as untrusted inputs.
 
 Controls include:
 
