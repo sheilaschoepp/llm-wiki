@@ -2,25 +2,32 @@
 
 Write to `2-outputs/skill-llm-council/skill-llm-council-YYYY-MM-DD-HHMM-{skill-name}.md`, following the timestamp and same-minute-suffix rule in SKILL.md Step 7 (not restated here); `{skill-name}` is the target skill's folder name.
 
-The report is the audit trail: it must let someone reconstruct the whole deliberation and check every applied edit. Paths in the report are repo-relative (start with `./`). Keep the agent responses verbatim enough to be inspectable — summarize only the parts that were redundant.
+The report is the audit trail. Render the shared body and exactly one mode ending; never emit solve-only candidate, edit, or proposal headings in evaluate. Paths are repo-relative. Keep responses inspectable and bind every item to the recorded snapshot.
 
 ```markdown
 ---
 type: skill-llm-council
 date: {YYYY-MM-DD}
+mode: {evaluate | solve}
+result: {evaluated-clean | evaluated-findings | solved-applied | solved-proposals | solved-demoted | solved-no-survivor | blocked | incomplete}
 target: "{skill-name}"
 target_path: "./.claude/skills/{skill-name}/"
-applied: {N}
-cross_file_proposals: {N}
+snapshot_id: "{manifest hash}"
+baseline_commit: "{commit}"
+dirty_paths: {N}
+drift: {none | detected}
+{solve only: applied: N}
+{solve only: cross_file_proposals: N}
 ---
 
 # Skill LLM council: {skill-name}
 
 Path: `./.claude/skills/{skill-name}/`
 Run: {YYYY-MM-DD HH:MM}
-Outcome: {N edits applied}, {N cross-file proposals}, {one-line headline}
+Mode/result: {mode} / {result}
+Outcome: {one-line headline; include edit/proposal tallies only in solve}
 Value over the skill-linter baseline: {what this council caught that the deterministic scripts + best-practices checklist pass would have missed — the reason the ~22-call spend was worth it this run; if little beyond the cheap pass, say so plainly}
-Churn vs prior run: {if a prior report for this skill exists, how this run's applied set differs from it — repeated churn on the same lines is a signal the councils are oscillating rather than converging; "no prior run" otherwise}
+Churn vs prior run: {evaluate: how the finding set changed; solve: how the applied candidate set changed; "no prior run" otherwise}
 
 ## Task brief
 
@@ -32,18 +39,18 @@ Related context: {which related skills and repo files the councils were given, a
 
 ### Step 2 responses
 Independence: confirm the five Step-2 calls were issued in parallel in a single message (the launch that keeps the reads independent); note any that were not.
-Ground check: {every finding dropped for a failed or missing ground line — quote the finding's own claim as the reviewer wrote it, then its ground line, then how it failed: quote not found in the file, claimed-absent string actually present, or no ground line returned. Name any edits dropped with it. "None dropped" when every finding grounded. Quote the claim, not only the ground line: the check is unbenchmarked, so a false drop is discoverable only from what this record preserved.}
-Ungroundable: {each finding a reviewer returned as `ground: ungroundable`, with its reason — carried flagged, never the sole support for a load-bearing edit. "None" when there were none.}
-{Each role's FINDINGS / PROPOSED EDITS / CONFIDENCE / DO-NOT-IGNORE, one block per role, verbatim — a ground-dropped finding stays in place marked `[dropped: ground]` rather than being cut, so the block is still the response the agent actually returned.}
+Ground check: {every finding or candidate dropped for failed/missing ground, with its original claim and ground; "None dropped" when clean.}
+Ungroundable: {each flagged finding or candidate and its reason; never sole support for a load-bearing candidate. "None" when absent.}
+{Each role's mode-specific response, one block per role, with ground-dropped items marked rather than cut. Evaluate contains FINDINGS only; solve contains implementation-complete IDEAS.}
 
 ### Anonymization
 {A–E → role mapping for this council.}
 
-### Step 3 peer reviews
-{Each reviewer's four answers.}
+### Step 3 fresh reviews
+{Evaluate: each findings peer review. Solve: frozen candidate ledger plus each evaluator's per-C_ID verdicts and panel/candidate coverage.}
 
 ### Step 4 chair synthesis
-{The consolidated change-set, agreements, clashes (tension vs error catch), strongest dissent, what peer review surfaced, uncertainty, confidence.}
+{Evaluate: consolidated assessment only. Solve: exact selected/rejected C_IDs. Then agreements, clashes, dissent, peer/evaluator-only signal, uncertainty, confidence.}
 
 ## Council 2 — skill specialists
 
@@ -51,11 +58,25 @@ Ungroundable: {each finding a reviewer returned as `ground: ungroundable`, with 
 
 ## Step 5 — meta-chair reconciliation
 
-{The final change-set as an ordered list: file, anchor, change, scope, rationale. Note where the two councils agreed, where one council carried a change alone, and how each conflict was resolved. Preserve dissent.}
+{Evaluate: final findings, grounds, severity, confidence, and dissent only. Solve: selected exact C_IDs with P_ID, snapshot, implementation, scope, chair trace, evaluator coverage, and conflicts.}
+
+## Evaluate ending — render only when `mode: evaluate`
+
+### Consolidated assessment
+
+{Grounded findings by severity; ground-check dispositions; uncertainty; preserved dissent. No target-improvement ideas, replacement wording, candidates, proposed edits, change-set, needs-review proposals, cross-file proposals, or memory recommendations.}
+
+Zero-write attestation: target unchanged; memory unchanged; no proposal/change-set artifacts emitted. Report drift against the captured snapshot, if any.
+
+## Solve ending — render only when `mode: solve`
+
+### Problem manifest and frozen candidates
+
+{Every P_ID; every frozen C_ID and snapshot; material-difference check; evaluator panel quorum; per-candidate HOLD/REFUTE/ABSTAIN coverage; chair/meta-chair disposition; no-survivor reason when applicable.}
 
 ## Completed changes
 
-Adversarial verification (load-bearing edits): {per edit, BOTH verdicts — locator: holds/refuted, entailment: holds/refuted — each with its one-line ground-truth reason. Name which lens refuted when one did: a locator refutation means the council misquoted its ground, an entailment refutation means it quoted correctly and inferred wrongly, and the two call for different follow-up. Note any refutation discarded because its returned quote failed the re-grep, any third refuter spent with the escalation trigger that justified it, and every authorized repair with its fresh verdicts and terminal disposition. Refuted in-folder edits were demoted to `[needs-review]` proposals in the section below.}
+Adversarial verification (load-bearing edits): {per exact C_ID edit, BOTH verdicts — locator and entailment — with verified evidence. Name the refuting lens. Refuted candidates are terminal for this run and appear under Needs-review; no repair path.}
 
 Applied in-folder, smallest reasonable edit each:
 
@@ -86,9 +107,9 @@ Not applied — these touch shared files. Act on them by hand if you agree.
 ## Notes
 
 - If a council ran with fewer than five advisors (a failed subagent that could not be re-run), say so in that council's section and note how it affected confidence.
-- The report does not carry a machine-readable `result:` gate field — nothing downstream consumes it.
+- The report always carries `mode:` and `result:`. Use `solved-proposals` when only cross-file candidates survive, `solved-demoted` when candidates reached verification but none held, and `solved-no-survivor` when none survived generation, eligibility, or coherence. In evaluate, omit every solve-only heading and frontmatter field; do not render empty placeholders.
 - This is a skill-facing operation: no `1-wiki/log.md` entry.
 
 ## Self-report
 
-- A specific limitation that bit the council process *this run* — the two councils converged so the split under-earned its cost, the refuters over- or under-fired, an applied edit needed rework a later pass caught, a role that added no signal — paired with how the `skill-llm-council` skill should be upgraded. `none noted this run` when the process ran cleanly. (Per `.claude/skills/multi-skill/references/self-report.md`; this is the council's report on *itself*, distinct from its findings about the target skill and from the revisit-trigger memory note.)
+- Follow `.claude/skills/multi-skill/references/self-report.md` in both modes. This process-governance section is distinct from evaluate's target assessment and does not license target-improvement ideas or writes. Use `none noted this run` only when the process genuinely ran cleanly.
