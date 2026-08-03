@@ -2627,8 +2627,8 @@ class UnknownSourceTypeTests(unittest.TestCase):
         self.assertIn('method', so['message'])
 
     def test_missing_type_on_source_page_is_flagged(self) -> None:
-        # type: absent entirely -> kind == '' -> also caught (not treated as an
-        # out-of-scope non-page file, because it lives under sources/).
+        # No `type:` field at all -> kind == '' -> also caught (not treated as
+        # an out-of-scope non-page file, because it lives under sources/).
         fm = (
             'title: "X"\nfile: "[[0-raw/books/X.pdf]]"\nattachments: []\n'
             'tags: []\nframes: []\ncreated: 2026-01-01\nupdated: 2026-01-01\n'
