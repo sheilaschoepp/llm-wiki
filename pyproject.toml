@@ -29,12 +29,3 @@ quote-style = "single"
 # so a ruff upgrade cannot silently widen the set. E4 import, E5 line
 # length, E7 statement, E9 syntax/IO; F pyflakes.
 select = ["E4", "E501", "E7", "E9", "F"]
-
-[tool.black]
-line-length = 79
-target-version = ["py312"]
-# Black is not run here; ruff format is the formatter. Black is pinned
-# only so that if it is ever run it stays harmless:
-# skip-string-normalization keeps it from converting the single quotes
-# to double.
-skip-string-normalization = true

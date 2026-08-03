@@ -5,9 +5,8 @@
 # standard-library only, so no test framework is needed. The ingest skill's
 # figure extraction needs three runtime tools: PyMuPDF (pip) plus ImageMagick
 # and Poppler (conda-forge, providing `magick`, `pdftoppm`, and `pdfimages`).
-# black and ruff are the formatter and linter; both read their settings
-# from pyproject.toml, which pins the single-quote, 79-column house
-# style.
+# ruff is both the formatter and the linter; it reads its settings from
+# pyproject.toml, which pins the single-quote, 79-column house style.
 #
 # Usage:
 #   bash setup.sh
@@ -49,14 +48,13 @@ pip install \
     'PyMuPDF>=1.28.0'
 
 # Formatter and linter for the skill scripts. Installed into the env
-# rather than relied on globally: a global ruff or black sees no
-# pyproject.toml and falls back to double quotes, silently reformatting
-# the scripts away from the house style. Both read their settings from
-# pyproject.toml at the repo root.
-echo 'Installing ruff and black (formatter and linter).'
+# rather than relied on globally: a global ruff sees no pyproject.toml
+# and falls back to double quotes, silently reformatting the scripts
+# away from the house style. It reads its settings from pyproject.toml
+# at the repo root.
+echo 'Installing ruff (formatter and linter).'
 pip install \
-    'ruff>=0.15' \
-    'black>=26.5'
+    'ruff>=0.15'
 
 echo ''
 echo "Done. Activate the env with: conda activate ${ENV_NAME}"
