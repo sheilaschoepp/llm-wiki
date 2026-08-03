@@ -61,7 +61,8 @@ def recover_time(entry_text: str, entry_date: str) -> str | None:
 
 def sort_log(path: Path) -> str:
     """Return the sorted text of log.md, or raise ValueError if an entry is
-    untimed. Preamble (everything before the first dated header) is preserved."""
+    untimed. Preamble (everything before the first dated header) is preserved.
+    """
     lines = path.read_text(encoding='utf-8').split('\n')
     first = next(
         (i for i, l in enumerate(lines) if LOG_HEADER_RE.match(l)), None
@@ -122,7 +123,8 @@ def sort_hot(path: Path) -> str:
     or raise ValueError if an entry is untimed. Mirrors sort_log so no content is
     dropped: a non-entry line before the first dated bullet (a placeholder, a parked
     note) stays as a preamble, and lines following a bullet (a sub-bullet, a wrapped
-    continuation) move with it as its body. Every other section is preserved verbatim."""
+    continuation) move with it as its body. Every other section is preserved verbatim.
+    """
     lines = path.read_text(encoding='utf-8').split('\n')
     try:
         start = next(

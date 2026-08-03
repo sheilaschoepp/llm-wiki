@@ -123,7 +123,8 @@ def embed_findings(body: str, end: int = 0):
 
 def fix_embeds(body: str) -> str:
     """The documented auto-fix: insert a blank `>` line above and below each
-    standalone embed line on whichever side is missing (mirrors the fix_hint)."""
+    standalone embed line on whichever side is missing (mirrors the fix_hint).
+    """
     lines = body.split('\n')
     out: list[str] = []
     n = len(lines)

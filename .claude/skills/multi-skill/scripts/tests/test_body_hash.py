@@ -104,7 +104,8 @@ class TestBodyHash(unittest.TestCase):
 
     def test_mask_is_line_scoped_continuation_still_counts(self) -> None:
         """Only the marker-bearing line is dropped; a continuation line still counts,
-        so two pages differing only on a marked claim's continuation hash differently."""
+        so two pages differing only on a marked claim's continuation hash differently.
+        """
         a = FM + '# T\n\n- claim *[unverified]*\n  continuation alpha\n'
         b = FM + '# T\n\n- claim *[unverified]*\n  continuation beta\n'
         assert bh.body_hash(path=self.write(a)) != bh.body_hash(
@@ -118,7 +119,8 @@ class TestBodyHash(unittest.TestCase):
     def test_marker_inside_inline_code_is_not_masked(self) -> None:
         """A `*[unverified]*` MENTION inside inline code is documentation, not a
         pending claim, so the line's real content still counts toward the hash
-        (mirrors check_wiki.py, which counts markers only outside code spans)."""
+        (mirrors check_wiki.py, which counts markers only outside code spans).
+        """
         a = (
             FM
             + '# T\n\n- the `*[unverified]*` marker means pending -- alpha\n'

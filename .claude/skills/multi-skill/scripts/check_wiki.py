@@ -394,7 +394,8 @@ BLOCK_ID_OVERRIDES = {
 
 def expected_block_id(slug: str) -> str:
     """The block ID a `[!{slug}]` callout must carry (CLAUDE.md -> Callout Block
-    IDs): the type slug, unless the type is abbreviated below its display title."""
+    IDs): the type slug, unless the type is abbreviated below its display title.
+    """
     return BLOCK_ID_OVERRIDES.get(slug, slug)
 
 
