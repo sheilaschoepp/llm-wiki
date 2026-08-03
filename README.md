@@ -1,8 +1,8 @@
 # llm-wiki
 
-A personal knowledge base that an AI agent builds and maintains for you, following a fixed set of rules. Built for academic research, but the rules are general.
+A personal wiki that an AI agent builds and maintains for you, following a fixed set of rules. Built for academic research, but the rules are general.
 
-The design blends two ideas. From Andrej Karpathy's LLM knowledge base sketch it takes a three-part split: your original sources stay untouched, the agent writes and maintains a wiki of notes about them, and a rulebook tells the agent how to behave. From Sönke Ahrens' smart-note method it takes the note-writing discipline: each note captures one reusable idea, stays tied to its source, and links to related notes. It is packaged as a set of [Claude Code](https://docs.claude.com/en/docs/claude-code/overview) commands ("skills") that read, write, and check a local [Obsidian](https://obsidian.md) vault — a plain folder of markdown files.
+The design blends two ideas. From Andrej Karpathy's LLM wiki sketch it takes a three-part split: your original sources stay untouched, the agent writes and maintains a wiki of notes about them, and a rulebook tells the agent how to behave. From Sönke Ahrens' smart-note method it takes the note-writing discipline: each note captures one reusable idea, stays tied to its source, and links to related notes. It is packaged as a set of [Claude Code](https://docs.claude.com/en/docs/claude-code/overview) commands ("skills") that read, write, and check a local [Obsidian](https://obsidian.md) vault — a plain folder of markdown files.
 
 ## What this is
 
@@ -162,7 +162,7 @@ The rulebook and skills draw on four primary sources, plus a small set of indepe
 
 **Primary sources.**
 
-- **Andrej Karpathy.** *LLM knowledge base* (gist), [https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f). The three-part split — untouched sources, an agent-maintained wiki, and a rulebook that drives the agent — and the idea of treating Obsidian as the workspace and the wiki as something the agent keeps re-building from your sources.
+- **Andrej Karpathy.** *LLM wiki* (gist), [https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f). The three-part split — untouched sources, an agent-maintained wiki, and a rulebook that drives the agent — and the idea of treating Obsidian as the workspace and the wiki as something the agent keeps re-building from your sources.
 - **Sönke Ahrens.** *How to Take Smart Notes: One Simple Technique to Boost Writing, Learning and Thinking — for Students, Academics and Nonfiction Book Writers*. CreateSpace, 2017. ISBN 978-1542866507. The note-writing discipline: one idea per note, every claim tied to a source, notes linked to each other, and a clean split between notes *about a source* (here, source pages) and notes *about an idea* (here, concept and entity pages).
 - **Anthropic.** *Skill authoring best practices*, [https://docs.claude.com/en/docs/agents-and-tools/agent-skills/best-practices](https://docs.claude.com/en/docs/agents-and-tools/agent-skills/best-practices). How to write good agent skills — keep them short, reveal detail only as it's needed, and avoid both time-sensitive notes and unexplained magic numbers. The internal `skill-linter` skill checks skills against this guidance.
 - **Wikipedia.** *Signs of AI writing*, [https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing). The catalogue of tells that give away AI-written text — overused buzzwords, empty significance-puffing, vague hedging — collected into `a-archive/style/ai-writing-tells.md` and checked across the repo: `lint` and `consistency` scan for them, `skill-linter` checks skill text, and `ingest`'s verification keeps them out of the wiki.

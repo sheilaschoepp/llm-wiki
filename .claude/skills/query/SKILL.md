@@ -1,6 +1,6 @@
 ---
 name: query
-description: Answer a research question from the LLM knowledge base. Read hot.md, index.md, relevant concept/entity pages, synthesis pages, and source pages as needed; save every answer to 2-outputs/query/query-YYYY-MM-DD-HHMM-{topic}.md. Use when the user asks a specific question the wiki should answer — what the wiki says about a topic, which sources support a claim, whether a claim is true or has evidence, what the wiki's position is on a debate, or asks to back up or confirm a claim against the wiki — and wants a source-grounded answer. Not for a broad lay-of-the-land overview with no specific question (use brief), naming 2-4 pages for a side-by-side (use compare), a durable cross-source argument (use synthesis), whole-wiki direction or blind spots (use reflect), or processing a named raw source (use ingest). Ask before using synthesis to promote reusable answers or updating concept/entity pages.
+description: Answer a research question from the LLM wiki. Read hot.md, index.md, relevant concept/entity pages, synthesis pages, and source pages as needed; save every answer to 2-outputs/query/query-YYYY-MM-DD-HHMM-{topic}.md. Use when the user asks a specific question the wiki should answer — what the wiki says about a topic, which sources support a claim, whether a claim is true or has evidence, what the wiki's position is on a debate, or asks to back up or confirm a claim against the wiki — and wants a source-grounded answer. Not for a broad lay-of-the-land overview with no specific question (use brief), naming 2-4 pages for a side-by-side (use compare), a durable cross-source argument (use synthesis), whole-wiki direction or blind spots (use reflect), or processing a named raw source (use ingest). Ask before using synthesis to promote reusable answers or updating concept/entity pages.
 ---
 
 # query
@@ -9,7 +9,7 @@ Answer from the wiki first, then reopen source pages or raw sources only when ne
 
 ## Purpose
 
-Queries turn the knowledge base into an answer. They do not silently change the wiki. Every query output is saved, and durable integrations require user approval.
+Queries turn the wiki into an answer. They do not silently change the wiki. Every query output is saved, and durable integrations require user approval.
 
 The skill runs read → answer → verify → propose → apply → bookkeep: read the wiki (and raw sources when needed), synthesize and save the query output, verify it with two independent packets, surface durable integrations as a proposal, apply only what the user approves, then do hot/log bookkeeping. The no-silent-edit rule keeps the wiki safe even before promotion; the verification packets keep the saved query output faithful, because query outputs get read and reused without anyone re-checking them against the wiki.
 

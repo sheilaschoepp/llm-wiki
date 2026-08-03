@@ -1,6 +1,6 @@
 ---
 name: checkup
-description: "Autonomously run the knowledge base's full check chain in one invocation — consistency, then lint, then audit, then a confirming lint, in the order that satisfies audit's preconditions. Each sub-skill self-converges: consistency and lint loop until clean, and audit fact-checks claims against their raw sources, sets status, and carries out content fixes. Checkup runs unattended, asks nothing mid-chain, and surfaces the decisions it cannot make autonomously — root-level proposals, committing, new pages — as AskUserQuestion prompts. It never edits CLAUDE.md, skill files, or scripts. Use to check the whole wiki at once — before high-stakes synthesis, paper drafting, or major reference work, or as a periodic health check. Also use when the user asks to run all the checks, do a full check, health-check the wiki, check if the wiki is healthy or ready, or run consistency, lint, and audit together. Not for a single layer — for one, use consistency, lint, or audit; not for pruning outputs/memory — use cleanup."
+description: "Autonomously run the wiki's full check chain in one invocation — consistency, then lint, then audit, then a confirming lint, in the order that satisfies audit's preconditions. Each sub-skill self-converges: consistency and lint loop until clean, and audit fact-checks claims against their raw sources, sets status, and carries out content fixes. Checkup runs unattended, asks nothing mid-chain, and surfaces the decisions it cannot make autonomously — root-level proposals, committing, new pages — as AskUserQuestion prompts. It never edits CLAUDE.md, skill files, or scripts. Use to check the whole wiki at once — before high-stakes synthesis, paper drafting, or major reference work, or as a periodic health check. Also use when the user asks to run all the checks, do a full check, health-check the wiki, check if the wiki is healthy or ready, or run consistency, lint, and audit together. Not for a single layer — for one, use consistency, lint, or audit; not for pruning outputs/memory — use cleanup."
 ---
 
 # checkup
@@ -9,7 +9,7 @@ Run the three review skills back to back, autonomously, in one invocation.
 
 ## Purpose
 
-`audit` has two preconditions: a clean `consistency` report (project-level schema and skill drift cleared) and a clean `lint` report (page-level structural drift cleared). Those preconditions force only that **audit runs last** — audit gates on the two reports independently, not on their relative order. Checkup runs consistency before lint because consistency's project-level fixes (stale wiki-page section names, index drift) feed what lint then checks — and because consistency can itself edit wiki pages, whose log entry would make a prior lint stale under audit's Step-1 recency gate, so consistency-first is correctness-preserving, not only churn-reducing. One invocation takes the knowledge base from unchecked toward fully reviewed and fixed — a clean full pass is the good case, not a guarantee: consistency may end `findings`/`blocked` or lint `blocking`, in which case audit is skipped (Step 3).
+`audit` has two preconditions: a clean `consistency` report (project-level schema and skill drift cleared) and a clean `lint` report (page-level structural drift cleared). Those preconditions force only that **audit runs last** — audit gates on the two reports independently, not on their relative order. Checkup runs consistency before lint because consistency's project-level fixes (stale wiki-page section names, index drift) feed what lint then checks — and because consistency can itself edit wiki pages, whose log entry would make a prior lint stale under audit's Step-1 recency gate, so consistency-first is correctness-preserving, not only churn-reducing. One invocation takes the wiki from unchecked toward fully reviewed and fixed — a clean full pass is the good case, not a guarantee: consistency may end `findings`/`blocked` or lint `blocking`, in which case audit is skipped (Step 3).
 
 ## Autonomous Operation
 
@@ -27,7 +27,7 @@ A checkup run ends with the wiki itself fixed (pages corrected, content restruct
 
 - Before high-stakes work — synthesis, paper drafting, major reference work.
 - After a batch of ingest operations (any mode), or a schema or skill change, when both the project layer and the page layer may have drifted.
-- As a periodic health check of the whole knowledge base.
+- As a periodic health check of the whole wiki.
 - When the user asks to run all the checks, do a full check, or run consistency, lint, and audit together.
 
 ## When Not To Invoke
