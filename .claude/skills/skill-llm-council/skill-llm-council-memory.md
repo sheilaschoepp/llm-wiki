@@ -1,7 +1,7 @@
 ---
 type: memory
 skill: skill-llm-council
-updated: 2026-07-14
+updated: 2026-08-03
 ---
 
 # Skill-llm-council memory
@@ -11,4 +11,3 @@ Corrections, rewrites, and scope adjustments specific to the `skill-llm-council`
 Cross-skill rules live in `.claude/skills/multi-skill/multi-skill-memory.md` — read that file too.
 
 Newest entry on top, one entry per heading.
-

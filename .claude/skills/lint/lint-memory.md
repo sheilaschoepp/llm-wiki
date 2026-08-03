@@ -1,7 +1,7 @@
 ---
 type: memory
 skill: lint
-updated: 2026-07-05
+updated: 2026-08-03
 ---
 
 # Lint memory
