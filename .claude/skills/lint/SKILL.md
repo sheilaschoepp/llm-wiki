@@ -54,7 +54,9 @@ python3 .claude/skills/multi-skill/scripts/check_wiki.py "1-wiki"
 
 Parse the JSON findings. Guard the parse: `check_wiki.py` prints its findings JSON only on a run that ran to completion, so **empty or unparseable stdout is not "zero findings" — it is a run that could not complete.** A wrong or missing wiki path exits 2, and a crashed check aborts the battery with a traceback on stderr; both print nothing to stdout, whereas a genuinely clean wiki prints `[]` (non-empty and parseable). The exit code alone does not distinguish these — a crashed check exits 1, the same as a normal blocking run — so key on the stdout: if it is empty or does not parse as a JSON array, stop and write the report with `result: blocking` naming the failure, rather than letting it fall through to Step 4's `audit_blocking` count (which would read zero findings and certify an un-run or crashed wiki to `audit` as clean). This mirrors the empty-stdout guard `consistency` already applies to its own gate. Retain this completed pre-fix pass as the pinned snapshot both baselines are read from — its `verified_hash_mismatch` finding set (the hash baseline, used in Step 2) and its full multiset of `(severity, check_id, file, message)` fingerprints (the regression baseline, diffed in the Step 3 loop) — before applying any Step 3 fix, because a fix mutates both sets and neither can be re-derived afterward.
 
-2. **Walk only the checks the script can't do.** The script's execution roster is the `CHECKS` registry printed by `python3 .claude/skills/multi-skill/scripts/check_wiki.py --list-checks`; a normal completed run prints findings only, so an absent `check_id` means that check found nothing, not that it did not run. Before the manual walk, confirm the **Script-emitted** IDs and severity subsections in `references/checks.md` match that registry exactly. A mismatch is catalogue drift: stop and report it instead of guessing which copy is current.
+2. **Walk only the checks the script can't do.** The script's execution roster is the `CHECKS` registry printed by `python3 .claude/skills/multi-skill/scripts/check_wiki.py --list-checks`; a normal completed run prints findings only, so an absent `check_id` means that check found nothing, not that it did not run. Before the manual walk, run `python3 .claude/skills/lint/scripts/check_catalogue.py`. A clean, completed comparison prints `[]` and exits 0. JSON drift findings exit 1; invocation or parse failure prints to stderr with empty stdout and exits 2. Either non-clean result is catalogue drift: stop and report it instead of guessing which copy is current.
+
+Run the trigger-independent protected-interval positive-lookahead census in `references/unlinked-mentions.md`. Freeze every declared stem-display, literal scalar title, alias, ASCII-space/hyphen literal, and non-self host-target-literal obligation, including zero-result terminals. Search original unmasked body text with one captured positive-lookahead pass per literal so overlapping occurrences remain visible; reject every span intersecting the authoritative protected-interval ledger so blanked masks cannot synthesize candidates. Keep body start:end as the semantic/replay identity and compute physical anchors with `file_line = frontmatter_end + 1 + body_line` and `file_column = body_column`. Separately run the unmodified native checker and exact replay in one unchanged Python process. Every replay row maps to one semantic row, a proven fenced-code shared-only row, or a proven native-mask-artifact shared-only row; shared-only rows count once toward native `N` and never become semantic candidates. Completion requires terminal positive-lookahead obligations and pinned/native/replay union groups, complete mixed provenance, exact anchors, count-once equality, unchanged frozen bytes, and zero pending, failed, duplicate, protected, shadowed, or unexplained evidence. Neither procedure mutates prose, links, hyphenation, titles, aliases, ignore data, checker code, or frozen inputs.
 
    Run every item under `references/checks.md` → **LLM-walk** exactly once. That subsection is the sole manual roster and carries each check's operational exceptions and report severity. Do not manually repeat any registry-listed check.
 
@@ -111,6 +113,34 @@ info: N
 ## Info
 - ... (includes user-owned findings lint and audit do not auto-fix: `filename_not_kebab`, `source_stem_mismatch`, `bare_basename_link`)
 
+## Unlinked-Mention Origins and Literals
+- Origin: `origin ID | target path | stem-display|title|alias-N | canonical form`
+- Literal: `literal ID | target path | literal text | complete origin ID:exact|separator-derived relation set`
+- Relation reconciliation: origins N; literals N; mixed-relation literals N; missing N; extra N.
+- Blank exclusions: origins N; literals N; unrecorded N; blank frozen IDs 0.
+
+## Unlinked-Mention Positive-Lookahead Obligations
+- `semantic obligation ID | host path | target path | literal ID | literal text | complete origin relation set | completed|pending|failed | semantic row IDs | verified-ignore source lines/spans | failure`
+- Execution: planned N = completed N; zero-result terminals N; pending N; failed N; shadowed occurrences 0.
+
+## Unlinked-Mention Protected Intervals
+- `protected interval ID | host path | body start:end | fenced-code|inline-code|wikilink-or-embed|ascii-double-quote|H1`
+- Protected overlaps rejected N; semantic overlap rows 0; malformed-fence limits N.
+- Semantic ignore: parsed N; malformed/skipped N; accepted phrase spans N; protected phrase spans rejected N; suppressing lines/spans N.
+
+## Unlinked-Mention Semantic Occurrences
+- `semantic row ID | semantic obligation IDs | complete origin relation set | body start:end | body_line:body_column | file:line:column | matched text | target path | normal|hyphen-boundary | full original file line | genuine-reference|generic-wording|uncertain`
+- Coordinate rule: `file_line = frontmatter_end + 1 + body_line`; `file_column = body_column`; anchor mismatches N.
+- Rows N = genuine-reference N + generic-wording N + uncertain N; duplicate keys N; pending N; shadowed N.
+
+## Unlinked-Mention Native Replay and Union Aggregates
+- Replay: `shared replay ID | host path | target stem | final target path | body start:end | body_line:body_column | file:line:column | matched replay text | winning form | qualifying final-target semantic origin/literal/obligation IDs|none | semantic row ID|shared-only reason`
+- Mapping: semantic N; shared-only:fenced-code N; shared-only:native-mask-artifact N; unproven shared-only N; multiply proven shared-only N; ungrounded fence-only N; unmapped N; multiply mapped N; anchor mismatches N.
+- Aggregate: `aggregate ID | host path | target stem | final target path | pinned N|missing | paired-native N|missing | replay M|missing | replay row IDs | semantic row IDs | shared-only row IDs | completed|failed | failure`
+- Reconciliation: union groups N; completed N; failed N; every replay row counted once; frozen bytes unchanged yes|no.
+- Occurrence expansion: complete|incomplete.
+- Coverage: declared forms and ASCII space/hyphen variants under authoritative protected intervals and documented boundaries. Native replay is reconciliation evidence only; undeclared near aliases, malformed syntax, and grammatical meaning remain outside deterministic coverage.
+
 ## Self-report
 - {a specific limitation that bit lint this run — a check it lacked, a false positive/negative it produced, a fix it couldn't safely apply} → upgrade: {how the lint skill should change} (or the single line: none noted this run; per `.claude/skills/multi-skill/references/self-report.md`)
 ```
@@ -145,6 +175,8 @@ It prints its own JSON findings (`check_id: cited_figure_off_page`, severity `wa
 ## Tests
 
 The scripts require Python 3.10+ (they use `X | None` unions and built-in generics); the test suite uses Python's stdlib `unittest` (no extra dependency).
+
+Regression tests for `check_catalogue.py` live in `.claude/skills/lint/scripts/tests/test_check_catalogue.py`; they pin current parity, severity drift, duplicate rejection, and operational failure. Run them with `pytest .claude/skills/lint/scripts/tests/test_check_catalogue.py -q` after changing the registry or catalogue gate.
 
 Regression tests for `check_wiki.py` live in `.claude/skills/multi-skill/scripts/tests/test_check_wiki.py` — they pin the `CHECKS` registry, the auto-fix transforms (callout block IDs, citation bracket style, embed isolation, pipe spacing), and the specific bug classes each check guards. Regression tests for `body_hash.py` live in `.claude/skills/multi-skill/scripts/tests/test_body_hash.py` — they pin the `*[unverified]*` line-masking and the malformed-frontmatter error behaviour the verified-hash sweep depends on. Tests for the opt-in `cited_figure_check.py` backstop live in `.claude/skills/multi-skill/scripts/tests/test_cited_figure_check.py` — they pin its figure/deep-link parsing, the version-string and bare-integer exclusions, and `check_page` over a fake page-text cache (no PDF opened). After changing `check_wiki.py`, `body_hash.py`, or `cited_figure_check.py`, run:
 
