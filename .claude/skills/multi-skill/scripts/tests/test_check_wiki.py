@@ -2160,3 +2160,67 @@ class TestVerifiedSourcesChanged(unittest.TestCase):
             cw.check_verified_sources_changed(
                 text=text, fm=fm, rel='1-wiki/concepts/c.md'),
             [])
+
+
+class TestGraphMetricsStale(unittest.TestCase):
+    """`graph_metrics_stale` — computed graph properties vs page edits.
+
+    The properties are optional and their staleness is an expected state
+    between recomputes, so the check must stay silent on a vault that does
+    not use them and must never block.
+    """
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        (self.root / '1-wiki' / 'concepts').mkdir(parents=True)
+        self.addCleanup(self.tmp.cleanup)
+
+    def page(self, name: str, *, updated: str,
+             computed: str | None = None) -> None:
+        lines = ['---', 'type: concept', f'updated: {updated}']
+        if computed:
+            lines += ['cluster: anchor', 'betweenness: 0.1000',
+                      f'graph_computed: {computed}']
+        lines += ['---', '', '# P', '']
+        (self.root / '1-wiki' / 'concepts' / name).write_text(
+            '\n'.join(lines), encoding='utf-8')
+
+    def run_check(self) -> list[dict[str, Any]]:
+        return cw.check_graph_metrics_stale(self.root / '1-wiki')
+
+    def test_silent_when_the_properties_are_not_in_use(self) -> None:
+        self.page('a.md', updated='2026-01-01')
+        self.assertEqual(self.run_check(), [])
+
+    def test_silent_when_every_page_predates_the_stamp(self) -> None:
+        self.page('a.md', updated='2026-01-01', computed='2026-02-01')
+        self.assertEqual(self.run_check(), [])
+
+    def test_flags_a_page_edited_after_the_stamp(self) -> None:
+        self.page('a.md', updated='2026-03-01', computed='2026-02-01')
+        out = self.run_check()
+        self.assertEqual(len(out), 1)
+        self.assertEqual(out[0]['check_id'], 'graph_metrics_stale')
+        self.assertEqual(out[0]['severity'], 'info')
+        self.assertIn('2026-02-01', out[0]['message'])
+
+    def test_flags_a_page_carrying_no_metrics_while_others_do(self) -> None:
+        self.page('a.md', updated='2026-01-01', computed='2026-02-01')
+        self.page('b.md', updated='2026-01-01')
+        out = self.run_check()
+        self.assertEqual(len(out), 1)
+        self.assertIn('carry no `graph_computed:`', out[0]['message'])
+
+    def test_reports_both_conditions_independently(self) -> None:
+        self.page('a.md', updated='2026-01-01', computed='2026-02-01')
+        self.page('b.md', updated='2026-03-01')
+        self.assertEqual(len(self.run_check()), 2)
+
+    def test_is_advisory_never_blocking(self) -> None:
+        self.page('a.md', updated='2026-03-01', computed='2026-02-01')
+        self.assertTrue(
+            all(f['severity'] != 'error' for f in self.run_check()))
+
+    def test_registered_in_the_checks_registry(self) -> None:
+        self.assertEqual(cw.CHECKS['graph_metrics_stale'], 'info')

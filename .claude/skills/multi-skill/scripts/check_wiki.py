@@ -304,6 +304,7 @@ CHECKS: dict[str, str | None] = {
     'embed_unresolved': 'error',
     'file_field_unresolved': 'error',
     'filename_not_kebab': 'info',
+    'graph_metrics_stale': 'info',
     'frontmatter_missing': 'error',
     'frontmatter_missing_field': 'warning',
     'hyphenated_open_compound': 'warning',
@@ -3837,6 +3838,85 @@ AUDIT_INHERITED_RE = re.compile(r'^inherited_cleared:\s*"?(\d+)\s+of\s+(\d+)"?',
 AUDIT_PENDING_RE = re.compile(r'^markers_pending:\s*(\d+)\s*$', re.M)
 
 
+def check_graph_metrics_stale(wiki_root: Path) -> list[dict[str, Any]]:
+    """Computed graph metrics have fallen behind the pages they describe.
+
+    `cluster:` and `betweenness:` are global: both change on page A because
+    page B was edited, so any ingest invalidates every page's values at
+    once. They carry a `graph_computed:` date for exactly this reason, but
+    a date only helps a reader who thinks to look. This surfaces it.
+
+    Advisory, not a defect. The properties are optional -- a vault that
+    never computes them gets no finding -- and stale values are an expected
+    state between recomputes, not a break. Two ways it fires: a page edited
+    after the newest stamp, or a page carrying no metrics while others do
+    (usually one ingested since the last run).
+    """
+    findings: list[dict[str, Any]] = []
+    repo_root = wiki_root.parent
+    stamps: list[str] = []
+    updates: list[tuple[str, str]] = []
+    without: list[str] = []
+    for folder in ('sources', 'entities', 'concepts', 'syntheses'):
+        folder_path = wiki_root / folder
+        if not folder_path.exists():
+            continue
+        for path in sorted(folder_path.glob('*.md')):
+            try:
+                fm, _ = parse_frontmatter(path.read_text(encoding='utf-8'))
+            except OSError:
+                continue
+            if fm is None:
+                continue
+            rel = str(path.relative_to(repo_root))
+            stamp = fm.get('graph_computed')
+            if isinstance(stamp, str) and stamp.strip():
+                stamps.append(stamp.strip())
+            else:
+                without.append(rel)
+            updated = fm.get('updated')
+            if isinstance(updated, str) and updated.strip():
+                updates.append((updated.strip(), rel))
+
+    # No page carries a stamp: the metrics are simply not in use here.
+    if not stamps:
+        return findings
+
+    newest_stamp = max(stamps)
+    stale = [(u, rel) for u, rel in updates if u > newest_stamp]
+    if stale:
+        newest_update, example = max(stale)
+        findings.append(finding(
+            check='graph_metrics_stale',
+            file=example,
+            message=(
+                f'`cluster:` / `betweenness:` were computed on '
+                f'{newest_stamp}, but {len(stale)} page(s) have been '
+                f'updated since (newest {newest_update}). Both values are '
+                'global, so an edit anywhere can change them everywhere.'),
+            fix_hint=(
+                'Recompute with `python3 '
+                '.claude/skills/graph/scripts/graph_metrics.py . --write`, '
+                'or read the Bridges view as a snapshot of '
+                f'{newest_stamp}.')))
+
+    if without:
+        findings.append(finding(
+            check='graph_metrics_stale',
+            file=without[0],
+            message=(
+                f'{len(without)} page(s) carry no `graph_computed:` while '
+                'others do — they are absent from any view filtering on the '
+                'computed properties, most likely ingested since the last '
+                'run.'),
+            fix_hint=(
+                'Recompute with `python3 '
+                '.claude/skills/graph/scripts/graph_metrics.py . --write` '
+                'to cover every page.')))
+
+    return findings
+
+
 def check_audit_burndown(*, wiki_root: Path) -> list[dict[str, Any]]:
     """Deterministic burn-down gate over the newest audit reports' frontmatter.
 
@@ -3981,6 +4061,7 @@ def main() -> int:
     findings.extend(check_bare_basename_links(wiki_root=wiki_root))
     findings.extend(check_unlinked_page_mentions(wiki_root=wiki_root))
     findings.extend(check_pagination_registration(wiki_root=wiki_root))
+    findings.extend(check_graph_metrics_stale(wiki_root=wiki_root))
     findings.extend(check_audit_burndown(wiki_root=wiki_root))
 
     print(json.dumps(findings, indent=2))

@@ -29,7 +29,8 @@ llm-wiki/
 │   ├── attachments/           # figures and images extracted from sources
 │   ├── hot.md                 # short "what's going on right now" cache
 │   ├── index.md               # full catalog of every page
-│   └── log.md                 # log of every operation, newest first
+│   ├── log.md                 # log of every operation, newest first
+│   └── graph.base              # native Obsidian tables for hubs, bridges, and neglected pages
 ├── 2-outputs/                     # dated working files (answers, briefs, check reports)
 ├── a-archive/
 │   ├── about-me/
@@ -99,6 +100,7 @@ Correcting and maintaining the wiki:
 - **lint** — A fast, automatic check of the wiki's *structure* — missing sections, broken links, miscounted sources, stray formatting — that quietly fixes the safe, mechanical problems. Cheap, so run it often. *Use it right after an ingest, or any time for a quick structural pass.*
 - **audit** — A slower, deeper read that judges whether the notes are actually *good*: one clear idea per page, properly supported, honest about disagreements. It re-checks pages against the original sources and either promotes them to "verified" or flags what needs fixing. *Use it before you rely on the wiki for something important, or after a batch of ingests.*
 - **checkup** — Run consistency, then lint, then audit back-to-back, hands-off, so the whole wiki gets checked and fixed in one go. The easiest way to keep things healthy. *Use it when you just want everything checked at once and don't want to think about order.*
+- **graph** — Set up or refresh the vault's native Obsidian map. It colours the live graph by page type, provides sortable Bases views for hubs, bridges, and neglected pages, and can compute the two measures Obsidian cannot: communities and betweenness. Those computed values are snapshots, so refresh them after an ingest when you need current rankings. *Use it when you want to see the vault's shape or find unusually central, connective, or isolated pages.*
 
 Internals (rarely needed once you're running):
 
@@ -115,7 +117,7 @@ Nothing runs on its own — you invoke each skill yourself with `/<name>`. A few
 
 - **The everyday loop.** Ingest sources, query them, and run `/checkup` from time to time. That's the whole core cycle; the rest is there when you need finer control.
 - **One skill runs the others.** `/checkup` runs `consistency`, then `lint`, then `audit`, in that order, hands-off — so you rarely call those three directly. (`audit` needs a recent clean `lint` and `consistency` first; `checkup` handles that ordering for you.)
-- **Write vs. read.** Skills that change the wiki — `ingest`, `supersede`, `forget`, `synthesis` — always show you their plan and ask before writing. Read-only skills — `query`, `brief`, `compare`, `reflect` — never touch the wiki; they save their output under `2-outputs/` for you to keep or discard.
+- **Three kinds of action.** Authored wiki changes — `ingest`, `supersede`, `forget`, and `synthesis` — show you their plan and ask before writing. Maintenance skills (`lint`, `audit`, and therefore `checkup`) can apply only the bounded repairs their procedures authorize; `cleanup` confirms deletions, and `graph` writes map settings or computed metrics only when that operation is requested. Read-only skills — `query`, `brief`, `compare`, and `reflect` — never touch the wiki; they save their output under `2-outputs/` for you to keep or discard.
 
 ## Examples
 
@@ -150,6 +152,7 @@ A few choices that may matter if you adapt this for your own use:
 - **Pages have a lifecycle.** A new page is a *draft*. `audit` promotes it to *verified* after re-reading it against its source. Any page can be flagged *needs-update* when something goes stale or a contradiction turns up — and it has to say why. Verification is claim-level: replacing a page wholesale sends it back to *draft*, but a small edit (say, adding one citation) just marks that one claim as unverified so the rest of the page stays trusted and only that claim gets re-checked.
 - **Every ingest is double-checked.** After writing, two separate passes confirm the new pages are faithful to the source and well-formed before the job is called done.
 - **Two kinds of health check.** `lint` is the cheap, automatic one: it checks structure — sections present, links valid, counts correct, formatting clean — and fixes the safe problems itself. `audit` is the slower, thoughtful one: it judges whether each note is one clear, well-supported idea and decides what's ready to be trusted.
+- **The map is native and partly live.** Obsidian's graph and the Hubs/Neglected Bases rankings update from the vault itself. Community and betweenness values require `/graph` to recompute them; their `graph_computed:` timestamp makes that staleness visible rather than pretending the snapshot is live.
 - **Outputs aren't the wiki.** Answers, briefs, comparisons, and reflections are saved under `2-outputs/` and never change the wiki itself without your say-so.
 
 ## Acknowledgments

@@ -33,6 +33,7 @@ llm-wiki/
 │   ├── hot.md
 │   ├── index.md
 │   ├── log.md
+│   ├── graph.base
 │   ├── attachments/
 │   ├── concepts/
 │   ├── entities/

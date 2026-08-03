@@ -1,0 +1,77 @@
+# Graph — native Obsidian views over the wiki's link structure.
+#
+# Three views, each answering a question no other native surface answers.
+# The graph view draws structure but cannot rank; search filters but cannot
+# sort by a number. Bases is the only native surface that produces an
+# ordered list, which is why these three and no others live here — status
+# and support-depth filtering is already a linter's job, and duplicating it
+# as a view only creates a second place for the two to disagree.
+#
+# Sort by clicking a column header.
+#
+# file.backlinks counts DISTINCT linking notes, which is in-degree on the
+# page graph. Obsidian documents it as performance heavy and as not
+# refreshing automatically on vault change, so reopen the view after a
+# large ingest.
+
+formulas:
+  inbound: 'file.backlinks.length'
+  outbound: 'file.links.unique().length'
+
+filters:
+  or:
+    - file.inFolder("1-wiki/sources")
+    - file.inFolder("1-wiki/concepts")
+    - file.inFolder("1-wiki/entities")
+    - file.inFolder("1-wiki/syntheses")
+
+views:
+  # What the vault leans on. Live — Obsidian computes every row at read
+  # time, so this view is never stale and needs no script run.
+  - type: table
+    name: Hubs
+    order:
+      - file.name
+      - note.type
+      - formula.inbound
+      - formula.outbound
+      - note.status
+
+  # The connector pages, and the one view that shows something the graph
+  # actively hides: Obsidian sizes a node by inbound links, so a page
+  # joining two regions while almost nothing cites it renders as one of the
+  # smallest dots on the map. In this vault the third- and ninth-ranked
+  # bridges have in-degree 2 and 3 — invisible by size, structurally load
+  # bearing.
+  #
+  # betweenness: and cluster: are NOT native. A script writes them
+  # (.claude/skills/graph/scripts/graph_metrics.py) and they are stale from
+  # the next ingest onward. Read graph_computed: before trusting a row, and
+  # treat the ranking as the signal — the values move far more than the
+  # order does.
+  - type: table
+    name: Bridges
+    filters:
+      - file.hasProperty("betweenness")
+    order:
+      - file.name
+      - note.betweenness
+      - formula.inbound
+      - note.cluster
+      - note.graph_computed
+
+  # Pages nothing was built on and nothing has checked. The conjunction is
+  # the signal: degree alone is weak here, because the schema already
+  # floors most pages at a few links.
+  - type: table
+    name: Neglected
+    filters:
+      and:
+        - note.source_count <= 1
+        - note.status != "verified"
+    order:
+      - file.name
+      - note.type
+      - formula.inbound
+      - note.source_count
+      - note.updated

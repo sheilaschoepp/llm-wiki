@@ -84,9 +84,10 @@ META_SKILL_NAMES = {'consistency', 'skill-linter', 'skill-llm-council', 'checkup
 # from the Operations list, the directory tree, and the output-kind naming registry.
 # Their on-disk skill folders and `2-outputs/` folders must not be flagged as
 # missing from those catalogues (same exemption shape as OUTPUT_ARCHIVE_DIRS).
-# Currently empty — no standalone skill exists. Add a folder name here to exempt
-# a future one.
-STANDALONE_SKILL_NAMES: set[str] = set()
+# `graph` configures Obsidian's own graph and Bases views and writes two
+# computed frontmatter properties; it reads the wiki but authors no page content
+# and produces no `2-outputs/` artifact, so it sits outside the wiki workflow.
+STANDALONE_SKILL_NAMES: set[str] = {'graph'}
 
 EXPECTED_SECTIONS = {
     'source': ['tldr', 'contribution', 'key-claims', 'evidence', 'method',
