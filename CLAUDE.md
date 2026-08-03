@@ -1,10 +1,10 @@
-# LLM Knowledge Base Schema
+# LLM Wiki Schema
 
-This is a personal LLM knowledge base for academic research. It is browsed in Obsidian and maintained with local agent skills.
+This is a personal LLM wiki for academic research. It is browsed in Obsidian and maintained with local agent skills.
 
 `MEMORY.md` at the repo root holds stable, transferable cross-machine context about the user, the project, and feedback rules — exported from auto-memory so it travels with the repo. Treat its contents as point-in-time observations and verify against the current state of files before asserting them as fact. See **Memory tiers** below for how `MEMORY.md` relates to the per-skill memory files (`.claude/skills/<skill>/<skill>-memory.md`), the multi-skill memory file (`.claude/skills/multi-skill/multi-skill-memory.md`), and this `CLAUDE.md` schema file, and **Workflow Rules → Session start order** for when each is read.
 
-The design is a hybrid: it borrows the three-layer pattern (immutable raw sources, an LLM-maintained markdown knowledge base, and a schema file driving an agent) from Andrej Karpathy's LLM knowledge base sketch, and the atomic, source-grounded, interlinked note discipline from Sönke Ahrens' smart-note method. The layers:
+The design is a hybrid: it borrows the three-layer pattern (immutable raw sources, an LLM-maintained markdown wiki, and a schema file driving an agent) from Andrej Karpathy's LLM wiki sketch, and the atomic, source-grounded, interlinked note discipline from Sönke Ahrens' smart-note method. The layers:
 
 - `0-raw/` is immutable source material and remains the source of truth.
 - `1-wiki/sources/` holds source pages: source-shaped records with summary and evidence pointers.
