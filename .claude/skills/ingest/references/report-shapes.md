@@ -1,6 +1,6 @@
 # ingest — Report Shapes (Step 8)
 
-The two report body shapes `ingest` writes, and the `Recommended next ingests` spec they close with. Read this when Step 8 writes the report. The verification procedure itself — the two packets, the tiered refuter model, and the routing rule that sends ingest's report here — is in the shared spec `.claude/skills/multi-skill/references/verification.md`; this file holds only the templates, which no other skill uses.
+The two report body shapes `ingest` writes, and the `Recommended next ingests` spec they close with. Read this when Step 8 writes the report. The two packets and role briefs are in `.claude/skills/multi-skill/references/verification.md`; exact claim identity, durable rows, result states, and reconciliation are in `verification-ledger.md`. This file holds only ingest's templates.
 
 ## Contents
 
@@ -20,14 +20,16 @@ Every report closes with a `Recommended next ingests` section: the papers that w
 
 ## New-Source Report Shape
 
-```markdown
+````markdown
 ---
 type: ingest-report
 date: YYYY-MM-DD
 stem: "{stem}"
 frames: []  # one or more frame texts, or empty if unscoped
 purpose: "{non-frame depth purpose, or empty}"
-result: <clean|unconverged>   # unconverged when Step 8 stopped on the three-round bound or an oscillation
+result: <complete|unconverged|incomplete>
+ledger_schema: 1
+pending: N
 ---
 
 # Ingest report: {stem}
@@ -52,7 +54,7 @@ Result: pass | fail
 - Notes on one-idea clarity, simple language, source support, image discipline, coverage gaps, intra-page redundancy.
 
 ## Fixes applied
-- Authoring-tier refuter spend: {owed units authored — aggregate/generalization claims; restated numbers; cross-source clauses} owed; {refuter calls} calls ({units per call} batched, ~25 max) — one verdict per owed unit, so calls should be far fewer than units; more *verdicts* than owed units means the run escalated past the authoring tier; say so and why. (or `none — no owed units this run`)
+- Bullet evidence: {required} required, {exempt} exempt; locator {hold/refute/cannot-confirm counts}; entailment {counts}; {calls} calls; {pending} pending. Full claim/evidence text is retained in the ledger below.
 - Pagination map: {section registered | already registered | re-verified after raw change | n/a — non-PDF | unregistered because {reason}}.
 - Verified-page delta sweep: {page → hash matches stamp / demoted with `verified_hash:` stripped}, per swept page (or `none — no verified page touched`).
 - Structural check (`check_wiki.py`, filtered to pages this run wrote): {error-severity findings cleared, or "none"}.
@@ -60,25 +62,45 @@ Result: pass | fail
 - Short bullet per fix made before finalizing (or "none").
 - Repeated-literal sweep (after any citation fix): the literal(s) searched and the occurrences re-checked and fixed across the wiki (or "no citation fix this run").
 
+## Verification ledger
+
+- Inventory: {sources/pages/claims/bullet roles planned and terminal}
+- Checker: status {0|1}; stdout JSON-array {yes}; stderr runtime error {no}; global tripwires {cleared}
+- Reconciliation: `claims = exempt + required`; required pairs {terminal}; pending {N}
+
+<!-- verification-ledger:start -->
+```jsonl
+{"schema_version":1,"row_type":"manifest","row_id":"...","run_id":"...","planned_sources":0,"planned_pages":1,"planned_claims":1,"planned_bullet_roles":2,"planned_page_readers":0,"planned_scanners":1,"planned_status_writes":0}
+{"schema_version":1,"row_type":"claim","row_id":"...","run_id":"...","claim_instance_id":"...","page_path":"1-wiki/...","page_type":"concept","page_title":"...","semantic_frontmatter":{},"callout_type":"idea","callout_id":"idea","duplicate_ordinal":1,"claim_text":"> - full untruncated bullet","claim_bytes":27,"locators":[],"raw_dependencies":[],"context_digest":"...","classification":"required"}
+{"schema_version":1,"row_type":"bullet_verdict","row_id":"...","run_id":"...","claim_instance_id":"...","role":"locator_bullet","role_version":"...","agent_id":"...","verdict":"hold","quote":"...","quote_raw_path":"0-raw/...","physical_page":1,"reasoning":"...","confidence":"...","correction":null,"quote_validated":true}
+{"schema_version":1,"row_type":"bullet_verdict","row_id":"...","run_id":"...","claim_instance_id":"...","role":"entailment_bullet","role_version":"...","agent_id":"...","verdict":"hold","quote":"...","quote_raw_path":"0-raw/...","physical_page":1,"reasoning":"...","confidence":"...","correction":null,"quote_validated":true}
+{"schema_version":1,"row_type":"claim_terminal","row_id":"...","run_id":"...","claim_instance_id":"...","disposition":"backfilled_hold","role_rows":["...","..."]}
+{"schema_version":1,"row_type":"scanner","row_id":"...","run_id":"...","scanner":"check_wiki","target":"1-wiki","status":0,"stdout_json":true,"stderr_runtime_error":false,"terminal":true}
+{"schema_version":1,"row_type":"reconciliation","row_id":"...","run_id":"...","result":"complete","pending":0,"planned_pages":1,"terminal_pages":1,"pending_pages":0,"planned_sources":0,"terminal_sources":0,"pending_sources":0,"planned_claims":1,"terminal_claims":1,"pending_claims":0,"planned_bullet_roles":2,"terminal_bullet_roles":2,"pending_bullet_roles":0,"planned_page_readers":0,"terminal_page_readers":0,"pending_page_readers":0,"planned_scanners":1,"terminal_scanners":1,"pending_scanners":0,"planned_status_writes":0,"terminal_status_writes":0,"pending_status_writes":0}
+```
+<!-- verification-ledger:end -->
+
 ## Recommended next ingests
 - {author year — "Title" — the gap this ingest surfaced that it fills; "(verify exists)" if unsure}, grouped if several. Only papers you are confident exist. "none" when the ingest surfaced no specific next-source.
 
 ## Self-report
 - {a specific limitation that bit ingest this run — a rule it lacked, a case it handled wrong (e.g. over-demoting a page on a single added claim), a step it couldn't complete} → upgrade: {how the ingest skill should change} (or the single line: none noted this run; per `.claude/skills/multi-skill/references/self-report.md`)
-```
+````
 
 ## Existing-Source (Reingest) Report Shape
 
 Same frontmatter and heading levels as the new-source shape — `purpose:` in particular, since `references/existing-mode.md` recovers a prior deep purpose by reading it off the latest report for this stem.
 
-```markdown
+````markdown
 ---
 type: ingest-report
 date: YYYY-MM-DD
 stem: "{stem}"
 frames: []  # one or more frame texts, or empty if unscoped
 purpose: "{non-frame depth purpose, or empty}"
-result: <clean|unconverged>   # unconverged when Step 8 stopped on the three-round bound or an oscillation
+result: <complete|unconverged|incomplete>
+ledger_schema: 1
+pending: N
 ---
 
 # Reingest report: {stem}
@@ -111,15 +133,33 @@ Touched:
   - ...
 - Findings: {short list, or "none"}
 - Fixes applied: {short list, or "none"}
-- Authoring-tier refuter spend: {owed units authored — aggregate/generalization claims; restated numbers; cross-source clauses} owed; {refuter calls} calls ({units per call} batched, ~25 max) — one verdict per owed unit, so calls should be far fewer than units; more *verdicts* than owed units means the run escalated past the authoring tier; say so and why. (or `none — no owed units this run`)
+- Bullet evidence: {required} required, {exempt} exempt; locator {hold/refute/cannot-confirm counts}; entailment {counts}; {calls} calls; {pending} pending. Full claim/evidence text is retained in the ledger below.
 - Pagination map: {section registered | already registered | re-verified after raw change | n/a — non-PDF | unregistered because {reason}}.
 - Verified-page delta sweep: {page → hash matches stamp / demoted with `verified_hash:` stripped}, per swept page (or `none — no verified page touched`).
 - Structural check (`check_wiki.py`, filtered to pages this run wrote): {error-severity findings cleared, or "none"}.
 - Repeated-literal sweep (after any citation fix): the literal(s) searched and the occurrences re-checked and fixed across the wiki (or "no citation fix this run").
+
+## Verification ledger
+
+- Inventory: {sources/pages/claims/bullet roles planned and terminal}
+- Checker: status {0|1}; stdout JSON-array {yes}; stderr runtime error {no}; global tripwires {cleared}
+- Reconciliation: `claims = exempt + required`; required pairs {terminal}; pending {N}
+
+<!-- verification-ledger:start -->
+```jsonl
+{"schema_version":1,"row_type":"manifest","row_id":"...","run_id":"...","planned_sources":0,"planned_pages":1,"planned_claims":1,"planned_bullet_roles":2,"planned_page_readers":0,"planned_scanners":1,"planned_status_writes":0}
+{"schema_version":1,"row_type":"claim","row_id":"...","run_id":"...","claim_instance_id":"...","page_path":"1-wiki/...","page_type":"concept","page_title":"...","semantic_frontmatter":{},"callout_type":"idea","callout_id":"idea","duplicate_ordinal":1,"claim_text":"> - full untruncated bullet","claim_bytes":27,"locators":[],"raw_dependencies":[],"context_digest":"...","classification":"required"}
+{"schema_version":1,"row_type":"bullet_verdict","row_id":"...","run_id":"...","claim_instance_id":"...","role":"locator_bullet","role_version":"...","agent_id":"...","verdict":"hold","quote":"...","quote_raw_path":"0-raw/...","physical_page":1,"reasoning":"...","confidence":"...","correction":null,"quote_validated":true}
+{"schema_version":1,"row_type":"bullet_verdict","row_id":"...","run_id":"...","claim_instance_id":"...","role":"entailment_bullet","role_version":"...","agent_id":"...","verdict":"hold","quote":"...","quote_raw_path":"0-raw/...","physical_page":1,"reasoning":"...","confidence":"...","correction":null,"quote_validated":true}
+{"schema_version":1,"row_type":"claim_terminal","row_id":"...","run_id":"...","claim_instance_id":"...","disposition":"backfilled_hold","role_rows":["...","..."]}
+{"schema_version":1,"row_type":"scanner","row_id":"...","run_id":"...","scanner":"check_wiki","target":"1-wiki","status":0,"stdout_json":true,"stderr_runtime_error":false,"terminal":true}
+{"schema_version":1,"row_type":"reconciliation","row_id":"...","run_id":"...","result":"complete","pending":0,"planned_pages":1,"terminal_pages":1,"pending_pages":0,"planned_sources":0,"terminal_sources":0,"pending_sources":0,"planned_claims":1,"terminal_claims":1,"pending_claims":0,"planned_bullet_roles":2,"terminal_bullet_roles":2,"pending_bullet_roles":0,"planned_page_readers":0,"terminal_page_readers":0,"pending_page_readers":0,"planned_scanners":1,"terminal_scanners":1,"pending_scanners":0,"planned_status_writes":0,"terminal_status_writes":0,"pending_status_writes":0}
+```
+<!-- verification-ledger:end -->
 
 ## Recommended next ingests
 - {author year — "Title" — the gap this reingest surfaced that it fills; "(verify exists)" if unsure; "none" when none}. Only papers you are confident exist.
 
 ## Self-report
 - {a specific limitation that bit ingest this run — a rule it lacked, a case it handled wrong (e.g. over-demoting a page on a single added claim), a step it couldn't complete} → upgrade: {how the ingest skill should change} (or the single line: none noted this run; per `.claude/skills/multi-skill/references/self-report.md`)
-```
+````

@@ -1,69 +1,113 @@
 # audit — Report Template (Step 6)
 
-The report body `audit` drafts at Step 6 and finalizes at Step 9. Read this when writing the report; the procedure around it — what each section must reflect, and the Step 9 reconciliation that fills the deferred sections — is in SKILL.md.
+The report `audit` creates before dispatch and finalizes at Step 9. Use `audit-YYYY-MM-DD-HHMM.md`, or `audit-YYYY-MM-DD-HHMM-full.md` in full mode, with `TZ='UTC' date '+%Y-%m-%d-%H%M'`. The Markdown report and its bounded JSONL ledger are one atomic retained artifact.
 
-The file is `2-outputs/audit/audit-YYYY-MM-DD-HHMM.md`, or `audit-YYYY-MM-DD-HHMM-full.md` for a `full`-mode run so a deep full pass is distinguishable from routine partials. The `-full` is the registry's `-extra` suffix (it sits *after* the timestamp, so `file_naming_consistency` accepts it); never put the mode marker before the date. Obtain the timestamp at save time with `TZ='UTC' date '+%Y-%m-%d-%H%M'` — the session context provides the date but not the current minute.
+Initialize the file with `result: incomplete`, nonnumeric marker placeholders, frozen manifests, and planned counts before dispatch. `check_wiki.py`'s `audit_burndown_stalled` check deliberately ignores the nonnumeric placeholders. Replace them with numeric final values only after all obligations reconcile. A crash leaves a truthful incomplete report; a bare report file is never completion.
 
-**Status changes applied** and **Verification proof** record what Steps 7-8 actually did, so they are finalized in Step 9 — never let the report claim a change that a partial Step 7/8 failure left undone.
-
-```markdown
+````markdown
 ---
 type: audit
 date: YYYY-MM-DD
 mode: partial | full
-markers_pending: {N}    # total *[unverified]* markers wiki-wide at run end (counted directly — check_wiki.py's per-page unverified_claim messages summed, or a direct count of the marker)
-inherited_cleared: "{C} of {I}"  # inherited (anchor-at-HEAD) markers cleared this run / at run start
+result: incomplete | unconverged | complete
+ledger_schema: 1
+pending: N
+markers_pending: pending
+inherited_cleared: "pending"
 ---
 
 # Audit - YYYY-MM-DD-HHMM
 
 ## Summary
 - Mode: partial | full
-- Critical: N
-- Warning: N
-- Info: N
-- Worklist ledger, per class (lint check_id, or a short audit finding-class label), this run vs the newest prior audit report: carried in {N} → resolved {A} + marker-pending {P} (authored this run; the next post-commit audit clears them) + handed to the user {B} (genuinely ambiguous structural calls only). Resolved means reached its durable final-state disposition this run — including a barrier repair — fixed, or set `needs-update` with its derivation, or `*[tentative]*`-marked per the dispositions in `references/apply-fixes.md`; N = A + P + B, and there is no other bucket, because the edits themselves never stage. Invalidated verification never supplies ledger credit: count a barrier item from the repair or other final disposition itself. Inherited markers — those whose `#page=N` anchor is at git HEAD, the set `references/apply-fixes.md` permits clearing (markers left by a prior run that has not yet been committed are not inherited for this purpose and are carried forward with the new arrivals): {I} at run start, {C} cleared in the final epoch, {Ir} still pending; while I is above zero, Ir must be strictly below I — an inherited-marker class that did not shrink is a Warning naming the specific blocker (a class at zero staying at zero is not a finding). New arrivals since the prior run are listed separately and excluded from these comparisons. (or "no open worklist")
-- Refuter spend, final epoch only: {claims certified through the refuter gate in final epoch READY(n)} claims, {final-epoch refuter calls} calls, {escalations} escalated to a third (name each trigger: evidence-backed split / destructive correction / aggregate recomputation). A run whose final-epoch calls exceed twice its certified claims escalated more than the triggers warrant; say so and why. Invalidated calls are excluded here and recorded separately below.
+- Result: incomplete | unconverged | complete
+- Critical: N; Warning: N; Info: N
+- Pages: {planned} planned, {terminal} terminal; verified {N}, needs-update {N}
+- Claims: {planned} = {exempt} exempt + {required} required; reused pairs {N}; backfilled pairs {N}; unresolved terminal {N}; pending {N}
+- Final-epoch readers: locator bullets {N}; entailment bullets {N}; locator pages {N}; entailment/argument pages {N}; escalations {N}
+- Invalidated spend: {epochs}; {claims}; {calls}. Cost only, never final evidence.
+- Worklist by class: carried {N} = resolved {N} + marker-pending {N} + user-decision {N}
+- `unlinked_page_mention`: scanner groups {N}; rescanned exact spans {N}; genuine links {N}; generic/ignored {N}; near-alias or hyphenated spans found manually {N}; adjacent-token boundary false matches {N}. Scanner group count is not backlog size.
+
+## Frozen manifests and reconciliation
+- Final relationship epoch: READY(n)
+- Sources: {complete repo-relative path + raw SHA-256 inventory}
+- Pages: {complete scoped page path + final semantic digest inventory}
+- Claims: {complete claim count by page; no sampled or truncated bullets}
+- Reader obligations: {planned bullet roles, page roles, scanners, status writes}
+- Equations: `claims = exempt + required`; `required = reused + backfilled + unresolved`; `planned = terminal + pending`
+- Validator: `python3 .claude/skills/multi-skill/scripts/validate_verification_ledger.py {this report} --repo-root .` → status {0|1}; stdout {JSON}; stderr {empty}. Status 0 or 1 is valid checker execution; exit 2, traceback, empty/unparseable output, or wrong root is invalid.
+- Wiki checker: `python3 .claude/skills/multi-skill/scripts/check_wiki.py "1-wiki"` → status {0|1}; stdout {JSON finding count}; stderr {empty}. A missing-index result or single-digit artifactual scan means the invocation is wrong.
 
 ## Relationship-integrity barrier
-- Final verification epoch: READY(n)
-- Post-repair evidence: consistency {report/run}; complete lint including LLM walk {report/run}; whole-inventory relationship sweep {run}
-- Required missing targets: {initial N} → repaired {R} → final 0. If final is not zero, write `barrier blocked`; there is no Verification proof and no promotion.
-- Allowed dangling links recorded, not changed: {containing page; context; target; policy class — one-off author metadata / genuine first-use future term / other explicit current-policy exception} (or "none")
+- Post-repair consistency: {report/run}
+- Complete lint including LLM walk: {report/run}
+- Whole-inventory relationship sweep: {run}
+- Required missing targets: {initial} → repaired {N} → final 0
+- Allowed dangling links: {page; context; target; policy class} (or "none")
 
-## Invalidated verification spend
-- Invalidated epochs: {epoch and graph-affecting repair reason} (or "none")
-- Discarded work: {pages}, {claims/probes}, {refuter calls}. Cost only — excluded from promotions, marker clearance, inherited-marker burn-down, certified claims, Verification proof, and partial/full completion.
+## Raw acquisition evidence
+- Planned raws: record the exact count.
+- Reused raws: record each raw path, current SHA-256, producer report path, producer Git blob, pack payload SHA-256, evidence/coverage versions, pagination-map-section SHA-256, read scope, probe-revalidation result, and reused disposition.
+- Backfilled raws: record each reopened raw path, reason it was reopened, final SHA-256, read scope, positive coverage probes, evidence/coverage versions, pagination-map-section SHA-256, and backfilled disposition.
+- Reconciliation: `planned_raws = reused_raws + backfilled_raws`; `pending_raws = 0`. Any invalid, missing, duplicate, or unreconciled raw obligation makes the report `incomplete`.
+- Report-embedded packs: retain the exact manifest and complete page-addressed payload for every backfilled raw. Do not copy a reused pack forward; bind it to its committed producer report and Git blob.
+
+## Bullet evidence
+- Reused rows: {claim ID; producer report path; Git blob; role versions; quote re-extraction result} (or "none"; always none in full mode)
+- Backfilled rows: {claim ID; locator row; entailment row; terminal disposition}
+- Exemptions: {claim ID; closed exemption reason}
+- Refute/cannot-confirm rows: {claim ID; exact failure and safe terminal disposition}
+- Every claim in scope has one claim row and one terminal row, including clean claims. Ask: could the marker/status decision be reconstructed tomorrow from this ledger alone?
+
+## Fresh page readers
+- {page path; final semantic digest; READY(n)} — locator page: {HOLD|REFUTE|CANNOT_CONFIRM}; entailment/argument page: {HOLD|REFUTE|CANNOT_CONFIRM}
+- Defects: {bullet_local|cross_bullet|page_only; exact claim IDs/callouts; repair generation}
+- Both page roles are fresh and blind on every scoped page; neither receives bullet verdicts or the counterpart output.
 
 ## Status changes applied
-(finalized in Step 9, after the final-epoch fixes and stamping run; invalidated-epoch outcomes never appear here)
-- Promoted to `verified`: [[1-wiki/concepts/self-attention.md|self-attention]], ... (or "none")
-- Set `needs-update`: [[1-wiki/concepts/positional-encoding.md|positional encoding]], ... (or "none")
+- Promoted to `verified`: {pages and final hashes} (or "none")
+- Set `needs-update`: {pages and precise reasons} (or "none")
+- Markers cleared: {claim IDs; HEAD-anchor proof; atomic-write proof} (or "none")
+- Markers retained/authored: {claim IDs and reason} (or "none")
 
 ## Verification proof
-(for each page promoted to `verified` from the final epoch this run, mirroring ingest's proof-of-read — see `references/verification-spec.md` coverage gate; invalidated-epoch evidence is never proof)
-- [[1-wiki/concepts/self-attention.md|self-attention]] - late-section raw detail re-located: {final section / last figure / appendix, fact-checked}; `#page=N` spot-checked: {N + cited content confirmed} (or `n/a` for a non-PDF raw)
-- A promotion recorded with no re-located late-section detail and no confirmed locator is not complete. (or "none promoted this run")
-- A `full` run is not complete until its cold post-repair full scope finishes in the final epoch.
+- {page} — full-text coverage; late-section proof; exact locator proof; bullet terminal count; both page HOLD row IDs; postwrite structural check; final hash/reason
+- A page is not promoted from page-level HOLD alone, bullet-level HOLD alone, or an invalidated epoch.
 
-## Recommendations
-- (e.g. "Re-check needed: the CLAUDE.md change tightening the summary-claim rule may stale verified aggregate claims — demote [[1-wiki/concepts/example.md|example]] for the next partial to re-verify." — only for a change to a raw-judgement criterion, never a format, structural, presence, or process edit.) (or "none")
+## Invalidated verification spend
+- {epoch; invalidating graph/support/provenance/page-inventory edit; discarded pages/claims/calls} (or "none")
 
 ## Critical
-- [[1-wiki/concepts/positional-encoding.md|Positional encoding]] - fact-check against raw failed: listed source [[1-wiki/sources/Vaswani2017AttentionIA.md|Vaswani2017AttentionIA]] does not support one of the page's claims - set `needs-update`; propose removing the unsupported bullet and the bad sources entry
-- [[1-wiki/concepts/multi-head-attention.md|Multi-head attention]] and [[1-wiki/sources/Vaswani2017AttentionIA.md|Vaswani2017AttentionIA]] - distortion by generalization: the shared claim "BLEU falls whenever attention heads are reduced" is true of the one cited row (the single-head ablation) but false of the recomputed table - both set `needs-update` with a `needs_update_reason:` carrying the full derivation (distortion-disposition rule, `references/apply-fixes.md`)
+- {yes/no audit assumption; raw evidence; applied status/fix}
 
 ## Warning
-- ...
-- [[1-wiki/concepts/scaled-dot-product-attention.md|Scaled Dot-Product Attention]] - page covers two distinct ideas; should split - propose splitting into [[1-wiki/concepts/scaled-dot-product-attention.md|Scaled Dot-Product Attention]] and [[1-wiki/concepts/multi-head-attention.md|Multi-Head Attention]]
+- {finding; final disposition}
 
 ## Info
-- ... (each bullet labelled with sub-type: *verified candidate* / *missing page* / *next source*)
-- *verified candidate* — [[1-wiki/concepts/residual-connection.md|residual connection]] - looks ready but not raw-fact-checked this run
+- {verified candidate | missing page | next source; explanation}
 
 ## Verification Candidates
-- Pages that look ready for `verified` but were not fact-checked against their raw source this run, and pages whose content edit landed this run but whose Tier-2 re-verification was staged to a later run (the staged valve) — flag for the next audit so the backlog burn-down stays visible. Also list any `verified` page audit notices has taken repeated delta-only re-checks — markers cleared on it across several runs with no end-to-end fact-check since, judged from `log.md` and the run history in `2-outputs/audit/` (the newest `full` audit is the last whole-wiki re-read) — and demote it deliberately so the next `partial` re-verifies it end to end. When that history does not settle it, list the page without demoting rather than guessing. Once every path is delta-scoped, nothing re-reads a page whole, and `verified` otherwise decays from "this page is faithful to its sources" into "each line was once checked in isolation". (or "none")
+- {enumerated staged re-verification or ignore-list quorum only} (or "none")
+
+## Recommendations
+- {only criterion-changing re-checks or genuine decisions} (or "none")
 
 ## Self-report
-- {a specific limitation that bit audit this run — a rule it lacked, a case it mishandled, a check it couldn't run} → upgrade: {how the audit skill should change} (or the single line: none noted this run; per `.claude/skills/multi-skill/references/self-report.md`)
+- {specific limitation → upgrade} (or "none noted this run")
+
+<!-- verification-ledger:start -->
+```jsonl
+{"schema_version":1,"row_type":"manifest","row_id":"...","run_id":"...","relationship_epoch":"READY(n)","mode":"partial","planned_sources":0,"planned_pages":1,"planned_claims":1,"planned_bullet_roles":2,"planned_page_readers":2,"planned_scanners":1,"planned_status_writes":1}
+{"schema_version":1,"row_type":"claim","row_id":"...","run_id":"...","claim_instance_id":"...","page_path":"1-wiki/...","page_type":"concept","page_title":"...","semantic_frontmatter":{},"callout_type":"idea","callout_id":"idea","duplicate_ordinal":1,"claim_text":"> - full untruncated bullet","claim_bytes":27,"locators":[],"raw_dependencies":[],"context_digest":"...","classification":"required"}
+{"schema_version":1,"row_type":"bullet_verdict","row_id":"...","run_id":"...","claim_instance_id":"...","role":"locator_bullet","role_version":"...","agent_id":"...","blind_to":[],"verdict":"hold","quote":"...","quote_raw_path":"0-raw/...","physical_page":1,"reasoning":"...","confidence":"...","correction":null,"quote_validated":true}
+{"schema_version":1,"row_type":"bullet_verdict","row_id":"...","run_id":"...","claim_instance_id":"...","role":"entailment_bullet","role_version":"...","agent_id":"...","blind_to":[],"verdict":"hold","quote":"...","quote_raw_path":"0-raw/...","physical_page":1,"reasoning":"...","confidence":"...","correction":null,"quote_validated":true}
+{"schema_version":1,"row_type":"claim_terminal","row_id":"...","run_id":"...","claim_instance_id":"...","disposition":"backfilled_hold","role_rows":["...","..."]}
+{"schema_version":1,"row_type":"page_reader","row_id":"...","run_id":"...","page_path":"1-wiki/...","page_generation":"...","role":"locator_page","agent_id":"...","verdict":"hold","defects":[],"evidence":"..."}
+{"schema_version":1,"row_type":"page_reader","row_id":"...","run_id":"...","page_path":"1-wiki/...","page_generation":"...","role":"entailment_argument_page","agent_id":"...","verdict":"hold","defects":[],"evidence":"..."}
+{"schema_version":1,"row_type":"status_write","row_id":"...","run_id":"...","page_path":"1-wiki/...","page_generation":"...","before_status":"draft","after_status":"verified","pre_semantic_hash":"...","post_semantic_hash":"...","marker_action":"none","verified_hash":"..."}
+{"schema_version":1,"row_type":"scanner","row_id":"...","run_id":"...","scanner":"check_wiki","target":"1-wiki","status":0,"stdout_json":true,"stderr_runtime_error":false,"terminal":true}
+{"schema_version":1,"row_type":"reconciliation","row_id":"...","run_id":"...","result":"complete","pending":0,"planned_pages":1,"terminal_pages":1,"pending_pages":0,"planned_sources":0,"terminal_sources":0,"pending_sources":0,"planned_claims":1,"terminal_claims":1,"pending_claims":0,"planned_bullet_roles":2,"terminal_bullet_roles":2,"pending_bullet_roles":0,"planned_page_readers":2,"terminal_page_readers":2,"pending_page_readers":0,"planned_scanners":1,"terminal_scanners":1,"pending_scanners":0,"planned_status_writes":1,"terminal_status_writes":1,"pending_status_writes":0}
 ```
+<!-- verification-ledger:end -->
+````
