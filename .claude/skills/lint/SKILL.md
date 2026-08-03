@@ -178,10 +178,16 @@ The scripts require Python 3.10+ (they use `X | None` unions and built-in generi
 
 Regression tests for `check_catalogue.py` live in `.claude/skills/lint/scripts/tests/test_check_catalogue.py`; they pin current parity, severity drift, duplicate rejection, and operational failure. Run them with `pytest .claude/skills/lint/scripts/tests/test_check_catalogue.py -q` after changing the registry or catalogue gate.
 
-Regression tests for `check_wiki.py` live in `.claude/skills/multi-skill/scripts/tests/test_check_wiki.py` — they pin the `CHECKS` registry, the auto-fix transforms (callout block IDs, citation bracket style, embed isolation, pipe spacing), and the specific bug classes each check guards. Regression tests for `body_hash.py` live in `.claude/skills/multi-skill/scripts/tests/test_body_hash.py` — they pin the `*[unverified]*` line-masking and the malformed-frontmatter error behaviour the verified-hash sweep depends on. Tests for the opt-in `cited_figure_check.py` backstop live in `.claude/skills/multi-skill/scripts/tests/test_cited_figure_check.py` — they pin its figure/deep-link parsing, the version-string and bare-integer exclusions, and `check_page` over a fake page-text cache (no PDF opened). After changing `check_wiki.py`, `body_hash.py`, or `cited_figure_check.py`, run:
+Fixture-based regression tests for `check_wiki.py` live in `.claude/skills/multi-skill/scripts/tests/test_check_wiki.py` — they pin the `CHECKS` registry, the auto-fix transforms (callout block IDs, citation bracket style, embed isolation, pipe spacing), and the specific bug classes each check guards. Regression tests for `body_hash.py` live in `.claude/skills/multi-skill/scripts/tests/test_body_hash.py` — they pin the `*[unverified]*` line-masking and the malformed-frontmatter error behaviour the verified-hash sweep depends on. Tests for the opt-in `cited_figure_check.py` backstop live in `.claude/skills/multi-skill/scripts/tests/test_cited_figure_check.py` — they pin its figure/deep-link parsing, the version-string and bare-integer exclusions, and `check_page` over a fake page-text cache (no PDF opened). After changing `check_wiki.py`, `body_hash.py`, or `cited_figure_check.py`, run:
 
 ```bash
 python3 -m unittest discover -s .claude/skills/multi-skill/scripts/tests
+```
+
+The live-wiki content-health anchors are deliberately separate: they report maintenance in the current working wiki, not code regressions. Run them explicitly when certifying wiki health:
+
+```bash
+python3 .claude/skills/multi-skill/scripts/acceptance_check_wiki.py
 ```
 
 `unittest` ships with Python, so the suite needs no install. Running it is not a lint gate: if it cannot be run, note in the report that the script regression tests were not run rather than treating that as a lint failure.

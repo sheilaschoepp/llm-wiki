@@ -228,10 +228,16 @@ The script supports `--list-checks` for the live check manifest, `--packet <name
 
 The script requires Python 3.10+ (it uses `X | None` unions and built-in generics); the test suite uses Python's stdlib `unittest` (no extra dependency).
 
-Regression tests for the script live in `scripts/tests/test_check_consistency.py` — they pin the wiring invariants, the clean-repo anchor, output determinism, and the specific bug classes (missing-subfolder crash, fence false positives, parser misattribution, output-kind coverage). After changing `check_consistency.py`, run:
+Fixture-based regression tests for the script live in `scripts/tests/test_check_consistency.py` — they pin the wiring invariants, output determinism, and the specific bug classes (missing-subfolder crash, fence false positives, parser misattribution, output-kind coverage). After changing `check_consistency.py`, run:
 
 ```bash
 python3 -m unittest discover -s .claude/skills/consistency/scripts/tests
+```
+
+The live-repository cleanliness anchors are deliberately separate: they report schema maintenance in the current working vault, not code regressions. Run them explicitly when certifying repository health:
+
+```bash
+python3 .claude/skills/consistency/scripts/acceptance_check_consistency.py
 ```
 
 ## Limits
