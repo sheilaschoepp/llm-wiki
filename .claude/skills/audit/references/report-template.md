@@ -94,7 +94,7 @@ inherited_cleared: "pending"
 - {only criterion-changing re-checks or genuine decisions} (or "none")
 
 ## Self-report
-- {specific limitation → upgrade} (or "none noted this run")
+- Follow `.claude/skills/multi-skill/references/self-report.md`: {specific limitation that bit audit this run → upgrade that would prevent it} (or "none noted this run")
 
 <!-- verification-ledger:start -->
 ```jsonl
