@@ -27,14 +27,14 @@ Use when the user names 2-4 pages that are all the same type (all sources, all c
 
 ```text
 Compare Progress
-- [ ] 1. Confirm targets (exist, 2-4 count, same type, record status)
-- [ ] 2. Load orientation (hot.md, index.md, compare-memory.md, multi-skill-memory.md)
-- [ ] 3. Read target pages
-- [ ] 4. Choose dimensions
-- [ ] 5. Save the comparison
-- [ ] 6. Verify the comparison
-- [ ] 7. Flag follow-ups (no wiki integration)
-- [ ] 8. Update hot and log
+- [ ] Step 1: Confirm targets (exist, 2-4 count, same type, record status)
+- [ ] Step 2: Load orientation (hot.md, index.md, compare-memory.md, multi-skill-memory.md)
+- [ ] Step 3: Read target pages
+- [ ] Step 4: Choose dimensions
+- [ ] Step 5: Save the comparison
+- [ ] Step 6: Verify the comparison
+- [ ] Step 7: Flag follow-ups (no wiki integration)
+- [ ] Step 8: Update hot and log
 ```
 
 1. **Confirm targets.** Verify every named page exists and identify each one's type, reading only frontmatter at this step (the full-body read is Step 3). Resolve existence against the file on disk; `index.md` (loaded in Step 2 — read it first if a name is ambiguous here) is for suggesting the closest match, not the authority on existence. A target's comparison *category* is one of `source | concept | entity | synthesis`, read from frontmatter, not folder or H1: a `concept` / `entity` / `synthesis` page's category is its `type:` value directly, but every page under `1-wiki/sources/` is category `source` regardless of its `type: paper` / `article` / `book` / `media` / `other` sub-type (all source pages share one callout set, so a paper and an article compare cleanly). This category — not the raw `type:` — is what the same-type guard below checks and what Step 5 records as `target_type`.
