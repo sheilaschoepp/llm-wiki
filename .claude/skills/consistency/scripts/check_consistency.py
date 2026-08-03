@@ -875,7 +875,15 @@ def _extract_skill_path_refs(text: str) -> list[str]:
             continue
         if not in_fence:
             for m in PATH_IN_BACKTICKS.finditer(line):
-                refs.append(m.group(1))
+                code_span = m.group(1)
+                refs.append(code_span)
+                # A backticked command is one inline-code span, so the raw
+                # match starts with its executable (often ``python3``) rather
+                # than the script path. Retain the whole span for bare-path
+                # references and also inspect shell-like tokens so
+                # ``python3 .claude/skills/.../script.py --flag`` counts.
+                refs.extend(
+                    tok for tok in re.split(r"[\s'\"=]+", code_span) if tok)
             for m in MARKDOWN_LINK_RE.finditer(line):
                 refs.append(m.group(1))
         if in_bash:
@@ -929,6 +937,23 @@ def check_orphan_skill_scripts(root: Path) -> list[dict[str, Any]]:
             rel = str(f.relative_to(root))
             if rel in referenced:
                 continue
+            # A conventional test companion is covered by its referenced
+            # production script. Test files are discovered as a suite and do
+            # not need one SKILL.md path per case, but an orphan production
+            # script and its test must both remain visible.
+            script_parts = f.relative_to(scripts).parts
+            if 'tests' in script_parts[:-1] and f.name.startswith('test_'):
+                tests_i = script_parts.index('tests')
+                production_parts = (
+                    script_parts[:tests_i]
+                    + script_parts[tests_i + 1:-1]
+                    + (f.name.removeprefix('test_'),)
+                )
+                production = scripts.joinpath(*production_parts)
+                if production.is_file():
+                    production_rel = str(production.relative_to(root))
+                    if production_rel in referenced:
+                        continue
             findings.append(finding(
                 check_id='orphan_skill_scripts',
                 file=rel,

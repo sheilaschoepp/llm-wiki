@@ -284,6 +284,24 @@ class TestCheckConsistency(unittest.TestCase):
         assert not any('.pytest_cache' in f for f in files)            # cache skipped
         assert '.claude/skills/dummy/scripts/run.py' not in files      # referenced, not orphan
 
+    def test_orphan_skill_scripts_parses_commands_and_test_companions(self) -> None:
+        skills = self.tmp / '.claude' / 'skills'
+        skill = skills / 'dummy'
+        tests = skill / 'scripts' / 'tests'
+        tests.mkdir(parents=True)
+        (skill / 'SKILL.md').write_text(
+            'Run `python3 .claude/skills/dummy/scripts/run.py --strict`.\n')
+        (skill / 'scripts' / 'run.py').write_text('print("run")\n')
+        (tests / 'test_run.py').write_text('pass\n')
+        (skill / 'scripts' / 'orphan.py').write_text('print("orphan")\n')
+        (tests / 'test_orphan.py').write_text('pass\n')
+
+        files = {f['file'] for f in cc.check_orphan_skill_scripts(self.tmp)}
+        assert '.claude/skills/dummy/scripts/run.py' not in files
+        assert '.claude/skills/dummy/scripts/tests/test_run.py' not in files
+        assert '.claude/skills/dummy/scripts/orphan.py' in files
+        assert '.claude/skills/dummy/scripts/tests/test_orphan.py' in files
+
     # --- regression: output-kind coverage ---
 
     def test_output_kinds_flags_unlisted_dir(self) -> None:
