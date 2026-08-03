@@ -34,6 +34,7 @@ llm-wiki/
 │   ├── index.md
 │   ├── log.md
 │   ├── graph.base
+│   ├── archive/
 │   ├── attachments/
 │   ├── concepts/
 │   ├── entities/
@@ -73,6 +74,8 @@ Folder prefixes (`0-`, `1-`, `2-`, `a-`) keep Obsidian sorted in workflow order.
 ## Page Filenames
 
 Concept pages, entity pages, synthesis pages, and attachment files in `1-wiki/` use kebab-case lowercase: ASCII letters, digits, and hyphens. No spaces, no underscores, no uppercase, no camel-case.
+
+Archive files under `1-wiki/archive/` are not wiki pages and take a fixed dated form instead: `log-YYYY-MM.md` and `hot-YYYY-MM.md`. They carry no frontmatter and no callouts, and never appear in `index.md`.
 
 **Source pages are the one exception:** the source-page filename matches the raw source stem exactly (preserving the raw's case, digits, and any internal punctuation that the OS allows), so the source page and the raw file share a basename and are easy to associate by eye. This overrides the kebab-case rule for source pages only — other wiki file types stay kebab-case.
 
@@ -642,7 +645,7 @@ Meta skills:
 - `skill-linter` - review skill quality.
 - `skill-llm-council` - deeply review and autonomously improve one skill via two independent LLM councils (cognitive lenses and skill specialists), reconciled by a meta-chair; the deliberative companion to `skill-linter`.
 - `checkup` - autonomously run consistency, lint, and audit in one invocation, in the order that satisfies audit's preconditions.
-- `cleanup` - two jobs: graduate memory-file entries into their permanent home (MEMORY.md, CLAUDE.md, or a skill) and clear the absorbed ones, and prune unneeded `2-outputs/` files (junk, superseded check reports, subject-orphaned reports, aged artifacts). Every deletion is gated file by file.
+- `cleanup` - three jobs: graduate memory-file entries into their permanent home (MEMORY.md, CLAUDE.md, or a skill) and clear the absorbed ones; prune unneeded `2-outputs/` files (junk, superseded check reports, subject-orphaned reports, aged artifacts); and archive the wiki bookkeeping files — aged `log.md` entries and finished `hot.md` threads move into `1-wiki/archive/`, while `index.md` is report-only. Every deletion is gated file by file; the log archival, which moves rather than deletes, takes one approval for the whole operation.
 
 A **standalone skill** is one that lives under `.claude/skills/` but sits outside the wiki workflow, so it is intentionally **not** catalogued here, in the directory tree, or in the output-kind naming registry, and should not be referenced by the other skills. `consistency` exempts any such skill via its `STANDALONE_SKILL_NAMES` set — its omission from the catalogues is by design, not drift. The set is currently empty (no standalone skill exists); add a folder name to it to register a future one.
 
@@ -787,11 +790,13 @@ When uncertain whether a piece of context belongs in `MEMORY.md` or in a memory 
 
 The agent may update Recent activity, Open threads, and Watchlist. Active focus is user-owned unless explicitly requested. Recent activity entries are dated and timed and kept newest-first: each begins `- [YYYY-MM-DD HH:MM] verb | …` (24-hour UTC), so that entries from concurrently-merged sessions sort unambiguously.
 
-Recent activity is a rolling cache of the five newest entries: `lint` trims it to five, and because every entry is also recorded in `1-wiki/log.md` (the permanent, complete record of every operation), trimming the cache loses nothing. That five-entry count is the section's retention policy — owned here so one rule governs it; the whole-file soft cap of 200 lines (stated in hot.md's header) is a separate, consistent bound. Open threads and Watchlist are not caches — they hold unique orientation that is not duplicated in `log.md`, so they are never trimmed on a count, only pruned when a target page no longer exists.
+Recent activity is a rolling cache of the five newest entries: `lint` trims it to five, and because every entry is also recorded in `1-wiki/log.md` (the permanent, complete record of every operation), trimming the cache loses nothing. That five-entry count is the section's retention policy — owned here so one rule governs it; the whole-file soft cap of 200 lines (stated in hot.md's header) is a separate, consistent bound. Open threads and Watchlist are not caches — they hold unique orientation that is not duplicated in `log.md`, so they are never trimmed on a count. They are pruned only as a consequence of some other operation, never by free-hand editing, along these paths: `lint` removes a bullet whose target page no longer exists; `forget` and `supersede` remove or rewrite a bullet naming the page they are acting on, as part of their own reference sweep; and `cleanup`'s bookkeeping job proposes a bullet whose target page still exists but whose thread is finished — a judgement gated per item, which archives the bullet to `1-wiki/archive/hot-YYYY-MM.md` before removing it, since these sections hold the only copy of that orientation outside git.
 
-`1-wiki/index.md` catalogs all wiki pages under Sources, Entities, Concepts, and Syntheses.
+`1-wiki/index.md` catalogs all wiki pages under Sources, Entities, Concepts, and Syntheses. It is a live catalog, kept synchronized with disk in both directions by `lint`, and is never archived from — its length tracks the wiki rather than accumulating history.
 
-`1-wiki/log.md` is reverse-chronological, ordered by date and time (newest first). Each entry starts with:
+`1-wiki/log.md` is reverse-chronological, ordered by date and time (newest first). It is the permanent, complete record of every operation, and nothing may delete from it. Because it also never shrinks on its own, `cleanup`'s bookkeeping job *moves* entries older than a chosen cutoff (90 days by default) into `1-wiki/archive/log-YYYY-MM.md`, grouped by each entry's own year-month and newest-first within each file. The record remains complete as the union of the live log and its archives: the move writes and verifies every archive first, proves entry-for-entry that none was lost or duplicated, and only then rewrites `log.md`, which carries a pointer block listing its archives. An entry whose heading has no parseable date is never archived. Archive files are frozen once written, are not wiki pages (no frontmatter, no callouts, never in `index.md`), and are never re-sorted except when a later run merges into the same month.
+
+Each log entry starts with:
 
 ```markdown
 ## [YYYY-MM-DD HH:MM] verb | subject

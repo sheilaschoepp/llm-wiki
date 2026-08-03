@@ -412,7 +412,7 @@ def check_retired_feature_mentions(root: Path) -> list[dict[str, Any]]:
         root=root,
         patterns=REMOVED_FEATURE_PATTERNS,
         paths=['CLAUDE.md', 'README.md', '1-wiki/', '.claude/skills/'],
-        exclude_paths=['log.md', 'consistency/SKILL.md'],
+        exclude_paths=['log.md', '1-wiki/archive/', 'consistency/SKILL.md'],
     )
     for path, line_no, content in hits:
         relstr = str(path.relative_to(root))

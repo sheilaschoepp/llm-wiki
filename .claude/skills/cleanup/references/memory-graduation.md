@@ -1,6 +1,6 @@
 # cleanup — Memory Graduation Classification (Step 3)
 
-The detailed classification logic the memory job assigns from. SKILL.md Step 3 names each entry's permanent home and verifies the substance is actually present there — matching the entry's direction, not just its subject; this file holds the six categories it chooses among, the tie-break order, the sensitive-content screen, and the keep-vs-graduate-vs-delete judgement. The outputs job never loads this.
+The detailed classification logic the memory job assigns from. SKILL.md Step 3 names each entry's permanent home and verifies the substance is actually present there — matching the entry's direction, not just its subject; this file holds the six categories it chooses among, the tie-break order, the sensitive-content screen, and the keep-vs-graduate-vs-delete judgement. The outputs and bookkeeping jobs never load this.
 
 ## Contents
 
@@ -27,7 +27,7 @@ Apply the first that matches: (1) `contradicted`, if the home states a rule that
 
 ## Sensitive-Content Screen
 
-Before proposing any graduation into `MEMORY.md` or `CLAUDE.md`, screen the entry against CLAUDE.md → Memory hygiene (no medical, family, relationship, financial, or legal specifics about anyone). If the entry carries such content, do not propose graduating it — graduation would push the violation into a more permanent, more-read home. Instead route it to the Step 7 per-item gate as a hygiene-flagged entry (redact in place, or remove from the journal — its own gated decision), so a hygiene-violating entry is acted on, not just flagged and left resident.
+Before proposing any graduation into `MEMORY.md` or `CLAUDE.md`, screen the entry against CLAUDE.md → Memory hygiene (no medical, family, relationship, financial, or legal specifics about anyone). If the entry carries such content, do not propose graduating it — graduation would push the violation into a more permanent, more-read home. Instead route it to the Step 8 per-item gate as a hygiene-flagged entry (redact in place, or remove from the journal — its own gated decision), so a hygiene-violating entry is acted on, not just flagged and left resident.
 
 ## Keep, Graduate, Or Delete Is A Judgement, Not A Count
 

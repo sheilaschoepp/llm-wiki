@@ -30,7 +30,8 @@ llm-wiki/
 │   ├── hot.md                 # short "what's going on right now" cache
 │   ├── index.md               # full catalog of every page
 │   ├── log.md                 # log of every operation, newest first
-│   └── graph.base              # native Obsidian tables for hubs, bridges, and neglected pages
+│   ├── graph.base              # native Obsidian tables for hubs, bridges, and neglected pages
+│   └── archive/               # aged log entries and retired hot threads, moved here
 ├── 2-outputs/                     # dated working files (answers, briefs, check reports)
 ├── a-archive/
 │   ├── about-me/
@@ -105,7 +106,7 @@ Correcting and maintaining the wiki:
 Internals (rarely needed once you're running):
 
 - **consistency** — Check that the project still agrees with its own rulebook (CLAUDE.md, the skills, the templates) after you change something. It catches drift and *proposes* fixes rather than silently editing the rules. *Use it after you edit the rulebook or a skill (or just run `/checkup`).*
-- **cleanup** — Two housekeeping jobs. First, look through the agent's saved notes-to-self and decide which have hardened into permanent rules (and can be cleared) versus which are still live guidance. Second, prune unneeded files from `2-outputs/` — junk, superseded check reports, reports about a deleted source or skill, and old artifacts. Every deletion is confirmed one file at a time. *Use it when the memory files or the outputs folder feel cluttered.*
+- **cleanup** — Three housekeeping jobs. First, look through the agent's saved notes-to-self and decide which have hardened into permanent rules (and can be cleared) versus which are still live guidance. Second, prune unneeded files from `2-outputs/` — junk, superseded check reports, reports about a deleted source or skill, and old artifacts. Third, keep the bookkeeping files from growing forever: old `log.md` entries and finished `hot.md` threads move into `1-wiki/archive/` rather than being deleted, and `index.md` is only ever reported on. Every deletion is confirmed one file at a time; the log move is not a deletion, so it takes one confirmation for the whole batch. *Use it when the memory files, the outputs folder, or the log feel cluttered.*
 - **skill-linter** — Review a skill file itself against good skill-writing practices, and tidy it up. *Use it when you're writing or editing a skill.*
 - **skill-llm-council** — Put one skill in front of two independent "councils" of five reviewers each — one judging it through general thinking lenses, one through skill-specialist lenses — let them critique it anonymously, then apply the changes they agree on and save the whole debate. The slower, deeper companion to `skill-linter`. *Use it when a quick lint isn't enough and you want a skill stress-tested from many angles.*
 

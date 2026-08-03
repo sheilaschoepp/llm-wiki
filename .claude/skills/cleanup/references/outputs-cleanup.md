@@ -1,6 +1,6 @@
 # cleanup — Outputs Candidate Classification (Step 4)
 
-How the outputs job sorts each `2-outputs/` file into a deletion-candidate category. SKILL.md Step 4 resolves the age threshold and runs the git-status check; this file holds the four categories, the repeatable-check-vs-working-artifact split they turn on, the inbound-reference check, and how the protected set is applied. The memory job never loads this.
+How the outputs job sorts each `2-outputs/` file into a deletion-candidate category. SKILL.md Step 4 resolves the age threshold and runs the git-status check; this file holds the four categories, the repeatable-check-vs-working-artifact split they turn on, the inbound-reference check, and how the protected set is applied. The memory and bookkeeping jobs never load this.
 
 ## Contents
 
@@ -23,7 +23,7 @@ Enumerate `2-outputs/` without following symlinks and inspect each path with `ls
 
 ## Inbound-Reference Check
 
-Run this before proposing any working artifact (`query`, `brief`, `compare`, `reflect`, `ingest`, `forget`, `supersede`, `synthesis`) for aged or orphaned deletion. A promoted synthesis page records where it came from in `origin:` frontmatter pointing at the report it grew from (CLAUDE.md → Synthesis frontmatter: `origin: "[[2-outputs/query/…]]"`), and a live page may wikilink a report in its body. Before proposing such a report for deletion, grep `1-wiki/` for its path — synthesis `origin:` fields first, then body wikilinks. If a live page references it, note that inbound link on the file's Step 7 item gate so the user removes it knowing a live page's `origin:` pointer will be left dangling. The dangler is tolerated — `forget` and `supersede` likewise leave a live-page-to-output `origin:` link frozen rather than repairing it, and CLAUDE.md already expects `log.md`/`hot.md` danglers into `2-outputs/` — so this is pre-deletion transparency, not a blocked deletion. It mirrors the inbound-reference sweep `forget` and `supersede` run before removing a wiki page.
+Run this before proposing any working artifact (`query`, `brief`, `compare`, `reflect`, `ingest`, `forget`, `supersede`, `synthesis`) for aged or orphaned deletion. A promoted synthesis page records where it came from in `origin:` frontmatter pointing at the report it grew from (CLAUDE.md → Synthesis frontmatter: `origin: "[[2-outputs/query/…]]"`), and a live page may wikilink a report in its body. Before proposing such a report for deletion, grep `1-wiki/` for its path — synthesis `origin:` fields first, then body wikilinks. If a live page references it, note that inbound link on the file's Step 8 item gate so the user removes it knowing a live page's `origin:` pointer will be left dangling. The dangler is tolerated — `forget` and `supersede` likewise leave a live-page-to-output `origin:` link frozen rather than repairing it, and CLAUDE.md already expects `log.md`/`hot.md` danglers into `2-outputs/` — so this is pre-deletion transparency, not a blocked deletion. It mirrors the inbound-reference sweep `forget` and `supersede` run before removing a wiki page.
 
 ## Apply The Protected Set
 
@@ -38,4 +38,4 @@ Disposition every regular file exactly once:
 3. **retained-current** — a recognized artifact that is neither protected nor eligible for a deletion category this run; or
 4. **unclassified-blocked** — a malformed, unknown, or ambiguous regular file that cleanup will not delete.
 
-Require `regular files scanned = candidates + protected + retained-current + unclassified-blocked` before saving the report. List symlinks and other non-regular entries separately as blocked; they are not part of the regular-file equation. Record a SHA-256 of the exact bytes for every candidate and use that same algorithm for the immediate pre-deletion comparison in Step 8.
+Require `regular files scanned = candidates + protected + retained-current + unclassified-blocked` before saving the report. List symlinks and other non-regular entries separately as blocked; they are not part of the regular-file equation. Record a SHA-256 of the exact bytes for every candidate and use that same algorithm for the immediate pre-deletion comparison in Step 9.
