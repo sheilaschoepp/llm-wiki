@@ -1798,9 +1798,10 @@ def check_dir_tree_drift(root: Path) -> list[dict[str, Any]]:
 
     # Find the first text-fenced block that looks like the repo tree.
     tree_text: str | None = None
+    tree_root = f'{root.name}/'
     for match in re.finditer(r'```text\n(.*?)```', text, re.DOTALL):
         block = match.group(1)
-        if 'llm-wiki/' in block:
+        if tree_root in block:
             tree_text = block
             break
 
@@ -1809,7 +1810,7 @@ def check_dir_tree_drift(root: Path) -> list[dict[str, Any]]:
             check_id='dir_tree_drift',
             file='CLAUDE.md',
             message='Directory tree block (```text ... ``` rooted at '
-            '`llm-wiki/`) not found.',
+            f'`{tree_root}`) not found.',
             fix_hint='Add a `text`-fenced ASCII tree under the '
             '`Directory Structure` heading.',
         ))

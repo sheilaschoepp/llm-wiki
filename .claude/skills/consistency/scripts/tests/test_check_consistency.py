@@ -85,6 +85,29 @@ class TestCheckConsistency(unittest.TestCase):
     def test_catalogue_matches_manifest_clean(self) -> None:
         assert cc.check_catalogue_matches_manifest(REPO) == []
 
+    # --- regression: directory-tree detection follows the checkout name ---
+
+    def test_dir_tree_drift_uses_actual_repo_folder_name(self) -> None:
+        root = self.tmp / 'renamed-wiki'
+        root.mkdir()
+        (root / 'docs').mkdir()
+        (root / 'CLAUDE.md').write_text(
+            '## Directory Structure\n\n'
+            '```text\n'
+            'renamed-wiki/\n'
+            '└── CLAUDE.md\n'
+            '```\n',
+            encoding='utf-8',
+        )
+
+        out = cc.check_dir_tree_drift(root)
+
+        # The renamed tree must be parsed and compared with disk: docs exists
+        # but is absent from the fixture tree. A hardcoded `llm-wiki/` search
+        # returns only "tree block not found" and never reaches this finding.
+        assert len(out) == 1, out
+        assert '`docs` exists on disk but is missing' in out[0]['message']
+
     # --- regression: crash on a missing wiki subfolder ---
 
     def test_index_drift_does_not_crash_on_missing_subfolder(self) -> None:
