@@ -45,3 +45,10 @@ Format per section:
 -->
 
 ## verified-ignore
+
+<!-- One lowercased `compound following-word` phrase per line — a flagged use
+     confirmed correct as written and therefore skipped in both directions.
+     Empty in a fresh vault. The line below is a schematic example, inert to the
+     parser (leading `#`); a real entry has no leading `#`:
+# - belief state representation
+-->
