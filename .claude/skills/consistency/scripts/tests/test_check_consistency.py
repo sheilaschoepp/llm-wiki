@@ -330,6 +330,235 @@ class TestCheckConsistency(unittest.TestCase):
         out = cc.check_catalogue_matches_manifest(self.tmp)
         assert any('99' in f['message'] for f in out)
 
+    # --- direct coverage for the remaining consistency checks ---
+
+    def test_retired_feature_mentions_flags_prose_but_skips_history(self) -> None:
+        (self.tmp / 'README.md').write_text('Use the working_copy now.\n')
+        archive = self.tmp / '1-wiki' / 'archive'
+        archive.mkdir(parents=True)
+        (archive / 'log-2026-01.md').write_text('Retired working copy history.\n')
+
+        out = cc.check_retired_feature_mentions(self.tmp)
+
+        assert [f['file'] for f in out] == ['README.md']
+
+    def test_working_skill_count_prose_compares_with_skill_folders(self) -> None:
+        skills = self.tmp / '.claude' / 'skills'
+        (skills / 'query').mkdir(parents=True)
+        (skills / 'query' / 'SKILL.md').write_text('A query skill.\n')
+        (skills / 'consistency').mkdir()
+        (skills / 'consistency' / 'SKILL.md').write_text(
+            'The ten operation skills are checked here.\n')
+        (self.tmp / 'README.md').write_text('The ten operation skills run.\n')
+
+        out = cc.check_working_skill_count_prose(self.tmp)
+
+        assert len(out) == 1
+        assert out[0]['file'] == 'README.md'
+        assert 'actual working-skill count (1)' in out[0]['message']
+
+    def test_old_schema_wording_ignores_inline_code_examples(self) -> None:
+        (self.tmp / 'README.md').write_text('Migrate every source note now.\n')
+        (self.tmp / 'CLAUDE.md').write_text(
+            'The token `source note` is an inert example.\n')
+
+        out = cc.check_old_schema_wording(self.tmp)
+
+        assert [f['file'] for f in out] == ['README.md']
+
+    def test_placeholder_consistency_flags_only_mixed_page(self) -> None:
+        concepts = self.tmp / '1-wiki' / 'concepts'
+        concepts.mkdir(parents=True)
+        (concepts / 'mixed.md').write_text(
+            '> - None identified.\n> - None documented.\n')
+        (concepts / 'uniform.md').write_text(
+            '> - None identified.\n> - None identified.\n')
+
+        out = cc.check_placeholder_consistency(self.tmp)
+
+        assert [f['file'] for f in out] == ['1-wiki/concepts/mixed.md']
+
+    def test_body_section_order_accepts_schema_and_flags_reordering(self) -> None:
+        concepts = self.tmp / '1-wiki' / 'concepts'
+        concepts.mkdir(parents=True)
+        expected = cc.EXPECTED_SECTIONS['concept']
+        (concepts / 'ordered.md').write_text(
+            ''.join(f'> [!{slug}]\n' for slug in expected))
+        (concepts / 'reordered.md').write_text(
+            ''.join(f'> [!{slug}]\n' for slug in reversed(expected)))
+
+        out = cc.check_body_section_order(self.tmp)
+
+        assert [f['file'] for f in out] == ['1-wiki/concepts/reordered.md']
+
+    def test_source_venue_year_split_flags_venue_year_only(self) -> None:
+        sources = self.tmp / '1-wiki' / 'sources'
+        sources.mkdir(parents=True)
+        (sources / 'bad.md').write_text(
+            'title: Bad\nvenue: NeurIPS 2017\nyear: 2017\n')
+        (sources / 'good.md').write_text(
+            'title: Good\nvenue: NeurIPS\nyear: 2017\n')
+
+        out = cc.check_source_venue_year_split(self.tmp)
+
+        assert [f['file'] for f in out] == ['1-wiki/sources/bad.md']
+        assert out[0]['line'] == 2
+
+    def test_attachments_folder_coverage_handles_missing_and_orphaned(self) -> None:
+        missing = cc.check_attachments_folder_coverage(self.tmp)
+        assert len(missing) == 1
+        assert 'is missing' in missing[0]['message']
+
+        attachments = self.tmp / '1-wiki' / 'attachments'
+        sources = self.tmp / '1-wiki' / 'sources'
+        (attachments / 'kept').mkdir(parents=True)
+        (attachments / 'orphan').mkdir()
+        sources.mkdir()
+        (sources / 'kept.md').write_text('x\n')
+
+        out = cc.check_attachments_folder_coverage(self.tmp)
+
+        assert [f['file'] for f in out] == ['1-wiki/attachments/orphan']
+
+    def test_callout_css_coverage_reports_only_missing_styles(self) -> None:
+        missing_file = cc.check_callout_css_coverage(self.tmp)
+        assert len(missing_file) == 1
+        assert 'stylesheet is missing' in missing_file[0]['message']
+
+        css = self.tmp / '.obsidian' / 'snippets' / 'custom_callouts.css'
+        css.parent.mkdir(parents=True)
+        omitted = cc.REQUIRED_CALLOUTS[0]
+        css.write_text('\n'.join(
+            f'.callout[data-callout="{slug}"] {{}}'
+            for slug in cc.REQUIRED_CALLOUTS if slug != omitted))
+
+        out = cc.check_callout_css_coverage(self.tmp)
+
+        assert len(out) == 1
+        assert f'`{omitted}`' in out[0]['message']
+
+    def test_ai_writing_tells_flags_docs_and_skips_self_documentation(self) -> None:
+        (self.tmp / 'README.md').write_text('This pivotal result matters.\n')
+        self_doc = self.tmp / '.claude' / 'skills' / 'consistency' / 'SKILL.md'
+        self_doc.parent.mkdir(parents=True)
+        self_doc.write_text('The pivotal pattern is documented here.\n')
+
+        out = cc.check_ai_writing_tells(self.tmp)
+
+        assert [f['file'] for f in out] == ['README.md']
+        assert 'high-density AI vocabulary' in out[0]['message']
+
+    def test_file_naming_consistency_flags_only_nonexempt_names(self) -> None:
+        raw = self.tmp / '0-raw' / 'papers'
+        source = self.tmp / '1-wiki' / 'sources'
+        concepts = self.tmp / '1-wiki' / 'concepts'
+        attachments = self.tmp / '1-wiki' / 'attachments' / 'MixedCase'
+        outputs = self.tmp / '2-outputs' / 'query'
+        skills = self.tmp / '.claude' / 'skills' / 'Bad_Name'
+        for folder in (raw, source, concepts, attachments, outputs, skills):
+            folder.mkdir(parents=True, exist_ok=True)
+        (raw / 'MixedCase.pdf').write_text('raw\n')
+        (source / 'MixedCase.md').write_text('source\n')
+        (concepts / 'Bad_Name.md').write_text('concept\n')
+        (attachments / 'Bad_Image.PNG').write_text('image\n')
+        (outputs / 'bad.md').write_text('output\n')
+
+        files = {f['file'] for f in cc.check_file_naming_consistency(self.tmp)}
+
+        assert files == {
+            '1-wiki/concepts/Bad_Name.md',
+            '1-wiki/attachments/MixedCase/Bad_Image.PNG',
+            '2-outputs/query/bad.md',
+            '.claude/skills/Bad_Name',
+        }
+        assert '1-wiki/sources/MixedCase.md' not in files
+        assert '1-wiki/attachments/MixedCase' not in files
+
+    def test_memory_file_graduation_prompt_respects_caps_and_index(self) -> None:
+        memory = self.tmp / 'MEMORY.md'
+        memory.write_text(
+            '## Index\n' + ''.join(f'## Entry {i}\n' for i in range(15)))
+        assert cc.check_memory_file_graduation_prompt(self.tmp) == []
+
+        memory.write_text(memory.read_text() + '## Entry 15\n')
+        out = cc.check_memory_file_graduation_prompt(self.tmp)
+
+        assert len(out) == 1
+        assert out[0]['file'] == 'MEMORY.md'
+        assert '16 entries' in out[0]['message']
+
+    def test_unbackticked_paths_resolve_owns_only_prose_paths(self) -> None:
+        wiki = self.tmp / '1-wiki'
+        wiki.mkdir()
+        (wiki / 'existing.md').write_text('x\n')
+        (self.tmp / 'CLAUDE.md').write_text(
+            'Existing 1-wiki/existing.md and missing 1-wiki/missing.md.\n'
+            'Backticked `1-wiki/backticked-missing.md` is owned elsewhere.\n'
+            '```text\n1-wiki/fenced-missing.md\n```\n')
+
+        out = cc.check_unbackticked_paths_resolve(self.tmp)
+
+        assert len(out) == 1
+        assert '`1-wiki/missing.md`' in out[0]['message']
+
+    def test_operations_list_matches_skills_flags_both_directions(self) -> None:
+        skills = self.tmp / '.claude' / 'skills'
+        for name in ('listed', 'missing', 'graph'):
+            (skills / name).mkdir(parents=True)
+            (skills / name / 'SKILL.md').write_text(f'{name}\n')
+        (self.tmp / 'CLAUDE.md').write_text(
+            '## Operations\n\n'
+            '- `listed` - present\n'
+            '- `stale` - absent\n'
+            '- `graph` - standalone\n\n'
+            '## Next\n')
+
+        out = cc.check_operations_list_matches_skills(self.tmp)
+        messages = [f['message'] for f in out]
+
+        assert len(out) == 2
+        assert any('lists `stale`' in message for message in messages)
+        assert any('skills/missing/' in message for message in messages)
+        assert not any('graph' in message for message in messages)
+
+    def test_retired_skill_references_distinguishes_mode_vocabulary(self) -> None:
+        (self.tmp / 'README.md').write_text(
+            'Route `/reingest` or `ingest-deep`; a plain reingest appends.\n')
+        skills = self.tmp / '.claude' / 'skills' / 'live'
+        skills.mkdir(parents=True)
+        (skills / 'SKILL.md').write_text(
+            'Required operation skills `live`, `ghost`.\n')
+
+        out = cc.check_retired_skill_references(self.tmp)
+        messages = [f['message'] for f in out]
+
+        assert len(out) == 3, out
+        assert sum('`reingest`' in message for message in messages) == 1
+        assert sum('`ingest-deep`' in message for message in messages) == 1
+        assert any('`ghost`' in message for message in messages)
+
+    def test_shared_reference_integrity_flags_duplicates_and_underuse(self) -> None:
+        skills = self.tmp / '.claude' / 'skills'
+        shared = skills / 'multi-skill' / 'references'
+        shared.mkdir(parents=True)
+        (shared / 'shared.md').write_text('shared\n')
+        (shared / 'lonely.md').write_text('lonely\n')
+        for name, text in (
+            ('alpha', 'Use shared.md and lonely.md.\n'),
+            ('beta', 'Use shared.md.\n'),
+        ):
+            (skills / name / 'references').mkdir(parents=True)
+            (skills / name / 'SKILL.md').write_text(text)
+        (skills / 'alpha' / 'references' / 'shared.md').write_text('copy\n')
+
+        out = cc.check_shared_reference_integrity(self.tmp)
+        messages = [f['message'] for f in out]
+
+        assert len(out) == 2, out
+        assert any('also copied' in message for message in messages)
+        assert any('`lonely.md` is cited by 1 skill(s)' in message
+                   for message in messages)
+
     # --- exit codes ---
 
     def test_bad_path_exits_2(self) -> None:
