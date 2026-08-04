@@ -264,11 +264,10 @@ HOT_WITH_STRAY = ('---\ntype: hot\n---\n\n# Hot\n\n## Recent activity\n\n'
 
 
 # --- fixture-backed module instance for the hyphenation lists -----------------
-# The shipped hyphenation-lists.md is schematic-empty: its four lists are vault
-# vocabulary (slug-derived compounds, corpus look-alikes, corpus head nouns), and
-# this repo ships an empty wiki, so it ships no entries. The noun-check behaviour
-# still has to be pinned, so the tests below supply their OWN vocabulary via a
-# second module instance loaded against a fixture data file.
+# The four hyphenation lists are mutable working-wiki data. The noun-check
+# behaviour still has to be pinned independently of whatever vocabulary a vault
+# has accumulated, so the tests below supply their OWN vocabulary via a second
+# module instance loaded against a fixture data file.
 #
 # It has to be a second instance rather than a patch: check_wiki.py resolves
 # HYPHENATION_LISTS_FILE from its own location and compiles the two derived
@@ -1524,7 +1523,7 @@ class TestCheckWiki(unittest.TestCase):
         # A term must not sit on both lists by accident (the allowed list is also a
         # hard never-flag guard, but disjointness keeps intent clear). Checked on the
         # fixture instance (populated lists, so the assertion has teeth) and on the
-        # shipped one (empty in a fresh vault, but the guard holds as it is grown).
+        # repository data file (which may be empty or populated).
         for mod in (cwh, cw):
             overlap = (set(mod.OPEN_COMPOUND_NOUN_SUGGEST)
                        & mod.HYPHENATED_COMPOUND_ALLOWED)
@@ -1570,23 +1569,38 @@ class TestCheckWiki(unittest.TestCase):
     # The four lists live in .claude/skills/multi-skill/hyphenation-lists.md (audit grows
     # them autonomously). The loader must parse the sections and degrade safely.
 
-    def test_shipped_hyphenation_lists_parse_to_four_empty_collections(self) -> None:
-        # The shipped file is schematic-empty (an empty wiki carries no vault
-        # vocabulary), and its schematic examples are commented so the parser skips
-        # them. Reading it must yield four EMPTY collections, not raise and not leak
-        # an example into a live list — an example that leaked would flag adopters'
-        # prose against vocabulary they never chose.
+    def test_inert_hyphenation_template_examples_parse_empty(self) -> None:
+        # Commented schematic examples must not leak into live lists — a leaked
+        # example would flag adopters' prose against vocabulary they never chose.
+        f = self.tmp / 'h-inert.md'
+        f.write_text(
+            '## disallowed\n<!-- schematic example:\n# - belief-state = belief state\n-->\n'
+            '## allowed\n<!-- schematic example:\n# - gpt-3\n-->\n'
+            '## heads\n<!-- schematic example:\n# - representation\n-->\n'
+            '## verified-ignore\n<!-- schematic example:\n'
+            '# - belief state representation\n-->\n', encoding='utf-8')
+        assert cw._load_hyphenation_lists(f) == (
+            {}, frozenset(), frozenset(), frozenset())
+
+    def test_real_hyphenation_lists_file_loads(self) -> None:
+        # A populated working wiki may carry real vocabulary. Validate the loaded
+        # shape and module wiring without treating data cardinality as an invariant.
         dis, allow, heads, ign = cw._load_hyphenation_lists()
-        assert (dis, allow, heads, ign) == ({}, frozenset(), frozenset(), frozenset())
-        # ...and the module globals derived from it agree, so the check no-ops.
-        assert cw.OPEN_COMPOUND_NOUN_SUGGEST == {}
-        assert cw.HYPHENATED_OPEN_COMPOUND_NOUN.search('a belief-state.') is None
-        assert cw.OPEN_COMPOUND_MODIFIER.search('belief state representation') is None
+        assert isinstance(dis, dict)
+        assert all(isinstance(items, frozenset) for items in (allow, heads, ign))
+        assert dis == cw.OPEN_COMPOUND_NOUN_SUGGEST
+        assert allow == cw.HYPHENATED_COMPOUND_ALLOWED
+        assert heads == cw.COMPOUND_MODIFIER_HEADS
+        assert ign == cw.HYPHENATION_VERIFIED_IGNORE
+        for hyphenated, opened in dis.items():
+            assert hyphenated and hyphenated == hyphenated.lower()
+            assert opened and isinstance(opened, str)
+        for items in (allow, heads, ign):
+            assert all(item and item == item.lower() for item in items)
 
     def test_data_file_lists_reach_the_module_globals(self) -> None:
-        # The wiring the shipped empty file cannot exercise: a POPULATED data file
-        # (the test fixture) must reach the four globals and the two regexes derived
-        # from them at import.
+        # A POPULATED fixture must reach the four globals and the two regexes derived
+        # from them at import, independent of the repository data's cardinality.
         assert cwh.OPEN_COMPOUND_NOUN_SUGGEST['belief-state'] == 'belief state'
         assert 'gpt-3' in cwh.HYPHENATED_COMPOUND_ALLOWED
         assert 'representation' in cwh.COMPOUND_MODIFIER_HEADS

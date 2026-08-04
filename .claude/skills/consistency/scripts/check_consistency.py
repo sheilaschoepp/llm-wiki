@@ -982,8 +982,8 @@ def _under_standalone_skill(path: Path, root: Path) -> bool:
     """True if path lies inside a STANDALONE_SKILL_NAMES skill folder.
 
     A standalone skill is wiki-orthogonal — it serves some out-of-band purpose,
-    not the wiki — so the leakage/privacy checks skip its folder. The set is
-    currently empty, so this returns False for every path.
+    not the wiki — so the leakage/privacy checks skip its folder. The current set
+    contains `graph`, so paths under that skill are skipped.
     """
     parts = path.relative_to(root).parts
     return (len(parts) >= 3 and parts[0] == '.claude'

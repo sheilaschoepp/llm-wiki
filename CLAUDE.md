@@ -647,7 +647,7 @@ Meta skills:
 - `checkup` - autonomously run consistency, lint, and audit in one invocation, in the order that satisfies audit's preconditions.
 - `cleanup` - three jobs: graduate memory-file entries into their permanent home (MEMORY.md, CLAUDE.md, or a skill) and clear the absorbed ones; prune unneeded `2-outputs/` files (junk, superseded check reports, subject-orphaned reports, aged artifacts); and archive the wiki bookkeeping files — aged `log.md` entries and finished `hot.md` threads move into `1-wiki/archive/`, while `index.md` is report-only. Every deletion is gated file by file; the log archival, which moves rather than deletes, takes one approval for the whole operation.
 
-A **standalone skill** is one that lives under `.claude/skills/` but sits outside the wiki workflow, so it is intentionally **not** catalogued here, in the directory tree, or in the output-kind naming registry, and should not be referenced by the other skills. `consistency` exempts any such skill via its `STANDALONE_SKILL_NAMES` set — its omission from the catalogues is by design, not drift. The set is currently empty (no standalone skill exists); add a folder name to it to register a future one.
+A **standalone skill** is one that lives under `.claude/skills/` but sits outside the wiki workflow, so it is intentionally **not** catalogued here, in the directory tree, or in the output-kind naming registry, and should not be referenced by the other skills. `consistency` exempts any such skill via its `STANDALONE_SKILL_NAMES` set — its omission from the catalogues is by design, not drift. The set currently contains `graph`; add another folder name to register a future standalone skill.
 
 ## Skill Self-Report
 
