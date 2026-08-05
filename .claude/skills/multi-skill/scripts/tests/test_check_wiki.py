@@ -964,6 +964,29 @@ class TestCheckWiki(unittest.TestCase):
             '(body_hash, masks them from the hash) must stay byte-identical, or '
             'claim-counting and hash-masking silently disagree.')
 
+    def test_unverified_marker_in_html_comment_is_not_reported(self) -> None:
+        p = _write_page(
+            self.tmp,
+            'concepts',
+            'c.md',
+            CONCEPT_FM,
+            '<!--\n> - *[unverified]* literal example\n-->\n',
+        )
+        findings = cw.check_page(
+            path=p, wiki_root=self.tmp / '1-wiki'
+        )
+        assert not any(
+            finding['check_id'] == 'unverified_claim'
+            for finding in findings
+        )
+
+    def test_inline_code_comment_literal_does_not_hide_real_marker(self) -> None:
+        text = (
+            '`<!--` is a literal, not an HTML-comment opener.\n'
+            '> - *[unverified]* pending\n'
+        )
+        assert cw.count_unverified_claim_markers(text=text) == 1
+
     # --- source-page locator completeness (source_locator_incomplete) ------------
     #
     # On source pages the `#page=N` deep-link display must list the structural anchor
@@ -1172,7 +1195,7 @@ class TestCheckWiki(unittest.TestCase):
         p = _write_page(self.tmp, 'sources', 'X.md', SOURCE_FM,
                         '> [!tldr] TL;DR\n> - a claim.\n> ^tldr')
         h = cw.body_hash(path=str(p))
-        p.write_text(p.read_text(encoding='utf-8') + '> - pending. *[unverified]*\n',
+        p.write_text(p.read_text(encoding='utf-8') + '> - *[unverified]* pending.\n',
                      encoding='utf-8')
         assert cw.check_verified_hash(
             path=p, fm={'status': 'verified', 'verified_hash': h},

@@ -49,7 +49,7 @@ from typing import Any
 # it) rather than replicating its masking — see body_hash.py's docstring. Insert the
 # script's own directory so the import resolves whether run as a script or imported.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from body_hash import body_hash  # noqa: E402
+from body_hash import body_hash, count_unverified_claim_markers  # noqa: E402
 
 # Stale-draft threshold in days. Lint flags pages with
 # status:draft and updated: older than this as Info-level. Audit's 60-day
@@ -467,10 +467,13 @@ SQUARE_CITATION_RE = re.compile(
 
 # The claim-level "awaiting a raw fact-check" marker (CLAUDE.md -> Bullet Markers).
 # Surfaced for visibility as the audit-pending delta on otherwise-verified pages.
-# NOTE: this pattern is duplicated as `_UNVERIFIED_RE` in body_hash.py (there it
-# masks marked lines from the hash; here it counts them). The two must stay
-# identical, or counting (here) and masking (there) silently disagree — change both.
-UNVERIFIED_MARKER_RE = re.compile(r'\*\[unverified\]\*')
+# NOTE: this pattern is duplicated as `_UNVERIFIED_RE` in body_hash.py. The
+# actual count and fence/comment handling use body_hash.py's shared helper below
+# so lint and the hash cannot silently disagree. Marker-shaped text in inline or
+# fenced code and HTML comments is semantic text, never pending process state.
+UNVERIFIED_MARKER_RE = re.compile(
+    r'^(> -[ \t]+)\*\[unverified\]\*[ \t]?', re.MULTILINE
+)
 
 # Source-context phrases — concept/entity pages must read as standalone ideas,
 # not as summaries of a particular paper. These phrases tie the bullet's
@@ -643,12 +646,13 @@ def _load_hyphenation_lists(
 # occurrence is a GENUINE reference or generic wording — a homograph, a common
 # noun that happens to be a page title, a term inside a larger established phrase
 # — is a judgement CLAUDE.md -> Wikilink Format explicitly leaves to a reader.
-# `audit` makes that call per occurrence (audit Step 7) and records a
+# `audit` makes that call per occurrence (audit Step 4a) and records a
 # confirmed-generic one here, so the next lint run does not re-flag it and the
 # next audit does not re-litigate it. This is the escape valve
 # HYPHENATION_VERIFIED_IGNORE gives the hyphenation check.
 #
-# An entry is `page-path :: target-stem :: phrase`. It is scoped to the PAGE the
+# An entry is the Markdown list line `- page-path :: target-stem :: phrase`. It
+# is scoped to the PAGE the
 # judgement was made on — genuine-vs-generic is a per-page call, so an entry
 # never suppresses a mention on some other page — and anchored to the PHRASE the
 # mention sits in. The phrase anchor makes an entry SELF-INVALIDATING: reword the
@@ -1787,7 +1791,7 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
     # Claim-level verification: surface `*[unverified]*` claims (the pending delta
     # audit re-checks). Info-level visibility — these are a normal transient state,
     # not drift; lint does not clear them (audit does, after a raw fact-check).
-    n_unverified = len(UNVERIFIED_MARKER_RE.findall(_mask_code_spans(text=body)))
+    n_unverified = count_unverified_claim_markers(text=body)
     if n_unverified:
         findings.append(finding(
             check='unverified_claim',

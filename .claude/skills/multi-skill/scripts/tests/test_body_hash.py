@@ -78,13 +78,13 @@ class TestBodyHash(unittest.TestCase):
 
     def test_marked_line_is_excluded(self) -> None:
         """A page with one marked claim hashes equal to the same page with that line gone."""
-        marked = FM + '# T\n\n- plain claim\n- pending claim *[unverified]*\n'
+        marked = FM + '# T\n\n- plain claim\n> - *[unverified]* pending claim\n'
         without = FM + '# T\n\n- plain claim\n'
         assert bh.body_hash(path=self.write(marked)) == bh.body_hash(path=self.write(without))
 
     def test_editing_marked_claim_does_not_move_hash(self) -> None:
-        a = FM + '# T\n\n- pending one *[unverified]*\n'
-        b = FM + '# T\n\n- a completely different pending claim *[unverified]*\n'
+        a = FM + '# T\n\n> - *[unverified]* pending one\n'
+        b = FM + '# T\n\n> - *[unverified]* a completely different pending claim\n'
         assert bh.body_hash(path=self.write(a)) == bh.body_hash(path=self.write(b))
 
     def test_editing_unmarked_claim_moves_hash(self) -> None:
@@ -95,8 +95,8 @@ class TestBodyHash(unittest.TestCase):
     def test_mask_is_line_scoped_continuation_still_counts(self) -> None:
         """Only the marker-bearing line is dropped; a continuation line still counts,
         so two pages differing only on a marked claim's continuation hash differently."""
-        a = FM + '# T\n\n- claim *[unverified]*\n  continuation alpha\n'
-        b = FM + '# T\n\n- claim *[unverified]*\n  continuation beta\n'
+        a = FM + '# T\n\n> - *[unverified]* claim\n>   continuation alpha\n'
+        b = FM + '# T\n\n> - *[unverified]* claim\n>   continuation beta\n'
         assert bh.body_hash(path=self.write(a)) != bh.body_hash(path=self.write(b))
 
     def test_no_marker_page_unchanged_by_masking(self) -> None:
@@ -113,6 +113,43 @@ class TestBodyHash(unittest.TestCase):
         assert bh.body_hash(path=self.write(a)) != bh.body_hash(path=self.write(b))
         # and the line is not dropped: the page does not hash as if the line were gone
         assert bh.body_hash(path=self.write(a)) != bh.body_hash(path=self.write(FM + '# T\n\n'))
+
+    def test_marker_text_in_fenced_code_is_semantic(self) -> None:
+        """Even canonical-looking marker text inside a fence remains hashed."""
+        a = FM + '# T\n\n```text\n> - *[unverified]* alpha\n```\n'
+        b = FM + '# T\n\n```text\n> - *[unverified]* beta\n```\n'
+        assert bh.body_hash(path=self.write(a)) != bh.body_hash(path=self.write(b))
+        assert bh.count_unverified_claim_markers(a) == 0
+
+    def test_noncanonical_marker_text_is_semantic(self) -> None:
+        a = FM + '# T\n\n- claim suffix *[unverified]* alpha\n'
+        b = FM + '# T\n\n- claim suffix *[unverified]* beta\n'
+        assert bh.body_hash(path=self.write(a)) != bh.body_hash(path=self.write(b))
+        assert bh.count_unverified_claim_markers(a) == 0
+
+    def test_backticks_in_info_string_do_not_open_a_fence(self) -> None:
+        text = FM + '```literal```\n> - *[unverified]* pending\n'
+        assert bh.count_unverified_claim_markers(text) == 1
+
+    def test_marker_text_in_html_comment_is_semantic(self) -> None:
+        a = FM + '<!--\n> - *[unverified]* literal alpha\n-->\n'
+        b = FM + '<!--\n> - *[unverified]* literal beta\n-->\n'
+        assert bh.count_unverified_claim_markers(a) == 0
+        assert bh.body_hash(path=self.write(a)) != bh.body_hash(
+            path=self.write(b)
+        )
+
+    def test_inline_code_comment_literal_does_not_hide_real_marker(self) -> None:
+        text = (
+            FM
+            + '`<!--` is a literal, not an HTML-comment opener.\n'
+            + '> - *[unverified]* pending\n'
+        )
+        assert bh.count_unverified_claim_markers(text) == 1
+
+    def test_blockquoted_html_comment_marker_is_semantic(self) -> None:
+        text = FM + '> <!--\n> - *[unverified]* literal\n> -->\n'
+        assert bh.count_unverified_claim_markers(text) == 0
 
     # --- line endings ---
 
