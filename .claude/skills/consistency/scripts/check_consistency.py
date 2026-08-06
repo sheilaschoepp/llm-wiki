@@ -347,6 +347,12 @@ CHECK_MANIFEST = [
         'name': 'shared multi-skill references are shared and single-copy',
         'scope': "`.claude/skills/multi-skill/references/*.md` vs the skill tree. Each shared reference must be (a) cited by >= 2 distinct skills — that location is for genuinely cross-skill material; a reference used by one skill belongs in that skill's own references/ — and (b) a single copy, with no same-named references/<file> duplicated in any skill folder. Motivating case: verification.md, run by ingest (Step 8) and query (page-authoring path). CLAUDE.md -> Stay In Your Lane. Root-level proposals.",
     },
+    {
+        'check_id': 'pagination_map_integrity',
+        'packet': 'styles-files',
+        'name': 'pagination map structural integrity',
+        'scope': "`.claude/skills/multi-skill/pagination-map.md` — the curated per-raw pagination data CLAUDE.md -> Stay In Your Lane names agent-writable. Structure only: the file must be present, readable, and non-empty; every `## 0-raw/...` section must carry at least one `- ` entry line; and no raw may be registered under two headings. The silent case it exists for is a section whose entry lines are gone — check_wiki.py's `_load_pagination_map` registers the raw from the heading alone (`out.setdefault(raw, {})`), so `printed_page` answers `unregistered` for every page while lint's `pagination_map_unregistered` nudge, which tests `raw_path in PAGINATION_MAP`, sees a member and stays silent; the raw drops out of both. Printed-folio VALUES are never read, parsed, or proposed: nothing here looks right of a line's `- ` prefix, so the roman folios and `none` values that are legitimate map data are structurally unreachable, and no fix hint names a page — adjudicating a folio stays with the human reading both rendered margins. A vault that has registered no raws yet is a legitimate empty map and is silent. Root-level proposals.",
+    },
 ]
 
 MEMORY_FILE_ENTRY_CAP = 10
@@ -2378,6 +2384,137 @@ def check_shared_reference_integrity(root: Path) -> list[dict[str, Any]]:
     return findings
 
 
+# pagination_map_integrity: the curated per-raw pagination data (CLAUDE.md ->
+# Stay In Your Lane). Structure only -- a printed folio is adjudicated by a
+# human reading both rendered margins ("a wrong `none` would license stripping
+# a correct printed page from a citation and certifying the damage",
+# pagination-map.md), so nothing below reads right of a line's `- ` prefix and
+# no message or fix hint ever names a page.
+PAGINATION_MAP_PATH = '.claude/skills/multi-skill/pagination-map.md'
+PAGINATION_MAP_RESTORE_HINT = (
+    'Restore the file from git — it is curated data a human confirmed page by '
+    'page, not something a script regenerates.'
+)
+
+
+def _scan_pagination_map_sections(
+        lines: list[str]) -> dict[str, tuple[int, int]]:
+    """Map each registered raw path to (heading count, entry-line count).
+
+    Mirrors `check_wiki.py`'s `_load_pagination_map` scan exactly — a `## ` line
+    whose heading starts with `0-raw/` opens a section, any other `## ` line
+    closes one, and a `- ` line inside a section is an entry — so this check's
+    notion of a registered section is the loader's, and the map's own
+    placeholder heading and fenced example stay inert here too. An entry is
+    counted by its bullet prefix alone: nothing reads right of the `- `, which
+    is where the printed folio sits.
+    """
+    sections: dict[str, tuple[int, int]] = {}
+    current: str | None = None
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith('## '):
+            heading = stripped[3:].strip()
+            current = heading if heading.startswith('0-raw/') else None
+            if current is not None:
+                headings, entries = sections.get(current, (0, 0))
+                sections[current] = (headings + 1, entries)
+            continue
+        if current is not None and stripped.startswith('- '):
+            headings, entries = sections[current]
+            sections[current] = (headings, entries + 1)
+    return sections
+
+
+def check_pagination_map_integrity(root: Path) -> list[dict[str, Any]]:
+    """Pagination-map structural integrity.
+
+    `.claude/skills/multi-skill/pagination-map.md` is the single source of truth
+    for what each physical page of a raw prints. Several checks already sweep it
+    as text through the `.claude/skills/**` directory walks, but none reads it as
+    pagination data, so its content can be emptied without the battery noticing.
+
+    Two structural defects, both judged from `## ` headings and `- ` bullet
+    prefixes alone:
+
+    (a) a registered `## 0-raw/...` section carrying no `- ` entry line.
+        `check_wiki.py`'s `_load_pagination_map` does `out.setdefault(raw, {})`
+        on the heading alone, so the raw registers with an empty page map:
+        `printed_page` answers `unregistered` for every page (locator
+        verification stops) while `pagination_map_unregistered`, which tests
+        `raw_path in PAGINATION_MAP`, sees a member and stays silent. The raw
+        drops out of both.
+    (b) the same raw registered under two headings. The loader merges them into
+        one page map, so a physical page listed in more than one takes whichever
+        value it reads last.
+
+    Absence fails loud: a missing, unreadable, or contentless file is a finding,
+    never a silent `return []`. A vault that has registered no raws yet is a
+    legitimate empty map and is silent.
+
+    Printed-folio VALUES are never read, parsed, compared, or proposed, so the
+    roman folios and `none` values that are legitimate map data are structurally
+    unreachable rather than allowlisted. Findings target the map file under
+    `.claude/skills/`, so they surface as root-level proposals: this is curated
+    data the user restores, never something the run rewrites.
+    """
+    rel = PAGINATION_MAP_PATH
+    try:
+        lines = (root / rel).read_text(encoding='utf-8').splitlines()
+    except (OSError, UnicodeDecodeError) as exc:
+        # UnicodeDecodeError is a ValueError, not an OSError, so it needs its own
+        # clause for the "unreadable" wording to actually cover it.
+        return [finding(
+            check_id='pagination_map_integrity',
+            file=rel,
+            message=f'Pagination map is missing or unreadable '
+            f'({type(exc).__name__}: {exc}); with no map, no `p. M` locator can '
+            f'be checked against what its physical page prints.',
+            fix_hint=PAGINATION_MAP_RESTORE_HINT,
+        )]
+    if not any(line.strip() for line in lines):
+        return [finding(
+            check_id='pagination_map_integrity',
+            file=rel,
+            message='Pagination map has no content: it registers no raw and '
+            'records no page fact, so no `p. M` locator can be checked against '
+            'what its physical page prints.',
+            fix_hint=PAGINATION_MAP_RESTORE_HINT,
+        )]
+
+    findings: list[dict[str, Any]] = []
+    sections = _scan_pagination_map_sections(lines=lines)
+    for raw_path, (headings, entries) in sorted(sections.items()):
+        if not entries:
+            findings.append(finding(
+                check_id='pagination_map_integrity',
+                file=rel,
+                message=f'Pagination map section `{raw_path}` carries no `- ` '
+                f'entry line, so the raw registers with an empty page map: its '
+                f"locators stop being verified while lint's unregistered-raw "
+                f'nudge, a map-membership test, stays silent.',
+                fix_hint=f"Restore the section's entry lines from git, or delete "
+                f'the `## {raw_path}` heading so the raw reads as unregistered '
+                f'— the fallback the map documents. Never hand-fill a printed '
+                f'folio: the map requires a human to confirm each line against '
+                f'both rendered margins.',
+            ))
+        if headings > 1:
+            findings.append(finding(
+                check_id='pagination_map_integrity',
+                file=rel,
+                message=f'Pagination map registers `{raw_path}` under {headings} '
+                f'separate headings; the loader merges them into one page map, '
+                f'so a physical page listed in more than one silently takes the '
+                f'value it reads last.',
+                fix_hint=f'Keep one `## {raw_path}` section. Reconcile the '
+                f'duplicates by hand — the map requires a human to confirm each '
+                f'line against both rendered margins, so they must not be '
+                f'merged mechanically.',
+            ))
+    return findings
+
+
 CHECK_FUNCTIONS = {
     'retired_feature_mentions': check_retired_feature_mentions,
     'working_skill_count_prose': check_working_skill_count_prose,
@@ -2406,6 +2543,7 @@ CHECK_FUNCTIONS = {
     'output_kinds_match_disk': check_output_kinds_match_disk,
     'catalogue_matches_manifest': check_catalogue_matches_manifest,
     'shared_reference_integrity': check_shared_reference_integrity,
+    'pagination_map_integrity': check_pagination_map_integrity,
 }
 
 

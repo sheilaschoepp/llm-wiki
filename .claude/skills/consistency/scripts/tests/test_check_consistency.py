@@ -44,6 +44,14 @@ def _addr(local: str, domain: str) -> str:
     return f'{local}@{domain}'
 
 
+def _write_pagination_map(root: Path, body: str) -> None:
+    # Every pagination-map fixture plants the file at the one path the check
+    # reads, so the fixtures state only what varies: the file's content.
+    path = root / cc.PAGINATION_MAP_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(body, encoding='utf-8')
+
+
 class TestCheckConsistency(unittest.TestCase):
     """Regression + wiring tests for check_consistency.py (one cohesive suite per script)."""
 
@@ -687,6 +695,105 @@ class TestCheckConsistency(unittest.TestCase):
             f'Reach me at {target} please.\n', encoding='utf-8')
         msgs = [f['message'] for f in cc.check_personal_info_leakage(self.tmp)]
         assert any(target in m for m in msgs), msgs
+
+    # --- pagination-map structural integrity ---
+
+    def test_pagination_map_flags_section_with_no_entry_lines(self) -> None:
+        # The silent case: the `## 0-raw/...` heading survives but its entry
+        # lines are gone. check_wiki.py's loader registers the raw from the
+        # heading alone, so printed_page answers 'unregistered' for every page
+        # while lint's pagination_map_unregistered nudge — a map-membership
+        # test — sees a member and stays quiet. The raw drops out of both, and
+        # before this check nothing in the battery read it as pagination
+        # data.
+        _write_pagination_map(
+            root=self.tmp,
+            body='## Registered raws\n\n'
+                 '## 0-raw/papers/example-raw.pdf\n\n'
+                 'Prose about the raw survived; the entry lines did not.\n',
+        )
+
+        out = cc.check_pagination_map_integrity(self.tmp)
+
+        assert len(out) == 1, out
+        assert out[0]['check_id'] == 'pagination_map_integrity'
+        # Must route root-level (SKILL.md Step 7.3 classifies by target file);
+        # a finding against a wiki page would become auto-fixable.
+        assert out[0]['file'] == cc.PAGINATION_MAP_PATH
+        assert '0-raw/papers/example-raw.pdf' in out[0]['message']
+
+    def test_pagination_map_silent_on_roman_and_none_printed_values(self) -> None:
+        # Roman folios, `none`, and an unresolved review(...) proposal are all
+        # legitimate content of the printed side. The check must never read
+        # that side, so a populated section is silent whatever it prints —
+        # structurally, not by allowlist. A fix hint that named a printed page
+        # would license overwriting a correct folio.
+        _write_pagination_map(
+            root=self.tmp,
+            body='## 0-raw/books/example-book.pdf\n\n'
+                 'Roman front matter, then a body offset.\n\n'
+                 '- 1-10 = none\n'
+                 '- 11 = viii\n'
+                 '- 12-19 = ix-xvi\n'
+                 '- 20 = review(header=3|4,footer=none)\n',
+        )
+
+        assert cc.check_pagination_map_integrity(self.tmp) == []
+
+    def test_pagination_map_silent_when_no_raw_is_registered(self) -> None:
+        # A fresh vault registers a raw only when it ingests one, so a map with
+        # no `## 0-raw/` section is correct, not drift. The template vault ships
+        # in exactly this state; flagging it would fire on every new clone.
+        # The fenced placeholder heading and the commented example are inert
+        # here for the same reason they are inert in check_wiki.py's loader.
+        _write_pagination_map(
+            root=self.tmp,
+            body='# Pagination map\n\n'
+                 '```text\n'
+                 '## <raw path — e.g. 0-raw/papers/Example.pdf>\n'
+                 '- 1 = 1\n'
+                 '```\n\n'
+                 '## Registered raws\n\n'
+                 '<!--\n# ## 0-raw/papers/x.pdf\n# - 1-16 = 4171-4186\n-->\n',
+        )
+
+        assert cc.check_pagination_map_integrity(self.tmp) == []
+
+    def test_pagination_map_absence_fails_loud(self) -> None:
+        # Absence must never be a silent `return []` — a vanished, undecodable,
+        # or contentless map degrades every raw to unregistered, which is the
+        # exact condition this check exists to surface. UnicodeDecodeError is a
+        # ValueError, not an OSError, so it needs its own except clause for the
+        # "unreadable" wording to actually cover it.
+        assert len(cc.check_pagination_map_integrity(self.tmp)) == 1
+
+        _write_pagination_map(root=self.tmp, body='\n   \n')
+        assert len(cc.check_pagination_map_integrity(self.tmp)) == 1
+
+        (self.tmp / cc.PAGINATION_MAP_PATH).write_bytes(
+            b'## 0-raw/papers/example-raw.pdf\n- 1 = \xff\xfe\n')
+        out = cc.check_pagination_map_integrity(self.tmp)
+        assert len(out) == 1, out
+        assert 'UnicodeDecodeError' in out[0]['message']
+
+    def test_pagination_map_flags_duplicate_raw_heading(self) -> None:
+        # The loader merges two same-named sections into one page map, so a
+        # physical page listed in both silently takes the value read last.
+        _write_pagination_map(
+            root=self.tmp,
+            body='## 0-raw/papers/example-raw.pdf\n- 1 = 1\n\n'
+                 '## 0-raw/papers/example-raw.pdf\n- 1 = 9\n',
+        )
+
+        out = cc.check_pagination_map_integrity(self.tmp)
+
+        assert len(out) == 1, out
+        assert 'under 2 separate headings' in out[0]['message']
+
+    def test_pagination_map_integrity_clean_on_this_repo(self) -> None:
+        # Pins the silent-on-an-intact-vault half of the contract, the way
+        # test_catalogue_matches_manifest_clean pins the catalogue's.
+        assert cc.check_pagination_map_integrity(REPO) == []
 
 
 if __name__ == '__main__':
