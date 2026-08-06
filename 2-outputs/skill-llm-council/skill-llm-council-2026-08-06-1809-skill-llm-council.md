@@ -14,8 +14,8 @@ advisors: 10
 evaluators: 10
 chairs: 2
 refuters: 0
-applied: 0
-proposals: 3
+applied: 3
+proposals: 0
 needs_review: 0
 cross_file_proposals: 0
 ---
@@ -71,6 +71,24 @@ All three are proposal-only.
 - **C-26** edits `references/protocol.md`. Doubly protected: `references/` is the enumerated governance class, and the text is the quorum mechanism itself. Both chairs agree.
 - **C-17** edits `SKILL.md`, but its added text operationalizes the self-target protection, which `SKILL.md:161` names explicitly. Chairs split; the meta-chair takes Chair 2's reading, because `SKILL.md:157` resolves unclear scope conservatively and the split is itself evidence of unclarity.
 - **C-10** edits the Step-1 brief specification. Chair 2 flagged this as the one call it could be overruled on. The meta-chair classifies it proposal-only: the defect it fixes is a common-mode input defeating ten otherwise-independent reads, which is an independence property whether or not the file states it as one; and `SKILL.md:161`'s own reasoning applies with full force here — a self-run cannot certify that its own rail edit is a strengthening, because that judgement is made by the very pass the rail constrains. This orchestrator would be the beneficiary of a better brief rule. It is not the right party to declare that rule ordinary content.
+
+## Correction: two of the three were mis-classified, and all three are applied
+
+The scope call above was wrong on C-10 and C-17, and the user overruled it.
+
+The self-target protection is narrower than this orchestrator applied it. `references/` files are proposal-only by explicit enumeration, and so is `SKILL.md` text that **states** a safety, independence, mode-boundary, or quorum mechanism. The task-brief specification is not stated as any of those — `SKILL.md:87` justifies it on framing quality. The unclear-scope rule at `SKILL.md:157` was invoked to route C-10 and C-17 to proposals, but that rule governs in-folder versus cross-file, and both edits are plainly in-folder. Two different tests were blurred together and the run defaulted to asking. **C-10 and C-17 were auto-appliable and should have been applied without a question.** Chair 1 read them correctly; the meta-chair did not.
+
+C-26 stands as correctly classified: `references/protocol.md` is named in the governance class, and `SKILL.md:161` says its text is the user's to change, not the run's. It is applied on explicit user instruction, which is the sanctioned path.
+
+Applied at `a779551`, all four edits byte-identical to the frozen text:
+
+| C_ID | File | Edit |
+| --- | --- | --- |
+| C-10 | `SKILL.md` | sixth brief field `Fact provenance`; confirm line now reads "all six fields… carries a provenance tag" |
+| C-17 | `SKILL.md` | self-run pre-spawn classification appended to the manifest-freeze paragraph |
+| C-26 | `references/protocol.md` | absolute-count arithmetic appended at the eligibility floor |
+
+Post-apply sanity check: `check_structure`, `check_musts`, `check_h2_case`, `check_kwargs` all `[]`; `check_synonyms` returns the one pre-existing `terminology_candidate` suggestion present at baseline. No orphaned text — `five fields` occurs zero times, the field list carries six bullets, and the confirm line agrees.
 
 ## The cost result
 
