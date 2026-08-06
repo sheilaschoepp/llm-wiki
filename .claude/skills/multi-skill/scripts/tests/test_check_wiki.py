@@ -82,6 +82,161 @@ def lineno(find: dict[str, Any]) -> int:
     return int(m.group(1))
 
 
+class TestVagueSourceReferent(unittest.TestCase):
+    def findings(self, text: str) -> list[dict[str, Any]]:
+        return cw.check_vague_source_referents(
+            body=f'> [!idea]\n> - {text}\n> ^idea',
+            rel='1-wiki/concepts/x.md',
+            end=0,
+            kind='concept',
+        )
+
+    def test_attribution_subjects_are_flagged(self) -> None:
+        for text in (
+            'The paper does not measure latency.',
+            'This survey groups the results by task.',
+            'One study found a tradeoff.',
+            "The paper's result depends on the split.",
+            'The paper points to a tradeoff.',
+            'This survey covers three tasks.',
+            'The study uses held-out data.',
+            'The article presents a benchmark.',
+            'The source defines the metric.',
+            'The paper concludes the method is stable.',
+            'The paper explains the discrepancy.',
+            'The paper asserts a causal mechanism.',
+            'The study indicates a tradeoff.',
+            'The source documents three failures.',
+            'The article reveals a hidden dependency.',
+            'The work establishes the upper bound.',
+            'The survey derives the taxonomy.',
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(len(self.findings(text)), 1)
+
+    def test_object_complement_and_compound_uses_are_not_flagged(self) -> None:
+        for text in (
+            'We size the study before collection.',
+            'The study of team dynamics spans three settings.',
+            'We report study-level effects.',
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(self.findings(text), [])
+
+    def test_code_quote_link_comment_and_fence_are_masked(self) -> None:
+        body = (
+            '> [!idea]\n'
+            '> - `the paper reports` and "the paper reports" and '
+            '[[1-wiki/concepts/x.md|the paper reports]].\n'
+            '<!-- the paper reports -->\n'
+            '```\nthe paper reports\n```\n'
+            '> ^idea'
+        )
+        self.assertEqual(cw.check_vague_source_referents(
+            body=body, rel='1-wiki/concepts/x.md', end=0, kind='concept'
+        ), [])
+
+    def test_exact_unique_verified_ignore_suppresses_only_its_page(self) -> None:
+        entry = {
+            'page': '1-wiki/concepts/x.md',
+            'phrase': 'The paper does not measure latency.',
+            'line': 1,
+            'pattern': re.compile(
+                r'The\s+paper\s+does\s+not\s+measure\s+latency\.', re.IGNORECASE
+            ),
+        }
+        with mock.patch.object(cw, 'VAGUE_SOURCE_IGNORE', [entry]):
+            self.assertEqual(
+                self.findings('The paper does not measure latency.'), []
+            )
+            other = cw.check_vague_source_referents(
+                body='> [!idea]\n> - The paper does not measure latency.\n> ^idea',
+                rel='1-wiki/concepts/y.md', end=0, kind='concept'
+            )
+            self.assertEqual(len(other), 1)
+
+    def test_one_broad_ignore_cannot_suppress_two_vague_referents(self) -> None:
+        phrase = (
+            'The paper reports latency and the study uses held-out data.'
+        )
+        entry = {
+            'page': '1-wiki/concepts/x.md',
+            'phrase': phrase,
+            'line': 1,
+            'pattern': re.compile(
+                r'The\s+paper\s+reports\s+latency\s+and\s+the\s+study\s+'
+                r'uses\s+held-out\s+data\.',
+                re.IGNORECASE,
+            ),
+        }
+        with mock.patch.object(cw, 'VAGUE_SOURCE_IGNORE', [entry]):
+            self.assertEqual(len(self.findings(phrase)), 2)
+
+
+class TestCitationUnpairedSites(unittest.TestCase):
+    def test_multiple_locators_at_one_site_emit_one_finding(self) -> None:
+        body = f'> [!idea]\n> - Claim ({LOC1}; {LOC2}).\n> ^idea'
+        findings = cw.check_citation_form(
+            body=body, rel='1-wiki/concepts/x.md', end=0
+        )
+        unpaired = [
+            f for f in findings if f['check_id'] == 'citation_unpaired'
+        ]
+        self.assertEqual(len(unpaired), 1)
+        self.assertIn('2 raw deep-link(s)', unpaired[0]['message'])
+
+    def test_separate_physical_sites_emit_separate_findings(self) -> None:
+        body = f'> [!idea]\n> - First {LOC1}.\n> - Second {LOC2}.\n> ^idea'
+        findings = cw.check_citation_form(
+            body=body, rel='1-wiki/concepts/x.md', end=0
+        )
+        self.assertEqual(
+            sum(f['check_id'] == 'citation_unpaired' for f in findings), 2
+        )
+
+    def test_two_parenthetical_sites_on_one_line_are_independent(self) -> None:
+        body = f'> [!idea]\n> - First ({LOC1}); second ({LOC2}).\n> ^idea'
+        findings = cw.check_citation_form(
+            body=body, rel='1-wiki/concepts/x.md', end=0
+        )
+        self.assertEqual(
+            sum(f['check_id'] == 'citation_unpaired' for f in findings), 2
+        )
+
+    def test_multiline_parenthetical_is_one_site(self) -> None:
+        body = (
+            f'> [!idea]\n> - Claim ({LOC1};\n>   {LOC2}).\n> ^idea'
+        )
+        findings = cw.check_citation_form(
+            body=body, rel='1-wiki/concepts/x.md', end=0
+        )
+        unpaired = [
+            item for item in findings
+            if item['check_id'] == 'citation_unpaired'
+        ]
+        self.assertEqual(len(unpaired), 1)
+        self.assertIn('2 raw deep-link(s)', unpaired[0]['message'])
+
+    def test_source_link_must_match_raw_stem(self) -> None:
+        wrong = '[[1-wiki/sources/Y.md|Y]]'
+        body = f'> [!idea]\n> - Claim ({wrong}; {LOC1}).\n> ^idea'
+        findings = cw.check_citation_form(
+            body=body, rel='1-wiki/concepts/x.md', end=0
+        )
+        self.assertEqual(
+            sum(f['check_id'] == 'citation_unpaired' for f in findings), 1
+        )
+
+    def test_matching_source_link_pairs_site(self) -> None:
+        body = f'> [!idea]\n> - Claim ({SRC}; {LOC1}; {LOC2}).\n> ^idea'
+        findings = cw.check_citation_form(
+            body=body, rel='1-wiki/concepts/x.md', end=0
+        )
+        self.assertFalse(any(
+            item['check_id'] == 'citation_unpaired' for item in findings
+        ))
+
+
 class TestInvocationGuard(unittest.TestCase):
     def test_repo_root_shape_is_rejected_without_findings_json(self) -> None:
         with tempfile.TemporaryDirectory() as td:

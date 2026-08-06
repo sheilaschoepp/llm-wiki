@@ -440,6 +440,9 @@ LOCATOR_ANCHOR_TOKEN_RE = re.compile(
     r'|\babstract\b', re.IGNORECASE)
 # A source-page wikilink in citation form (no `#^callout` section anchor).
 SOURCE_PAGE_LINK_RE = re.compile(r'\[\[1-wiki/sources/[^\]|#]+\.md\|[^\]]*\]\]')
+SOURCE_PAGE_LINK_KEY_RE = re.compile(
+    r'\[\[1-wiki/sources/([^\]|#]+)\.md\|[^\]]*\]\]'
+)
 # A callout body bullet that opens with a wiki-PAGE wikilink: `> - [[1-wiki/…|display]]…`.
 # Group 1 is the display text. Tolerates indented sub-bullets (`>   - `). Only
 # matches when the wikilink is the first content on the bullet (sentence-initial),
@@ -505,32 +508,35 @@ SOURCE_CONTEXT_PHRASES = re.compile(
 _ATTRIB_VERB = (
     r'note[sd]?|argue[sd]?|state[sd]?|show(?:s|ed)?|find[s]?|found|'
     r'claim(?:s|ed)?|report(?:s|ed)?|suggest(?:s|ed)?|propose[sd]?|'
-    r'demonstrate[sd]?|introduce[sd]?|observe[sd]?|describe[sd]?'
+    r'demonstrate[sd]?|introduce[sd]?|observe[sd]?|describe[sd]?|'
+    r'measure(?:s|d)?|test(?:s|ed)?|evaluate[sd]?|compare[sd]?|'
+    r'group(?:s|ed)?|distinguish(?:es|ed)?|omit(?:s|ted)?|exclude[sd]?|'
+    r'point(?:s|ed)?\s+to|cover(?:s|ed)?|use(?:s|d)?|'
+    r'present(?:s|ed)?|define[sd]?|conclude[sd]?|explain(?:s|ed)?|'
+    r'assert(?:s|ed)?|indicate[sd]?|document(?:s|ed)?|reveal(?:s|ed)?|'
+    r'establish(?:es|ed)?|derive[sd]?'
 )
 _VAGUE_NOUN = r'source|framework|study|paper|work|survey|article|preprint'
-# Definite/demonstrative references to a source artifact ("the paper", "this
-# survey", "the study", "the article", "the preprint", "the source", "the
-# authors") are essentially always the unnamed source on a concept/entity/
-# synthesis page, so they are flagged WITHOUT a verb gate — an enumerated verb
-# list was too narrow and silently missed "the survey points to", "the paper
-# does not measure", "the survey groups", etc. "framework/method/system/work"
-# are deliberately NOT in this arm: a definite "the framework" usually names the
-# page's OWN subject (e.g. an entity page for BERT), not the source. The
-# negative lookahead `(?!\s*\[\[)` suppresses the named-appositive form
-# "the survey [[1-wiki/sources/...]]", where the source IS named right after.
-_SOURCE_ARTIFACT = r'paper|survey|study|article|preprint|source'
+_SOURCE_ARTIFACT = r'paper|survey|study|work|article|preprint|source'
+_ATTRIB_AUX = (
+    r'(?:do|does|did|can|cannot|could|may|might|will|would|has|have|had)\s+'
+    r'(?:not\s+)?(?:' + _ATTRIB_VERB + r')'
+)
+_VAGUE_SUBJECT = (
+    r'(?:(?:the|this|that)\s+(?:' + _SOURCE_ARTIFACT + r')|'
+    r'(?:a|an|one)\s+(?:' + _VAGUE_NOUN + r'))'
+)
 VAGUE_SOURCE_REFERENT = re.compile(
-    # A vague referent as the subject of an attribution verb: "a source claims",
-    # "one study found", "a paper shows".
-    r'\b(?:the\s+source|(?:a|an|one)\s+(?:' + _VAGUE_NOUN + r'))\s+'
-    r'(?:' + _ATTRIB_VERB + r')\b'
-    # Enumerative possessive: "one framework's setup", "the source's claim".
-    r"|\b(?:the\s+source|one\s+(?:" + _VAGUE_NOUN + r"))'s\b"
-    # Definite/demonstrative reference to a source artifact, verb-free (covers
-    # the trailing-possessive "the paper's" / "the survey's" too), unless the
-    # source is named immediately after via a wikilink.
-    r'|\b(?:the|this|that)\s+(?:' + _SOURCE_ARTIFACT + r')\b(?!\s*\[\[)'
-    r'|\bthe\s+authors?\b(?!\s*\[\[)',
+    # Subject attribution only: "one study found", "this survey groups", and
+    # "the paper does not measure". Requiring the predicate avoids object uses,
+    # complements ("the study of teams"), and compounds ("study-level").
+    r'\b' + _VAGUE_SUBJECT + r'\b(?![\w-])(?!\s*\[\[)\s+'
+    r'(?:(?:' + _ATTRIB_VERB + r')|(?:' + _ATTRIB_AUX + r'))\b'
+    # Possessives carry source identity without needing an attribution verb.
+    r"|\b" + _VAGUE_SUBJECT + r"\b(?![\w-])(?!\s*\[\[)'s\b"
+    # Authors are attribution subjects only when possessive or verb-gated.
+    r"|\bthe\s+authors?\b(?![\w-])(?!\s*\[\[)(?:'s\b|\s+(?:(?:"
+    + _ATTRIB_VERB + r')|(?:' + _ATTRIB_AUX + r'))\b)',
     re.IGNORECASE,
 )
 
@@ -712,6 +718,48 @@ def _load_unlinked_mention_ignore(
 
 
 UNLINKED_MENTION_IGNORE = _load_unlinked_mention_ignore()
+
+
+def _load_vague_source_ignore(
+    path: Path = UNLINKED_MENTION_IGNORE_FILE,
+) -> list[dict[str, Any]]:
+    """Parse exact page/phrase exceptions for vague_source_referent."""
+    entries: list[dict[str, Any]] = []
+    try:
+        text = path.read_text(encoding='utf-8')
+    except OSError:
+        return entries
+    section: str | None = None
+    for lineno, raw in enumerate(text.splitlines(), 1):
+        line = raw.strip()
+        if line.startswith('## '):
+            section = line[3:].strip().lower()
+            continue
+        if (
+            section != 'vague-source-referent-verified-ignore'
+            or not line.startswith('- ')
+        ):
+            continue
+        item = line[2:].strip()
+        if not item or item.startswith('<!--'):
+            continue
+        parts = [part.strip() for part in item.split('::')]
+        if len(parts) != 2 or not all(parts):
+            continue
+        page, phrase = parts
+        entries.append({
+            'page': page,
+            'phrase': phrase,
+            'line': lineno,
+            'pattern': re.compile(
+                r'\s+'.join(re.escape(word) for word in phrase.split()),
+                re.IGNORECASE,
+            ),
+        })
+    return entries
+
+
+VAGUE_SOURCE_IGNORE = _load_vague_source_ignore()
 
 
 # What each physical page of each raw PDF actually PRINTS. A locator states two
@@ -930,6 +978,20 @@ def _mask_noscan_spans(text: str) -> str:
     return re.sub(r'\[\[[^\]]*\]\]', lambda m: ' ' * len(m.group(0)), text)
 
 
+def _mask_prose_literals(text: str) -> str:
+    """Blank code, links, comments, fences, and verbatim double quotes."""
+    masked = re.sub(
+        r'```.*?```|<!--.*?-->',
+        lambda match: ' ' * len(match.group(0)),
+        text,
+        flags=re.DOTALL,
+    )
+    masked = _mask_noscan_spans(text=masked)
+    return re.sub(
+        r'"[^"\n]*"', lambda match: ' ' * len(match.group(0)), masked
+    )
+
+
 def _blank_sources_callout(text: str) -> str:
     """Blank the `> [!sources]` callout block (length-preserving) so its
     support-list source links are not read as inline citations. The block runs
@@ -1087,6 +1149,56 @@ def finding(check: str, file: str, message: str, fix_hint: str = '',
         'message': message,
         'fix_hint': fix_hint,
     }
+
+
+def check_vague_source_referents(
+    *, body: str, rel: str, end: int, kind: str,
+) -> list[dict[str, Any]]:
+    """Flag unnamed source attribution, excluding exact verified exceptions."""
+    if kind not in {'concept', 'entity', 'synthesis'}:
+        return []
+    scan = _blank_sources_callout(text=_mask_prose_literals(text=body))
+    ignores = [entry for entry in VAGUE_SOURCE_IGNORE if entry['page'] == rel]
+    matches = list(VAGUE_SOURCE_REFERENT.finditer(scan))
+    valid_ignore_spans: list[tuple[int, int]] = []
+    for entry in ignores:
+        spans = [
+            (phrase.start(), phrase.end())
+            for phrase in entry['pattern'].finditer(body)
+        ]
+        if len(spans) != 1:
+            continue
+        start, stop = spans[0]
+        if sum(
+            start <= match.start() and match.end() <= stop
+            for match in matches
+        ) == 1:
+            valid_ignore_spans.append((start, stop))
+    findings: list[dict[str, Any]] = []
+    for match in matches:
+        if any(
+            start <= match.start() and match.end() <= stop
+            for start, stop in valid_ignore_spans
+        ):
+            continue
+        line_no = scan[:match.start()].count('\n') + 1
+        actual_line = end + 1 + line_no
+        findings.append(finding(
+            check='vague_source_referent',
+            file=rel,
+            message=(
+                f'Vague source referent `{match.group(0)}` on {kind} page '
+                f'(line {actual_line}). The bullet attributes a claim to a '
+                f'source without naming it; this becomes ambiguous once the '
+                f'page has more than one source.'
+            ),
+            fix_hint=(
+                'Name the source directly — a pipe-rendered wikilink to its '
+                'source page (or the named system) — or, if the attribution '
+                'is not load-bearing, restate the idea on its own terms.'
+            ),
+        ))
+    return findings
 
 
 # Cap the best-effort `git show HEAD:` fetch so a hung git never stalls lint.
@@ -1636,29 +1748,11 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
                 ),
             ))
 
-    # When a concept/entity/synthesis bullet attributes a claim to a source, it
-    # must name the source, not say "the source" / "a source" / "one framework"
-    # (CLAUDE.md -> Plain-Language Style). Source pages are exempt: the whole
-    # page is scoped to one source, so "the source" there is unambiguous.
-    if kind in {'concept', 'entity', 'synthesis'}:
-        for m in VAGUE_SOURCE_REFERENT.finditer(body):
-            line_no = body[:m.start()].count('\n') + 1
-            actual_line = end + 1 + line_no
-            findings.append(finding(
-                check='vague_source_referent',
-                file=rel,
-                message=(
-                    f'Vague source referent `{m.group(0)}` on {kind} page '
-                    f'(line {actual_line}). The bullet attributes a claim to a '
-                    f'source without naming it; this becomes ambiguous once the '
-                    f'page has more than one source.'
-                ),
-                fix_hint=(
-                    'Name the source directly — a pipe-rendered wikilink to its '
-                    'source page (or the named system) — or, if the attribution '
-                    'is not load-bearing, restate the idea on its own terms.'
-                ),
-            ))
+    # Source pages are exempt: the whole page is scoped to one source, so an
+    # otherwise-vague source noun there is unambiguous.
+    findings.extend(check_vague_source_referents(
+        body=body, rel=rel, end=end, kind=kind
+    ))
 
     # Canonical citation form: any inline raw deep-link must carry a structural
     # anchor + page in its display and be paired with its source-page link
@@ -2095,6 +2189,40 @@ def check_page_locators_linked(body: str, rel: str) -> list[dict[str, Any]]:
     return findings
 
 
+def _citation_site_bounds(
+    *, text: str, start: int, stop: int,
+) -> tuple[int, int, int]:
+    """Return logical-bullet start plus one enclosing citation-site span."""
+    bullet_starts = list(re.finditer(r'(?m)^>\s*-\s+', text[: start + 1]))
+    bullet_start = (
+        bullet_starts[-1].start()
+        if bullet_starts
+        else text.rfind('\n', 0, start) + 1
+    )
+    next_bullet = re.search(r'(?m)^>\s*-\s+', text[stop:])
+    bullet_stop = (
+        stop + next_bullet.start() if next_bullet else len(text)
+    )
+    stack: list[int] = []
+    for index in range(bullet_start, start):
+        if text[index] == '(':
+            stack.append(index)
+        elif text[index] == ')' and stack:
+            stack.pop()
+    if not stack:
+        return bullet_start, start, stop
+    opening = stack[-1]
+    depth = 1
+    for index in range(stop, bullet_stop):
+        if text[index] == '(':
+            depth += 1
+        elif text[index] == ')':
+            depth -= 1
+            if depth == 0:
+                return bullet_start, opening, index + 1
+    return bullet_start, start, stop
+
+
 def check_citation_form(body: str, rel: str, end: int) -> list[dict[str, Any]]:
     """Mechanical citation-form checks for concept/entity/synthesis pages
     (CLAUDE.md -> Source Support And Verification, canonical form). Lint owns the
@@ -2109,10 +2237,13 @@ def check_citation_form(body: str, rel: str, end: int) -> list[dict[str, Any]]:
       or a page (`p. M`). An
       `app.`-anchored display may omit `p. M` (the unpaginated-supplement
       exemption; see locator_display_complete).
-    - citation_unpaired: a raw deep-link not preceded on its bullet by a
-      source-page wikilink (the canonical form pairs them).
+    - citation_unpaired: a raw deep-link whose citation site is not paired with
+      the source-page wikilink for that same raw stem. One enclosing
+      parenthetical is one site, including multiline/multi-locator sites.
     """
     findings: list[dict[str, Any]] = []
+    unpaired_sites: dict[tuple[int, int], tuple[int, int]] = {}
+    site_state: dict[int, tuple[tuple[int, int], int]] = {}
     # Blank inline code and the Sources callout (its support-list links are not
     # inline citations). Length-preserving, so offsets map back for line numbers.
     scan = _blank_sources_callout(text=_mask_code_spans(text=body))
@@ -2137,24 +2268,45 @@ def check_citation_form(body: str, rel: str, end: int) -> list[dict[str, Any]]:
                           'appendix that carries no printed page cites the anchor '
                           'alone (`app. D.1, tab. 8`) — never invent a `p. M`.'),
             ))
-        # Canonical form pairs the deep-link with a source-page link earlier in
-        # the same bullet. Callout bullets are single physical lines, so scan
-        # from the start of the deep-link's line — this allows the common
-        # "Source notes X … (sec. Y, p. M)" form (source named at the bullet
-        # start, location cited at the end) as well as the adjacent form.
-        line_start = scan.rfind('\n', 0, m.start()) + 1
-        window = scan[line_start:m.start()]
-        if not SOURCE_PAGE_LINK_RE.search(window):
-            findings.append(finding(
-                check='citation_unpaired',
-                file=rel,
-                message=(f'Citation deep-link (line {actual_line}) is not '
-                         f'preceded by a source-page wikilink; the canonical '
-                         f'form pairs them.'),
-                fix_hint=('Prefix the deep-link with its source-page wikilink: '
-                          '`[[1-wiki/sources/X.md|X]] '
-                          '([[0-raw/papers/X.pdf#page=N|sec. Y, p. M]])`.'),
-            ))
+        # A citation site is one enclosing parenthetical, even when it spans
+        # lines or carries several locators.  Distinct sites on the same bullet
+        # are checked independently.  Pairing is source-specific: source X does
+        # not authenticate a raw locator for Y.
+        bullet_start, site_start, site_stop = _citation_site_bounds(
+            text=scan, start=m.start(), stop=m.end()
+        )
+        site = (site_start, site_stop)
+        previous = site_state.get(bullet_start)
+        if previous is None:
+            context_start = bullet_start
+        elif previous[0] == site:
+            context_start = previous[1]
+        else:
+            context_start = previous[0][1]
+        site_state[bullet_start] = (site, context_start)
+        window = scan[context_start:m.start()]
+        source_stems = {
+            Path(link.group(1)).name
+            for link in SOURCE_PAGE_LINK_KEY_RE.finditer(window)
+        }
+        raw_stem = Path(raw_path).stem if raw_path else None
+        if raw_stem not in source_stems:
+            prior = unpaired_sites.get(site)
+            unpaired_sites[site] = (
+                actual_line,
+                1 if prior is None else prior[1] + 1,
+            )
+    for actual_line, count in unpaired_sites.values():
+        findings.append(finding(
+            check='citation_unpaired',
+            file=rel,
+            message=(f'Citation site (line {actual_line}) contains {count} raw '
+                     f'deep-link(s) not preceded by a source-page wikilink; the '
+                     f'canonical form pairs the site with its source.'),
+            fix_hint=('Prefix the citation site with its source-page wikilink: '
+                      '`[[1-wiki/sources/X.md|X]] '
+                      '([[0-raw/papers/X.pdf#page=N|sec. Y, p. M]])`.'),
+        ))
     return findings
 
 

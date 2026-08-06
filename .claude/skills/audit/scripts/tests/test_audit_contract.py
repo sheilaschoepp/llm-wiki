@@ -33,6 +33,12 @@ baseline_capture = _load(
     'audit_warning_baseline_capture',
     SCRIPTS / 'capture_warning_baseline.py',
 )
+reader_batcher = _load(
+    'audit_reader_batcher', SCRIPTS / 'manage_reader_batches.py'
+)
+page_checkpoint = _load(
+    'audit_page_checkpoint', SCRIPTS / 'capture_page_checkpoint.py'
+)
 checker = _load(
     'audit_contract_check_wiki',
     REPO_ROOT / '.claude/skills/multi-skill/scripts/check_wiki.py',
@@ -41,8 +47,11 @@ checker = _load(
 
 RULE_BYTES = b'rule\n'
 RELATIONSHIP_BYTES = b'relationship\n'
-IGNORE_BYTES = b'# ignore\n\n## verified-ignore\n'
-TARGET_BYTES = b'target'
+IGNORE_BYTES = (
+    b'# ignore\n\n## verified-ignore\n\n'
+    b'## vague-source-referent-verified-ignore\n'
+)
+TARGET_BYTES = b'---\ntype: concept\nstatus: draft\n---\nTarget.\n'
 HOST_BYTES = b'target\n' * 700
 CHECKER_BYTES = (
     b'import json\nUNLINKED_MENTION_IGNORE=[]\n'
@@ -151,17 +160,28 @@ def _write_baseline(
     checker_path.write_bytes(CHECKER_BYTES)
     ignore = tmp_path / baseline_capture.IGNORE_PATH
     ignore.parent.mkdir(parents=True, exist_ok=True)
-    added_entries = [
+    mention_entries = [
         row['ignore_entry']
         for row in occurrences
         if row.get('ignore_entry') is not None
     ]
+    vague_entries = [
+        row['ignore_entry']
+        for row in warnings
+        if row.get('ignore_entry') is not None
+    ]
+    section = b'## vague-source-referent-verified-ignore\n'
+    before, after = IGNORE_BYTES.split(section, 1)
     ignore.write_bytes(
-        IGNORE_BYTES
-        + ''.join(entry + '\n' for entry in added_entries).encode()
+        before
+        + ''.join(entry + '\n' for entry in mention_entries).encode()
+        + section
+        + after
+        + ''.join(entry + '\n' for entry in vague_entries).encode()
     )
     frozen_target_paths = sorted(
         {row['target_path'] for row in frozen_occurrences}
+        | set(page_preimages or {})
     )
     for path in frozen_target_paths:
         if page_preimages and path in page_preimages:
@@ -257,6 +277,892 @@ def _write_baseline(
     )
 
 
+def _write_preverification_checkpoint(
+    tmp_path,
+    *,
+    baseline_path,
+    baseline_sha,
+    page_preimages=None,
+):
+    baseline = json.loads((tmp_path / baseline_path).read_text())
+    pages = {}
+    for relative in sorted(baseline['target_page_hashes']):
+        if page_preimages and relative in page_preimages:
+            record = dict(page_preimages[relative])
+        else:
+            data = (tmp_path / relative).read_bytes()
+            text = data.decode()
+            record = {
+                'sha256': hashlib.sha256(data).hexdigest(),
+                'bytes_base64': base64.b64encode(data).decode(),
+                'status': page_checkpoint._frontmatter_value(
+                    text=text, key='status'
+                ),
+                'verified_hash': page_checkpoint._frontmatter_value(
+                    text=text, key='verified_hash'
+                ),
+            }
+        pages[relative] = record
+    payload = {
+        'schema_version': 1,
+        'kind': 'audit-preverification-page-checkpoint',
+        'run_id': 'run',
+        'warning_baseline_sha256': baseline_sha,
+        'pages': pages,
+    }
+    data = json.dumps(payload, sort_keys=True, indent=2).encode() + b'\n'
+    path = (
+        tmp_path / baseline_capture.BASELINE_DIRECTORY
+        / 'audit-run-preverification.json'
+    )
+    path.write_bytes(data)
+    return {
+        'preverification_checkpoint_path': path.relative_to(
+            tmp_path
+        ).as_posix(),
+        'preverification_checkpoint_sha256': hashlib.sha256(data).hexdigest(),
+    }
+
+
+def _write_execution_journal(
+    tmp_path, *, executions, baseline_sha='b' * 64,
+):
+    genesis = hashlib.sha256(completion._canonical_json(value={
+        'kind': 'audit-reader-execution-journal-genesis',
+        'run_id': 'run',
+        'warning_baseline_sha256': baseline_sha,
+    })).hexdigest()
+    previous_entry = genesis
+    previous_anchor = genesis
+    entries = []
+    anchor_directory = (
+        tmp_path
+        / '2-outputs/audit/reader-artifacts/run/execution-anchors'
+    )
+    anchor_directory.mkdir(parents=True, exist_ok=True)
+    for index, execution in enumerate(executions, 1):
+        anchor = {
+            'schema_version': 1,
+            'run_id': 'run',
+            'warning_baseline_sha256': baseline_sha,
+            'execution_number': index,
+            'plan_sha256': execution['plan_sha256'],
+            'collected_sha256': execution['collected_sha256'],
+            'previous_anchor_sha256': previous_anchor,
+        }
+        anchor['anchor_sha256'] = hashlib.sha256(
+            completion._canonical_json(value=anchor)
+        ).hexdigest()
+        (anchor_directory / f'execution-{index:03d}.json').write_text(
+            json.dumps(anchor)
+        )
+        entry = {
+            'execution_number': index,
+            'plan_sha256': execution['plan_sha256'],
+            'collected_sha256': execution['collected_sha256'],
+            'previous_entry_sha256': previous_entry,
+            'anchor_sha256': anchor['anchor_sha256'],
+        }
+        entry['entry_sha256'] = hashlib.sha256(
+            completion._canonical_json(value=entry)
+        ).hexdigest()
+        entries.append(entry)
+        previous_entry = entry['entry_sha256']
+        previous_anchor = anchor['anchor_sha256']
+    journal = {
+        'schema_version': 1,
+        'run_id': 'run',
+        'warning_baseline_sha256': baseline_sha,
+        'entries': entries,
+    }
+    journal['journal_sha256'] = hashlib.sha256(
+        completion._canonical_json(value=journal)
+    ).hexdigest()
+    data = json.dumps(journal).encode()
+    path = (
+        tmp_path
+        / '2-outputs/audit/reader-artifacts/run/execution-journal.json'
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+    return {
+        'warning_baseline_sha256': baseline_sha,
+        'reader_execution_journal_path': (
+            '2-outputs/audit/reader-artifacts/run/execution-journal.json'
+        ),
+        'reader_execution_journal_sha256': hashlib.sha256(data).hexdigest(),
+    }
+
+
+def _reader_execution(tmp_path, *, kind='page', verdict='hold'):
+    generation = hashlib.sha256(b'page').hexdigest()
+    unit = {
+        'unit_id': (
+            hashlib.sha256(b'claim').hexdigest()
+            if kind == 'bullet'
+            else '1-wiki/concepts/example.md'
+        ),
+        'page_generation': generation,
+        'raw_manifest': [],
+        'verification_scope': 'ordinary',
+        'quantified_population': None,
+    }
+    plan = reader_batcher.build_plan({
+        'schema_version': 1,
+        'run_id': 'run',
+        'relationship_epoch': 'READY(1)',
+        'bullet_units': [unit] if kind == 'bullet' else [],
+        'page_units': [unit] if kind == 'page' else [],
+    })
+    folder = (
+        tmp_path / '2-outputs/audit/reader-artifacts/run/execution-001'
+    )
+    sidecars = folder / 'sidecars'
+    sidecars.mkdir(parents=True)
+    for index, batch in enumerate(plan['batches']):
+        unit = batch['units'][0]
+        agent = f'agent-{index}'
+        record_verdict = (
+            verdict[batch['role']] if isinstance(verdict, dict) else verdict
+        )
+        common = {
+            'schema_version': 1,
+            'row_id': batch['batch_id'],
+            'run_id': 'run',
+            'relationship_epoch': 'READY(1)',
+            'role': batch['role'],
+            'agent_id': agent,
+            'blind_to': [batch['counterpart_role']],
+            'verdict': record_verdict,
+        }
+        if kind == 'bullet':
+            record = {
+                **common,
+                'row_type': 'bullet_verdict',
+                'claim_instance_id': unit['unit_id'],
+                'role_version': 'reader-v1',
+                'quote': 'Literal evidence.',
+                'reasoning': 'The exact evidence entails the claim.',
+                'confidence': 'high',
+                'correction': (
+                    None
+                    if record_verdict == 'hold'
+                    else 'Remove unsupported claim.'
+                ),
+                'quote_validated': True,
+            }
+        else:
+            record = {
+                **common,
+                'row_type': 'page_reader',
+                'page_path': unit['unit_id'],
+                'page_generation': generation,
+                'raw_manifest': [],
+                'defects': (
+                    [] if record_verdict == 'hold'
+                    else [{'scope': 'page_only', 'detail': 'Test defect.'}]
+                ),
+                'evidence': 'Full final page and complete manifest reviewed.',
+            }
+        artifact = {
+            'schema_version': 1,
+            'run_id': 'run',
+            'relationship_epoch': 'READY(1)',
+            'batch_id': batch['batch_id'],
+            'plan_sha256': plan['plan_sha256'],
+            'input_sha256': plan['input_sha256'],
+            'role': batch['role'],
+            'agent_id': agent,
+            'reader_run_id': f'reader-run-{index}',
+            'unit_ids': [unit['unit_id']],
+            'records': [record],
+        }
+        (sidecars / f'{batch["batch_id"]}.json').write_text(
+            json.dumps(artifact), encoding='utf-8'
+        )
+    plan_path = folder / 'plan.json'
+    plan_path.write_text(json.dumps(plan), encoding='utf-8')
+    collected = reader_batcher.collect_artifacts(plan, sidecars)
+    collected_path = folder / 'collected.json'
+    collected_path.write_text(json.dumps(collected), encoding='utf-8')
+    execution = {
+        'execution_number': 1,
+        'plan_path': (
+            '2-outputs/audit/reader-artifacts/run/execution-001/plan.json'
+        ),
+        'plan_sha256': plan['plan_sha256'],
+        'input_sha256': plan['input_sha256'],
+        'planned_groups': plan['planned_groups'],
+        'planned_calls': plan['planned_calls'],
+        'planned_waves': plan['planned_waves'],
+        'planned_records': (
+            plan['planned_bullet_records']
+            if kind == 'bullet'
+            else plan['planned_page_records']
+        ),
+        'artifact_dir': (
+            '2-outputs/audit/reader-artifacts/run/execution-001/sidecars'
+        ),
+        'collected_path': (
+            '2-outputs/audit/reader-artifacts/run/execution-001/collected.json'
+        ),
+        'collected_sha256': hashlib.sha256(
+            collected_path.read_bytes()
+        ).hexdigest(),
+        'terminal_calls': collected['terminal_calls'],
+        'terminal_records': collected['terminal_records'],
+        'terminal_row_ids': [row['row_id'] for row in collected['records']],
+        'superseded_rows': [],
+        'records_sha256': collected['records_sha256'],
+    }
+    adjudications = [
+        {
+            'schema_version': 1,
+            'row_id': f'adjudication-{index}',
+            'run_id': 'run',
+            'record_row_id': row['row_id'],
+            'record_sha256': hashlib.sha256(
+                completion._canonical_json(value=row)
+            ).hexdigest(),
+            'coordinator_id': 'coordinator',
+            'coordinator_run_id': 'coordinator-run',
+            'evidence_rechecked': True,
+            'quote_reextracted': row['row_type'] == 'bullet_verdict',
+            'semantic_decision': row['verdict'],
+            'reasoning': 'Coordinator independently rechecked the full page.',
+        }
+        for index, row in enumerate(collected['records'], 1)
+    ]
+    journal = _write_execution_journal(
+        tmp_path, executions=[execution]
+    )
+    return execution, collected['records'], sidecars, adjudications, journal
+
+
+def test_reader_execution_authenticates_plan_sidecars_and_ledger(tmp_path):
+    execution, records, _, adjudications, journal = _reader_execution(tmp_path)
+    failures, count = completion._validate_reader_executions(
+        root=tmp_path,
+        reconciliation={
+            'reader_executions': [execution],
+            'reader_adjudications': adjudications,
+            'destructive_correction_reviews': [],
+            **journal,
+        },
+        ledger_rows=records,
+        run_id='run',
+    )
+    assert failures == []
+    assert count == 1
+
+
+def test_reader_execution_cannot_be_omitted_or_lose_a_sidecar(tmp_path):
+    execution, records, sidecars, adjudications, journal = _reader_execution(
+        tmp_path
+    )
+    failures, _ = completion._validate_reader_executions(
+        root=tmp_path,
+        reconciliation={
+            'reader_executions': [],
+            'reader_adjudications': adjudications,
+            'destructive_correction_reviews': [],
+            **journal,
+        },
+        ledger_rows=records,
+        run_id='run',
+    )
+    assert any('do not exactly equal' in item for item in failures)
+    next(sidecars.glob('*.json')).unlink()
+    failures, _ = completion._validate_reader_executions(
+        root=tmp_path,
+        reconciliation={
+            'reader_executions': [execution],
+            'reader_adjudications': adjudications,
+            'destructive_correction_reviews': [],
+            **journal,
+        },
+        ledger_rows=records,
+        run_id='run',
+    )
+    assert any('cannot be authenticated' in item for item in failures)
+
+
+def test_reader_execution_directory_cannot_be_omitted(tmp_path):
+    execution, records, _, adjudications, journal = _reader_execution(tmp_path)
+    extra = (
+        tmp_path / '2-outputs/audit/reader-artifacts/run/execution-002'
+    )
+    extra.mkdir()
+    failures, _ = completion._validate_reader_executions(
+        root=tmp_path,
+        reconciliation={
+            'reader_executions': [execution],
+            'reader_adjudications': adjudications,
+            'destructive_correction_reviews': [],
+            **journal,
+        },
+        ledger_rows=records,
+        run_id='run',
+    )
+    assert any('directory inventory differs' in item for item in failures)
+
+
+def test_reader_execution_rejects_ignored_suffix_child(tmp_path):
+    execution, records, _, adjudications, journal = _reader_execution(tmp_path)
+    extra = (
+        tmp_path / '2-outputs/audit/reader-artifacts/run/execution-001.old'
+    )
+    extra.mkdir()
+    failures, _ = completion._validate_reader_executions(
+        root=tmp_path,
+        reconciliation={
+            'reader_executions': [execution],
+            'reader_adjudications': adjudications,
+            'destructive_correction_reviews': [],
+            **journal,
+        },
+        ledger_rows=records,
+        run_id='run',
+    )
+    assert any('directory inventory differs' in item for item in failures)
+
+
+def test_reader_execution_rejects_symlinked_execution_directory(tmp_path):
+    execution, records, _, adjudications, journal = _reader_execution(tmp_path)
+    execution_path = (
+        tmp_path / '2-outputs/audit/reader-artifacts/run/execution-001'
+    )
+    outside = tmp_path / 'moved-execution'
+    execution_path.rename(outside)
+    execution_path.symlink_to(outside, target_is_directory=True)
+    failures, _ = completion._validate_reader_executions(
+        root=tmp_path,
+        reconciliation={
+            'reader_executions': [execution],
+            'reader_adjudications': adjudications,
+            'destructive_correction_reviews': [],
+            **journal,
+        },
+        ledger_rows=records,
+        run_id='run',
+    )
+    assert any(
+        'symlink' in item or 'not a real directory' in item
+        for item in failures
+    )
+
+
+def test_reader_execution_journal_rejects_rehashed_entry_tamper(tmp_path):
+    execution, records, _, adjudications, journal = _reader_execution(tmp_path)
+    journal_path = tmp_path / journal['reader_execution_journal_path']
+    payload = json.loads(journal_path.read_text())
+    payload['entries'][0]['collected_sha256'] = '0' * 64
+    payload['journal_sha256'] = hashlib.sha256(
+        completion._canonical_json(value={
+            key: value for key, value in payload.items()
+            if key != 'journal_sha256'
+        })
+    ).hexdigest()
+    data = json.dumps(payload).encode()
+    journal_path.write_bytes(data)
+    journal['reader_execution_journal_sha256'] = hashlib.sha256(data).hexdigest()
+    failures, _ = completion._validate_reader_executions(
+        root=tmp_path,
+        reconciliation={
+            'reader_executions': [execution],
+            'reader_adjudications': adjudications,
+            'destructive_correction_reviews': [],
+            **journal,
+        },
+        ledger_rows=records,
+        run_id='run',
+    )
+    assert any('hash-chain link' in item for item in failures)
+
+
+def test_execution_anchors_reject_journal_truncation_while_census_remains(
+    tmp_path,
+):
+    executions = [
+        {
+            'plan_sha256': hashlib.sha256(f'plan-{index}'.encode()).hexdigest(),
+            'collected_sha256': hashlib.sha256(
+                f'collected-{index}'.encode()
+            ).hexdigest(),
+        }
+        for index in (1, 2)
+    ]
+    reconciliation = _write_execution_journal(
+        tmp_path, executions=executions
+    )
+    journal_path = tmp_path / reconciliation['reader_execution_journal_path']
+    journal = json.loads(journal_path.read_text())
+    retained = dict(journal['entries'][1])
+    retained['execution_number'] = 1
+    retained['previous_entry_sha256'] = hashlib.sha256(
+        completion._canonical_json(value={
+            'kind': 'audit-reader-execution-journal-genesis',
+            'run_id': 'run',
+            'warning_baseline_sha256': 'b' * 64,
+        })
+    ).hexdigest()
+    retained['entry_sha256'] = hashlib.sha256(
+        completion._canonical_json(value={
+            key: value for key, value in retained.items()
+            if key != 'entry_sha256'
+        })
+    ).hexdigest()
+    journal['entries'] = [retained]
+    journal['journal_sha256'] = hashlib.sha256(
+        completion._canonical_json(value={
+            key: value for key, value in journal.items()
+            if key != 'journal_sha256'
+        })
+    ).hexdigest()
+    data = json.dumps(journal).encode()
+    journal_path.write_bytes(data)
+    reconciliation['reader_execution_journal_sha256'] = hashlib.sha256(
+        data
+    ).hexdigest()
+    failures = completion._validate_execution_journal(
+        root=tmp_path,
+        reconciliation=reconciliation,
+        executions=[executions[1]],
+        run_id='run',
+    )
+    assert any('anchor census' in item for item in failures)
+
+
+def test_reader_execution_requires_digest_bound_coordinator_review(tmp_path):
+    execution, records, _, _, journal = _reader_execution(tmp_path)
+    failures, _ = completion._validate_reader_executions(
+        root=tmp_path,
+        reconciliation={
+            'reader_executions': [execution],
+            'reader_adjudications': [],
+            'destructive_correction_reviews': [],
+            **journal,
+        },
+        ledger_rows=records,
+        run_id='run',
+    )
+    assert any('do not cover every retained' in item for item in failures)
+
+
+def test_counterpart_readers_cannot_impersonate_the_coordinator(tmp_path):
+    execution, records, _, adjudications, journal = _reader_execution(tmp_path)
+    adjudications[0]['coordinator_id'] = records[1]['agent_id']
+    adjudications[1]['coordinator_id'] = records[0]['agent_id']
+    failures, _ = completion._validate_reader_executions(
+        root=tmp_path,
+        reconciliation={
+            'reader_executions': [execution],
+            'reader_adjudications': adjudications,
+            'destructive_correction_reviews': [],
+            **journal,
+        },
+        ledger_rows=records,
+        run_id='run',
+    )
+    assert any('independent coordinator identity/run' in item
+               for item in failures)
+
+
+def test_terminal_bullet_plan_must_equal_current_claim_dependencies(tmp_path):
+    execution, records, _, adjudications, journal = _reader_execution(
+        tmp_path, kind='bullet'
+    )
+    claim_id = records[0]['claim_instance_id']
+    claim = {
+        'schema_version': 1,
+        'row_type': 'claim',
+        'row_id': 'claim-row',
+        'run_id': 'run',
+        'claim_instance_id': claim_id,
+        'context_digest': hashlib.sha256(b'page').hexdigest(),
+        'raw_dependencies': [{
+            'raw_path': '0-raw/papers/required.pdf',
+            'sha256': hashlib.sha256(b'required raw').hexdigest(),
+        }],
+        'verification_scope': 'ordinary',
+        'quantified_population': None,
+    }
+    failures, _ = completion._validate_reader_executions(
+        root=tmp_path,
+        reconciliation={
+            'reader_executions': [execution],
+            'reader_adjudications': adjudications,
+            'destructive_correction_reviews': [],
+            **journal,
+        },
+        ledger_rows=[claim, *records],
+        run_id='run',
+    )
+    assert any('terminal bullet unit differs' in item for item in failures)
+
+
+def test_removed_refute_pair_requires_third_destructive_review(tmp_path):
+    execution, records, _, adjudications, journal = _reader_execution(
+        tmp_path, kind='bullet', verdict='refute'
+    )
+    failures, _ = completion._validate_reader_executions(
+        root=tmp_path,
+        reconciliation={
+            'reader_executions': [execution],
+            'reader_adjudications': adjudications,
+            'destructive_correction_reviews': [],
+            **journal,
+        },
+        ledger_rows=records,
+        run_id='run',
+    )
+    assert any('do not cover every removed REFUTE pair' in item
+               for item in failures)
+
+
+def test_removed_refute_pair_accepts_exact_third_reader_sidecar(tmp_path):
+    execution, records, _, adjudications, journal = _reader_execution(
+        tmp_path, kind='bullet', verdict='refute'
+    )
+    claim_id = records[0]['claim_instance_id']
+    review = {
+        'schema_version': 1,
+        'row_id': 'destructive-review',
+        'run_id': 'run',
+        'claim_instance_id': claim_id,
+        'prior_role_row_ids': [row['row_id'] for row in records],
+        'prior_role_sha256': [
+            hashlib.sha256(
+                completion._canonical_json(value=row)
+            ).hexdigest()
+            for row in records
+        ],
+        'agent_id': 'third-reader',
+        'reader_run_id': 'third-reader-run',
+        'blind_to': ['locator_bullet', 'entailment_bullet'],
+        'decision': 'approve',
+        'correction': 'Remove unsupported claim.',
+        'reasoning': 'Both exact REFUTE records support this correction.',
+    }
+    directory = (
+        tmp_path
+        / '2-outputs/audit/reader-artifacts/run/destructive-reviews'
+    )
+    directory.mkdir()
+    artifact = directory / f'{claim_id}.json'
+    artifact.write_text(json.dumps(review))
+    review['artifact_path'] = (
+        f'2-outputs/audit/reader-artifacts/run/destructive-reviews/'
+        f'{claim_id}.json'
+    )
+    review['artifact_sha256'] = hashlib.sha256(
+        artifact.read_bytes()
+    ).hexdigest()
+    execution['terminal_row_ids'] = []
+    execution['terminal_records'] = 0
+    execution['superseded_rows'] = [
+        {
+            'row_id': row['row_id'],
+            'superseded_by': review['row_id'],
+        }
+        for row in records
+    ]
+    failures, count = completion._validate_reader_executions(
+        root=tmp_path,
+        reconciliation={
+            'reader_executions': [execution],
+            'reader_adjudications': adjudications,
+            'destructive_correction_reviews': [review],
+            **journal,
+        },
+        ledger_rows=[],
+        run_id='run',
+    )
+    assert failures == []
+    assert count == 1
+
+
+def test_mixed_hold_refute_pair_cannot_be_removed(tmp_path):
+    execution, records, _, adjudications, journal = _reader_execution(
+        tmp_path,
+        kind='bullet',
+        verdict={
+            'locator_bullet': 'refute',
+            'entailment_bullet': 'hold',
+        },
+    )
+    failures, _ = completion._validate_reader_executions(
+        root=tmp_path,
+        reconciliation={
+            'reader_executions': [execution],
+            'reader_adjudications': adjudications,
+            'destructive_correction_reviews': [],
+            **journal,
+        },
+        ledger_rows=records,
+        run_id='run',
+    )
+    assert any('lacks unanimous' in item for item in failures)
+
+
+def test_incomplete_infrastructure_report_proves_exact_rollback(tmp_path):
+    preimage = (
+        b'---\ntype: concept\nstatus: needs-update\n---\n'
+        b'> [!idea]\n> - *[unverified]* Claim.\n> ^claim\n'
+    )
+    page = tmp_path / '1-wiki/concepts/example.md'
+    page.parent.mkdir(parents=True)
+    page.write_bytes(preimage + b'changed')
+    rollback = {
+        'page_path': '1-wiki/concepts/example.md',
+        'preimage_existed': True,
+        'preimage_sha256': hashlib.sha256(preimage).hexdigest(),
+        'preimage_bytes_base64': base64.b64encode(preimage).decode(),
+        'before_status': 'needs-update',
+        'before_verified_hash': None,
+        'process_marker_count': 1,
+        'rollback_required': True,
+    }
+    report = _report(
+        tmp_path,
+        result='incomplete',
+        rec={
+            'content_rollback_preimages': [rollback],
+            'infrastructure_failure_pages': ['1-wiki/concepts/example.md'],
+        },
+        page_preimages={
+            '1-wiki/concepts/example.md': {
+                'sha256': hashlib.sha256(preimage).hexdigest(),
+                'bytes_base64': base64.b64encode(preimage).decode(),
+                'status': 'needs-update',
+                'verified_hash': '',
+            }
+        },
+    )
+    valid, result = completion.validate_incomplete_rollback(
+        report, repo_root=tmp_path
+    )
+    assert valid is False
+    assert any('do not equal rollback preimage' in item
+               for item in result['failures'])
+    page.write_bytes(preimage)
+    valid, result = completion.validate_incomplete_rollback(
+        report, repo_root=tmp_path
+    )
+    assert valid is True, result['failures']
+
+
+def test_incomplete_rollback_cannot_omit_a_changed_baseline_page(tmp_path):
+    preimage = b'---\ntype: concept\nstatus: draft\n---\nOriginal.\n'
+    page_path = '1-wiki/concepts/changed.md'
+    page = tmp_path / page_path
+    page.parent.mkdir(parents=True)
+    page.write_bytes(preimage + b'Undeclared change.\n')
+    report = _report(
+        tmp_path,
+        result='incomplete',
+        rec={
+            'content_rollback_preimages': [],
+            'infrastructure_failure_pages': [],
+        },
+        page_preimages={
+            page_path: {
+                'sha256': hashlib.sha256(preimage).hexdigest(),
+                'bytes_base64': base64.b64encode(preimage).decode(),
+                'status': 'draft',
+                'verified_hash': '',
+            }
+        },
+    )
+    valid, result = completion.validate_incomplete_rollback(
+        report, repo_root=tmp_path
+    )
+    assert valid is False
+    assert any('undeclared page change' in item for item in result['failures'])
+
+
+def test_incomplete_rollback_rejects_post_edit_bytes_as_preimage(tmp_path):
+    baseline_bytes = b'---\ntype: concept\nstatus: draft\n---\nOriginal.\n'
+    post_edit = b'---\ntype: concept\nstatus: draft\n---\nPost-edit.\n'
+    page_path = '1-wiki/concepts/forged.md'
+    page = tmp_path / page_path
+    page.parent.mkdir(parents=True)
+    page.write_bytes(post_edit)
+    report = _report(
+        tmp_path,
+        result='incomplete',
+        rec={
+            'content_rollback_preimages': [{
+                'page_path': page_path,
+                'preimage_existed': True,
+                'preimage_sha256': hashlib.sha256(post_edit).hexdigest(),
+                'preimage_bytes_base64': base64.b64encode(post_edit).decode(),
+                'before_status': 'draft',
+                'before_verified_hash': None,
+                'process_marker_count': 0,
+                'rollback_required': True,
+            }],
+            'infrastructure_failure_pages': [page_path],
+        },
+        page_preimages={
+            page_path: {
+                'sha256': hashlib.sha256(baseline_bytes).hexdigest(),
+                'bytes_base64': base64.b64encode(baseline_bytes).decode(),
+                'status': 'draft',
+                'verified_hash': '',
+            }
+        },
+    )
+    valid, result = completion.validate_incomplete_rollback(
+        report, repo_root=tmp_path
+    )
+    assert valid is False
+    assert any('baseline binding is invalid' in item
+               for item in result['failures'])
+
+
+def test_new_page_has_authenticated_did_not_exist_rollback_state(tmp_path):
+    page_path = '1-wiki/concepts/new-split.md'
+    page = tmp_path / page_path
+    page.parent.mkdir(parents=True)
+    page.write_text('---\ntype: concept\nstatus: draft\n---\nNew page.\n')
+    rollback = {
+        'page_path': page_path,
+        'preimage_existed': False,
+        'preimage_sha256': hashlib.sha256(b'').hexdigest(),
+        'preimage_bytes_base64': '',
+        'before_status': None,
+        'before_verified_hash': None,
+        'process_marker_count': 0,
+        'rollback_required': False,
+    }
+    ledger_rows = [{
+        'row_type': 'status_write',
+        'run_id': 'run',
+        'page_path': page_path,
+    }]
+    reconciliation = {
+        'content_rollback_preimages': [rollback],
+        'infrastructure_failure_pages': [],
+    }
+    assert completion._validate_content_rollback_preimages(
+        root=tmp_path,
+        reconciliation=reconciliation,
+        ledger_rows=ledger_rows,
+        run_id='run',
+        require_restored=False,
+        expected_preimage_hashes={},
+    ) == []
+    page.unlink()
+    rollback['rollback_required'] = True
+    reconciliation['infrastructure_failure_pages'] = [page_path]
+    assert completion._validate_content_rollback_preimages(
+        root=tmp_path,
+        reconciliation=reconciliation,
+        ledger_rows=ledger_rows,
+        run_id='run',
+        require_restored=True,
+        expected_preimage_hashes={},
+    ) == []
+
+
+def test_existing_page_cannot_claim_did_not_exist_at_baseline(tmp_path):
+    page_path = '1-wiki/concepts/existing.md'
+    rollback = {
+        'page_path': page_path,
+        'preimage_existed': False,
+        'preimage_sha256': hashlib.sha256(b'').hexdigest(),
+        'preimage_bytes_base64': '',
+        'before_status': None,
+        'before_verified_hash': None,
+        'process_marker_count': 0,
+        'rollback_required': False,
+    }
+    failures = completion._validate_content_rollback_preimages(
+        root=tmp_path,
+        reconciliation={
+            'content_rollback_preimages': [rollback],
+            'infrastructure_failure_pages': [],
+        },
+        ledger_rows=[{
+            'row_type': 'status_write',
+            'run_id': 'run',
+            'page_path': page_path,
+        }],
+        run_id='run',
+        require_restored=False,
+        expected_preimage_hashes={page_path: 'a' * 64},
+    )
+    assert any('did-not-exist state' in item for item in failures)
+
+
+def test_preverification_checkpoint_accepts_legitimate_step4a_page_change(
+    tmp_path,
+):
+    original = b'---\ntype: concept\nstatus: draft\n---\nTeh claim.\n'
+    corrected = b'---\ntype: concept\nstatus: draft\n---\nThe claim.\n'
+    page_path = '1-wiki/concepts/step4a.md'
+    page = tmp_path / page_path
+    page.parent.mkdir(parents=True)
+    page.write_bytes(corrected)
+    report = _report(
+        tmp_path,
+        result='incomplete',
+        rec={
+            'content_rollback_preimages': [],
+            'infrastructure_failure_pages': [],
+        },
+        page_preimages={
+            page_path: {
+                'sha256': hashlib.sha256(original).hexdigest(),
+                'bytes_base64': base64.b64encode(original).decode(),
+                'status': 'draft',
+                'verified_hash': '',
+            }
+        },
+        checkpoint_preimages={
+            page_path: {
+                'sha256': hashlib.sha256(corrected).hexdigest(),
+                'bytes_base64': base64.b64encode(corrected).decode(),
+                'status': 'draft',
+                'verified_hash': '',
+            }
+        },
+    )
+    valid, result = completion.validate_incomplete_rollback(
+        report, repo_root=tmp_path
+    )
+    assert valid is True, result['failures']
+
+
+def test_preverification_checkpoint_capture_is_exclusive(tmp_path):
+    page = tmp_path / '1-wiki/concepts/example.md'
+    page.parent.mkdir(parents=True)
+    page.write_text('---\ntype: concept\nstatus: draft\n---\nClaim.\n')
+    output = (
+        tmp_path / baseline_capture.BASELINE_DIRECTORY
+        / 'audit-run-preverification.json'
+    )
+    receipt = page_checkpoint.capture_checkpoint(
+        output=output,
+        repo_root=tmp_path,
+        run_id='run',
+        warning_baseline_sha256='a' * 64,
+    )
+    assert receipt['pages'] == 1
+    try:
+        page_checkpoint.capture_checkpoint(
+            output=output,
+            repo_root=tmp_path,
+            run_id='run',
+            warning_baseline_sha256='a' * 64,
+        )
+    except FileExistsError:
+        pass
+    else:
+        raise AssertionError('checkpoint capture overwrote an existing file')
+
+
 def _report(
     tmp_path,
     *,
@@ -268,6 +1174,7 @@ def _report(
     inherited_cleared='0 of 0',
     frozen_occurrences=None,
     page_preimages=None,
+    checkpoint_preimages=None,
 ):
     scanner_row = {
         'schema_version': 1,
@@ -337,6 +1244,11 @@ def _report(
         'suppression_batches': [],
         'suppression_reader_verdicts': [],
         'neutral_page_transactions': [],
+        'reader_executions': [],
+        'reader_adjudications': [],
+        'destructive_correction_reviews': [],
+        'content_rollback_preimages': [],
+        'infrastructure_failure_pages': [],
     }
     if rec:
         reconciliation.update(rec)
@@ -350,6 +1262,23 @@ def _report(
     reconciliation['warning_baseline_sha256'] = baseline_sha
     reconciliation['warning_baseline_id'] = 'baseline-run'
     reconciliation['evidence_context_sha256'] = context
+    reconciliation.update(
+        _write_preverification_checkpoint(
+            tmp_path,
+            baseline_path=baseline_path,
+            baseline_sha=baseline_sha,
+            page_preimages=(
+                checkpoint_preimages
+                if checkpoint_preimages is not None
+                else page_preimages
+            ),
+        )
+    )
+    reconciliation.update(
+        _write_execution_journal(
+            tmp_path, executions=[], baseline_sha=baseline_sha
+        )
+    )
     manifest = {
         'schema_version': 1,
         'row_type': 'manifest',
@@ -713,6 +1642,8 @@ def _warning(number=1, *, origin='initial'):
         'message_sha256': hashlib.sha256(resolution.encode()).hexdigest(),
         'disposition': 'fixed',
         'resolution': resolution,
+        'ignore_entry': None,
+        'reader_verdicts': [],
     }
     row['warning_id'] = completion.expected_warning_id(row=row)
     return row
@@ -849,6 +1780,11 @@ def _worklist_rec(warnings=None, occurrences=None, batches=None, readers=None):
         'mention_occurrences': occurrences,
         'suppression_batches': batches,
         'suppression_reader_verdicts': readers,
+        'reader_executions': [],
+        'reader_adjudications': [],
+        'destructive_correction_reviews': [],
+        'content_rollback_preimages': [],
+        'infrastructure_failure_pages': [],
     }
 
 
@@ -879,6 +1815,96 @@ def test_exact_warning_and_occurrence_terminal_rows_close(tmp_path):
     )
     valid, result = completion.validate(_report(tmp_path, rec=rec))
     assert valid is True, result['failures']
+
+
+def test_vague_source_ignore_requires_two_blind_holds_and_exact_phrase(tmp_path):
+    phrase = 'The paper does not measure latency.'
+    warning = _warning()
+    warning.update({
+        'check_id': 'vague_source_referent',
+        'page_path': '1-wiki/concepts/page-1.md',
+        'target': '',
+        'message_sha256': hashlib.sha256(phrase.encode()).hexdigest(),
+        'disposition': 'standing_ignore',
+        'resolution': phrase,
+        'ignore_entry': f'- 1-wiki/concepts/page-1.md :: {phrase}',
+        'reader_verdicts': [
+            {
+                'reader_role': role,
+                'agent_id': agent,
+                'reader_run_id': run,
+                'blind_to': [other],
+                'verdict': 'hold',
+                'question_version': 'vague-source-ignore-v1',
+                'reasoning': 'The phrase is a non-attribution false positive.',
+            }
+            for role, other, agent, run in (
+                ('reader_a', 'reader_b', 'agent-a', 'reader-a-run'),
+                ('reader_b', 'reader_a', 'agent-b', 'reader-b-run'),
+            )
+        ],
+    })
+    warning['warning_id'] = completion.expected_warning_id(row=warning)
+    data = (
+        '---\ntype: concept\nstatus: draft\n---\n' + phrase + '\n'
+    ).encode()
+    page_preimages = {
+        warning['page_path']: {
+            'sha256': hashlib.sha256(data).hexdigest(),
+            'bytes_base64': base64.b64encode(data).decode(),
+            'status': 'draft',
+            'verified_hash': '',
+        }
+    }
+    rec = _worklist_rec(warnings=[warning])
+    valid, result = completion.validate(
+        _report(tmp_path, rec=rec, page_preimages=page_preimages)
+    )
+    assert valid is True, result['failures']
+    parsed = checker._load_vague_source_ignore(
+        tmp_path / baseline_capture.IGNORE_PATH
+    )
+    assert [(item['page'], item['phrase']) for item in parsed] == [
+        (warning['page_path'], phrase)
+    ]
+
+    warning['reader_verdicts'][1]['agent_id'] = 'agent-a'
+    valid, result = completion.validate(
+        _report(tmp_path, rec=_worklist_rec(warnings=[warning]),
+                page_preimages=page_preimages)
+    )
+    assert valid is False
+    assert any('not independent' in failure for failure in result['failures'])
+
+    broad = 'The paper reports latency and the study uses held-out data.'
+    warning['reader_verdicts'][1]['agent_id'] = 'agent-b'
+    warning['resolution'] = broad
+    warning['message_sha256'] = hashlib.sha256(broad.encode()).hexdigest()
+    warning['ignore_entry'] = (
+        f'- 1-wiki/concepts/page-1.md :: {broad}'
+    )
+    warning['warning_id'] = completion.expected_warning_id(row=warning)
+    broad_bytes = (
+        '---\ntype: concept\nstatus: draft\n---\n' + broad + '\n'
+    ).encode()
+    page_preimages[warning['page_path']] = {
+        'sha256': hashlib.sha256(broad_bytes).hexdigest(),
+        'bytes_base64': base64.b64encode(broad_bytes).decode(),
+        'status': 'draft',
+        'verified_hash': '',
+    }
+    valid, result = completion.validate(
+        _report(
+            tmp_path,
+            rec=_worklist_rec(warnings=[warning]),
+            page_preimages=page_preimages,
+        )
+    )
+    assert valid is False
+    assert any(
+        'does not cover exactly one vague referent' in failure
+        for failure in result['failures']
+    )
 
 
 def test_suppression_requires_exact_two_reader_quorum(tmp_path):

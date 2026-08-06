@@ -34,6 +34,8 @@ def claim_row(text='> - A claim.', ordinal=1, locators=None):
         'raw_dependencies': [],
         'context_digest': 'a' * 64,
         'classification': 'required',
+        'verification_scope': 'ordinary',
+        'quantified_population': None,
     }
     row['claim_instance_id'] = ledger.expected_claim_id(row)
     return row
@@ -43,6 +45,136 @@ def test_unverified_marker_does_not_change_identity():
     marked = claim_row('> - *[unverified]* A claim.')
     clear = claim_row('> - A claim.')
     assert marked['claim_instance_id'] == clear['claim_instance_id']
+
+
+def test_verification_scope_changes_claim_identity():
+    ordinary = claim_row('> - The paper does not measure latency.')
+    exhaustive = dict(ordinary)
+    exhaustive['verification_scope'] = 'exhaustive_negative'
+    exhaustive['quantified_population'] = {
+        'raw_paths': ['0-raw/a.pdf'],
+        'members': [
+            {'member_id': 'source-a', 'raw_paths': ['0-raw/a.pdf']}
+        ],
+    }
+    assert ledger.expected_claim_id(ordinary) != ledger.expected_claim_id(
+        exhaustive
+    )
+
+
+def test_exhaustive_negative_role_must_cover_frozen_population():
+    claim = claim_row('> - No study measures latency.')
+    claim['verification_scope'] = 'exhaustive_negative'
+    claim['quantified_population'] = {
+        'raw_paths': ['0-raw/a.pdf', '0-raw/b.pdf'],
+        'members': [
+            {'member_id': 'study-a', 'raw_paths': ['0-raw/a.pdf']},
+            {'member_id': 'study-b', 'raw_paths': ['0-raw/b.pdf']},
+        ],
+    }
+    row = {
+        'row_id': 'locator',
+        'verdict': 'hold',
+        'quantified_scope': {
+            'raw_population': ['0-raw/a.pdf'],
+            'population': ['study-a'],
+            'searched_members': ['study-a'],
+            'counterexamples': [],
+            'search_summary': 'Searched the self-declared subset.',
+        },
+    }
+    try:
+        ledger.validate_quantified_role(
+            claim_id=claim['claim_instance_id'], claim=claim, row=row
+        )
+    except ledger.LedgerError as error:
+        assert 'differs from frozen population' in str(error)
+    else:
+        raise AssertionError('reader self-declared a smaller negative population')
+
+
+def test_exhaustive_negative_hold_requires_every_frozen_member():
+    claim = claim_row('> - No study measures latency.')
+    claim['verification_scope'] = 'exhaustive_negative'
+    claim['quantified_population'] = {
+        'raw_paths': ['0-raw/a.pdf'],
+        'members': [
+            {'member_id': 'study-a', 'raw_paths': ['0-raw/a.pdf']},
+            {'member_id': 'study-b', 'raw_paths': ['0-raw/a.pdf']},
+        ],
+    }
+    row = {
+        'row_id': 'locator',
+        'verdict': 'hold',
+        'quantified_scope': {
+            'raw_population': ['0-raw/a.pdf'],
+            'population': ['study-a', 'study-b'],
+            'searched_members': ['study-a'],
+            'counterexamples': [],
+            'search_summary': 'One member remains unsearched.',
+        },
+    }
+    try:
+        ledger.validate_quantified_role(
+            claim_id=claim['claim_instance_id'], claim=claim, row=row
+        )
+    except ledger.LedgerError as error:
+        assert 'HOLD is incomplete' in str(error)
+    else:
+        raise AssertionError('partial negative search was accepted as HOLD')
+
+
+def test_quantified_population_rejects_one_member_for_two_raws():
+    try:
+        ledger.validate_quantified_population(
+            value={
+                'raw_paths': ['0-raw/a.pdf', '0-raw/b.pdf'],
+                'members': [{
+                    'member_id': 'claimed-complete-universe',
+                    'raw_paths': ['0-raw/a.pdf', '0-raw/b.pdf'],
+                }],
+            },
+            expected_raw_paths=['0-raw/a.pdf', '0-raw/b.pdf'],
+            label='test population',
+        )
+    except ledger.LedgerError as error:
+        assert 'malformed member mapping' in str(error)
+    else:
+        raise AssertionError('one member was allowed to stand for two raws')
+
+
+def test_quantified_population_allows_many_semantic_members_in_one_raw():
+    members = [
+        {'member_id': f'condition-{index:02d}', 'raw_paths': ['0-raw/a.pdf']}
+        for index in range(1, 11)
+    ]
+    assert ledger.validate_quantified_population(
+        value={'raw_paths': ['0-raw/a.pdf'], 'members': members},
+        expected_raw_paths=['0-raw/a.pdf'],
+        label='ten conditions',
+    ) == [member['member_id'] for member in members]
+
+
+def test_exhaustive_negative_trigger_covers_common_absence_wording():
+    for text in (
+        'Neither source reports latency.',
+        'Zero studies include an ablation.',
+        'The paper lacks an ablation.',
+        'The survey fails to report failures.',
+        'Every study does not measure latency.',
+        'The paper does not sweep round count.',
+        'No foundation-model source sweeps round count.',
+        'This is the only measurement.',
+        'It is not one of its dimensions.',
+        'The result is stated without a supporting mechanism.',
+        'The paper provides zero latency measurements.',
+        'Latency measurements are absent.',
+        'The experiments omit ablations.',
+        'The benchmark excludes error analysis.',
+        'The authors report an absence of ablations.',
+        'Of the evaluated tasks, just one improves.',
+    ):
+        assert ledger.EXHAUSTIVE_NEGATIVE.search(text), text
 
 
 def test_fenced_marker_literal_is_not_counted_or_stripped():
@@ -453,6 +585,7 @@ def test_reused_pair_requires_role_versions(tmp_path):
             tmp_path,
             'claim-id',
             terminal,
+            claim_row(),
             recheck_quotes=False,
         )
     except ledger.LedgerError as exc:
@@ -469,6 +602,7 @@ def test_reused_pair_requires_role_versions(tmp_path):
             tmp_path,
             'claim-id',
             terminal,
+            claim_row(),
             recheck_quotes=False,
         )
     except ledger.LedgerError as exc:
@@ -489,7 +623,7 @@ def test_reused_pair_restricts_producer_path_and_report_type(tmp_path):
     }
     try:
         ledger.validate_reused_pair(
-            tmp_path, 'claim-id', terminal, recheck_quotes=False
+            tmp_path, 'claim-id', terminal, claim_row(), recheck_quotes=False
         )
     except ledger.LedgerError as error:
         assert 'outside audit/ingest outputs' in str(error)
@@ -551,7 +685,7 @@ def test_reused_pair_restricts_producer_path_and_report_type(tmp_path):
     )
     try:
         ledger.validate_reused_pair(
-            tmp_path, 'claim-id', terminal, recheck_quotes=False
+            tmp_path, 'claim-id', terminal, claim_row(), recheck_quotes=False
         )
     except ledger.LedgerError as error:
         assert 'producer report is not terminal' in str(error)
@@ -724,7 +858,7 @@ def test_exact_reused_claim_survives_unrelated_producer_rows(tmp_path):
         },
     }
     ledger.validate_reused_pair(
-        tmp_path, claim_id, terminal, recheck_quotes=True
+        tmp_path, claim_id, terminal, target, recheck_quotes=True
     )
 
     no_source = [row for row in rows if row.get('row_type') != 'source']
@@ -741,7 +875,7 @@ def test_exact_reused_claim_survives_unrelated_producer_rows(tmp_path):
     )
     try:
         ledger.validate_reused_pair(
-            tmp_path, claim_id, terminal, recheck_quotes=False
+            tmp_path, claim_id, terminal, target, recheck_quotes=False
         )
     except ledger.LedgerError as error:
         assert 'source' in str(error)
@@ -769,7 +903,7 @@ def test_exact_reused_claim_survives_unrelated_producer_rows(tmp_path):
     )
     try:
         ledger.validate_reused_pair(
-            tmp_path, claim_id, terminal, recheck_quotes=False
+            tmp_path, claim_id, terminal, target, recheck_quotes=False
         )
     except ledger.LedgerError as error:
         assert 'producer' in str(error)
@@ -793,7 +927,7 @@ def test_exact_reused_claim_survives_unrelated_producer_rows(tmp_path):
     )
     try:
         ledger.validate_reused_pair(
-            tmp_path, claim_id, terminal, recheck_quotes=False
+            tmp_path, claim_id, terminal, target, recheck_quotes=False
         )
     except ledger.LedgerError as error:
         assert 'mode' in str(error) or 'epoch' in str(error)
@@ -815,7 +949,7 @@ def test_exact_reused_claim_survives_unrelated_producer_rows(tmp_path):
     )
     try:
         ledger.validate_reused_pair(
-            tmp_path, claim_id, terminal, recheck_quotes=False
+            tmp_path, claim_id, terminal, target, recheck_quotes=False
         )
     except ledger.LedgerError as error:
         assert 'epoch' in str(error) or 'READY' in str(error)
@@ -2032,6 +2166,23 @@ def test_audit_rows_bind_run_epoch_page_and_generation(tmp_path):
     report = _write_audit_report(tmp_path, rows)
     summary = ledger.validate(report, tmp_path, recheck_quotes=False)
     assert summary['page_generations'] == 1
+
+
+def test_audit_cannot_label_explicit_negative_ordinary(tmp_path):
+    rows = _audit_rows(tmp_path)
+    claim = next(row for row in rows if row['row_type'] == 'claim')
+    claim['classification'] = 'required'
+    claim.pop('exemption_reason')
+    claim['claim_text'] = '> - No study measures latency.'
+    claim['claim_bytes'] = len(claim['claim_text'].encode('utf-8'))
+    claim['claim_instance_id'] = ledger.expected_claim_id(claim)
+    report = _write_audit_report(tmp_path, rows)
+    try:
+        ledger.validate(report, tmp_path, recheck_quotes=False)
+    except ledger.LedgerError as error:
+        assert 'labelled ordinary' in str(error)
+    else:
+        raise AssertionError('explicit negative bypassed exhaustive verification')
 
 
 def test_required_claim_cannot_use_exempt_terminal(tmp_path):

@@ -62,6 +62,34 @@ RAW_LOCATOR_WIKILINK = re.compile(
 )
 WIKILINK_TARGET = re.compile(r'\[\[([^\]#|]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]')
 TERMINAL_VERDICTS = {'hold', 'refute', 'cannot_confirm'}
+VERIFICATION_SCOPES = {'ordinary', 'exhaustive_negative'}
+QUANTIFIED_SCOPE_KEYS = {
+    'raw_population',
+    'population',
+    'searched_members',
+    'counterexamples',
+    'search_summary',
+}
+EXHAUSTIVE_NEGATIVE = re.compile(
+    r'\b(?:no|not|only|sole|without|absent|zero|none|neither|never|'
+    r'lacks?|lacked|lacking|omits?|omitted|omitting|excludes?|excluded|'
+    r'excluding)\b|'
+    r'\bnone\s+of\b|\bneither\b|\bnever\b|\bwithout\s+any\b|'
+    r'\bonly\s+(?:one|a\s+single|the\s+sole)\b|'
+    r'\bjust\s+(?:one|a\s+single)\b|\b(?:an?\s+|the\s+)?absence\s+of\b|'
+    r'\bzero\s+(?:source|stud(?:y|ie)|paper|experiment|evaluation|ablation|'
+    r'measurement|result|benchmark|dataset|condition|task|run|analysis|'
+    r'comparison)s?\b|'
+    r'\bno\s+(?:source|stud(?:y|ie)|paper|experiment|evaluation|ablation|'
+    r'measurement|evidence|result|benchmark|dataset|condition|task|run|'
+    r'analysis|comparison)s?\b|'
+    r'\b(?:does|do|did|is|are|was|were)\s+not\s+'
+    r'(?:measure|report|include|evaluate|test|perform|run|contain|use)\b|'
+    r'\b(?:lack(?:s|ed)?|omit(?:s|ted)?|exclude[sd]?|fail(?:s|ed)?\s+to)'
+    r'\s+(?:report|include|measure|test|run|contain|use|an?|any|all|the)\b|'
+    r'\b(?:all|every|each)\b.{0,80}\b(?:does|do|did)\s+not\b',
+    re.IGNORECASE,
+)
 TERMINAL_CLAIMS = {
     'exempt',
     'reused_hold',
@@ -1543,6 +1571,12 @@ def claim_identity_payload(row: dict[str, Any]) -> dict[str, Any]:
         'context_digest',
     )
     payload = {key: row.get(key) for key in keys}
+    if (
+        'verification_scope' in row
+        or 'quantified_population' in row
+    ):
+        payload['verification_scope'] = row.get('verification_scope')
+        payload['quantified_population'] = row.get('quantified_population')
     payload['claim_text_canonical'] = canonical_claim_text(row['claim_text'])
     return payload
 
@@ -1551,6 +1585,112 @@ def expected_claim_id(row: dict[str, Any]) -> str:
     return hashlib.sha256(
         canonical_json(claim_identity_payload(row))
     ).hexdigest()
+
+
+def validate_quantified_role(
+    *, claim_id: str, claim: dict[str, Any], row: dict[str, Any]
+) -> None:
+    """Require reader proof to cover the coordinator-frozen population."""
+    scope = row.get('quantified_scope')
+    if not isinstance(scope, dict) or set(scope) != QUANTIFIED_SCOPE_KEYS:
+        raise LedgerError(
+            f'exhaustive-negative role lacks schema-exact population: '
+            f'{row.get("row_id")}'
+        )
+    frozen = claim['quantified_population']
+    frozen_members = [
+        member['member_id'] for member in frozen['members']
+    ]
+    raw_population = scope.get('raw_population')
+    population = scope.get('population')
+    searched = scope.get('searched_members')
+    counterexamples = scope.get('counterexamples')
+    if any(
+        not isinstance(items, list)
+        or any(
+            not isinstance(item, str)
+            or not item.strip()
+            or item != item.strip()
+            for item in items
+        )
+        or len(items) != len(set(items))
+        for items in (
+            raw_population, population, searched, counterexamples
+        )
+    ):
+        raise LedgerError(
+            f'exhaustive-negative population is malformed: {claim_id}'
+        )
+    if (
+        raw_population != frozen['raw_paths']
+        or population != frozen_members
+        or not set(searched).issubset(population)
+        or not set(counterexamples).issubset(set(searched))
+        or not isinstance(scope.get('search_summary'), str)
+        or not scope['search_summary'].strip()
+    ):
+        raise LedgerError(
+            f'exhaustive-negative role differs from frozen population: '
+            f'{row.get("row_id")}'
+        )
+    verdict = row.get('verdict')
+    if verdict == 'hold' and (
+        searched != population or counterexamples
+    ):
+        raise LedgerError(
+            f'exhaustive-negative HOLD is incomplete: {row.get("row_id")}'
+        )
+    if verdict == 'refute' and not counterexamples:
+        raise LedgerError(
+            f'exhaustive-negative REFUTE lacks a counterexample: '
+            f'{row.get("row_id")}'
+        )
+    if verdict == 'cannot_confirm' and counterexamples:
+        raise LedgerError(
+            f'exhaustive-negative CANNOT_CONFIRM contains a counterexample: '
+            f'{row.get("row_id")}'
+        )
+
+
+def validate_quantified_population(
+    *, value: Any, expected_raw_paths: list[str], label: str,
+) -> list[str]:
+    """Validate grounded semantic members covering the complete raw universe."""
+    if (
+        not isinstance(value, dict)
+        or set(value) != {'raw_paths', 'members'}
+        or value.get('raw_paths') != expected_raw_paths
+        or not expected_raw_paths
+        or not isinstance(value.get('members'), list)
+    ):
+        raise LedgerError(f'{label} lacks a frozen complete population')
+    member_ids: list[str] = []
+    member_order: list[tuple[str, str]] = []
+    covered: set[str] = set()
+    for member in value['members']:
+        if (
+            not isinstance(member, dict)
+            or set(member) != {'member_id', 'raw_paths'}
+            or not isinstance(member.get('member_id'), str)
+            or not member['member_id'].strip()
+            or member['member_id'] != member['member_id'].strip()
+            or not isinstance(member.get('raw_paths'), list)
+            or len(member['raw_paths']) != 1
+            or member['raw_paths'][0] not in expected_raw_paths
+        ):
+            raise LedgerError(f'{label} has a malformed member mapping')
+        member_ids.append(member['member_id'])
+        member_order.append((member['raw_paths'][0], member['member_id']))
+        covered.update(member['raw_paths'])
+    if (
+        len(member_ids) != len(set(member_ids))
+        or covered != set(expected_raw_paths)
+        or member_order != sorted(member_order)
+    ):
+        raise LedgerError(
+            f'{label} members are not unique, ordered, and raw-complete'
+        )
+    return member_ids
 
 
 def parse_frontmatter(text: str) -> dict[str, str]:
@@ -2354,6 +2494,7 @@ def validate_reused_pair(
     repo_root: Path,
     claim_id: str,
     terminal: dict[str, Any],
+    current_claim: dict[str, Any],
     *,
     recheck_quotes: bool,
     seen_reports: set[Path] | None = None,
@@ -2466,6 +2607,16 @@ def validate_reused_pair(
         or expected_claim_id(producer_claim) != claim_id
     ):
         raise LedgerError(f'producer claim identity mismatch: {claim_id}')
+    if (
+        producer_claim.get('verification_scope')
+        != current_claim.get('verification_scope')
+        or producer_claim.get('quantified_population')
+        != current_claim.get('quantified_population')
+    ):
+        raise LedgerError(
+            f'producer verification scope differs from current claim: '
+            f'{claim_id}'
+        )
     producer_terminals = [
         row
         for row in producer_rows
@@ -2958,6 +3109,34 @@ def validate(
                 raw = resolve_raw_path(repo_root, raw_path)
                 if hashlib.sha256(raw.read_bytes()).hexdigest() != raw_sha:
                     raise LedgerError(f'raw dependency changed: {claim_id}')
+            if report_type == 'audit':
+                verification_scope = row.get('verification_scope')
+                population = row.get('quantified_population')
+                if verification_scope not in VERIFICATION_SCOPES:
+                    raise LedgerError(
+                        f'audit claim lacks verification_scope: {claim_id}'
+                    )
+                if (
+                    row.get('classification') == 'required'
+                    and EXHAUSTIVE_NEGATIVE.search(text_value)
+                    and verification_scope != 'exhaustive_negative'
+                ):
+                    raise LedgerError(
+                        f'exhaustive-negative claim is labelled ordinary: '
+                        f'{claim_id}'
+                    )
+                if verification_scope == 'ordinary':
+                    if population is not None:
+                        raise LedgerError(
+                            f'ordinary claim carries quantified_population: '
+                            f'{claim_id}'
+                        )
+                else:
+                    validate_quantified_population(
+                        value=population,
+                        expected_raw_paths=dependency_paths,
+                        label=f'exhaustive-negative claim {claim_id}',
+                    )
             validate_hold_raw_binding(
                 claim_id=claim_id,
                 claim=row,
@@ -3180,6 +3359,16 @@ def validate(
                 role_rows=list(verdicts[claim_id].values()),
                 repo_root=repo_root,
             )
+            if (
+                report_type == 'audit'
+                and claim.get('verification_scope') == 'exhaustive_negative'
+            ):
+                for role_row in verdicts[claim_id].values():
+                    validate_quantified_role(
+                        claim_id=claim_id,
+                        claim=claim,
+                        row=role_row,
+                    )
             if disposition == 'backfilled_hold' and outcomes != {'hold'}:
                 raise LedgerError(
                     f'backfilled HOLD has a non-HOLD role: {claim_id}'
@@ -3224,6 +3413,7 @@ def validate(
                 repo_root,
                 claim_id,
                 terminal,
+                claim,
                 recheck_quotes=recheck_quotes,
                 seen_reports=seen_reports,
             )
@@ -3327,6 +3517,26 @@ def validate(
     raw_closure: dict[str, set[str]] = {}
     if report_type == 'audit':
         raw_closure = retained_page_raw_closure(repo_root=repo_root)
+        for claim_id, claim in claims.items():
+            if claim.get('verification_scope') != 'exhaustive_negative':
+                continue
+            complete_page_raws = sorted(
+                raw_closure.get(claim['page_path'], set())
+            )
+            dependency_paths = [
+                dependency['raw_path']
+                for dependency in claim['raw_dependencies']
+            ]
+            if dependency_paths != complete_page_raws:
+                raise LedgerError(
+                    'exhaustive-negative dependencies differ from complete '
+                    f'page raw closure: {claim_id}'
+                )
+            validate_quantified_population(
+                value=claim.get('quantified_population'),
+                expected_raw_paths=complete_page_raws,
+                label=f'exhaustive-negative page universe {claim_id}',
+            )
         scoped_raw_paths = {
             raw_path
             for page_path in page_role_paths

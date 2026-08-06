@@ -1,10 +1,10 @@
 ---
 type: lint-data
-purpose: Curated verified-ignore list for the `unlinked_page_mention` lint check.
-updated: 2026-07-11
+purpose: Curated verified-ignore lists for judgement-bearing lint checks.
+updated: 2026-08-05
 ---
 
-# Unlinked-mention verified-ignore
+# Judgement-bearing lint verified-ignore
 
 Data for the `unlinked_page_mention` check in `scripts/check_wiki.py`. The script parses the `## verified-ignore` section below at load time; this file is the single source of truth for the list (the script holds no hardcoded copy).
 
@@ -37,4 +37,16 @@ Dead entries do not accumulate silently: lint's `stale_mention_ignore` check rep
 
 <!-- Example of the entry shape (schematic paths; a real entry names real ones and has no leading `#`):
 # - 1-wiki/concepts/{host-slug}.md :: {target-slug} :: reasoning proceeds as a chat chain
+-->
+
+## vague-source-referent-verified-ignore
+
+An entry here is added only when `audit` freezes the exact `vague_source_referent` Warning and two blind readers independently HOLD that the matched phrase is a literal, a non-attribution use, or another legitimate construction the calibrated grammar cannot distinguish. It is page-scoped and phrase-anchored; the phrase must occur exactly once and contain exactly one detector match, so one broad sentence cannot suppress several vague referents. A reword makes the entry inert and the live detector runs again.
+
+```text
+- {page path} :: {unique phrase containing the flagged occurrence}
+```
+
+<!-- Example only:
+# - 1-wiki/concepts/{host-slug}.md :: the paper crane does not measure latency
 -->

@@ -85,3 +85,93 @@ Walk these scenarios after changing audit's autonomy, worklist, batching, neutra
 **Given:** A reusable claim points to a committed report in a nested look-alike folder, or a direct report whose frontmatter type is crossed; another direct valid report has matching role rows and dependency path/SHA source rows.
 
 **Expect:** Audit rejects the first two producers. It may reuse the valid direct-folder/type producer, names only its claim/HOLD row IDs, and discovers source proof by exact dependency path/SHA without requiring reusable source row IDs.
+
+## 12. Page Batching Without Row Loss
+
+**Given:** Final scope has 94 pages over 31 identical complete raw-manifest groups.
+
+**Expect:** The pre-dispatch plan contains 62 page-role calls and 188 page-reader rows. Every page still receives both blind roles. A pooled group verdict, missing page record, or same agent/run used for counterpart roles is rejected.
+
+## 13. Coordinator Context Is Bounded
+
+**Given:** Hundreds of claim/page records HOLD across many batches.
+
+**Expect:** Readers write full evidence to unique plan/epoch/generation/raw-bound sidecars and return only compact receipts. The collector checks transport/schema. The coordinator then opens every accepted record in bounded sequential slices, mechanically re-extracts its quote, and semantically adjudicates it before import; no full reader transcript is returned inline or retained in context all at once.
+
+## 14. Universal Negative Has A Hidden Counterexample
+
+**Given:** A synthesis says “no source varies round count”; its cited source does not, but another source in the page's complete manifest does.
+
+**Expect:** The claim and both bullet units receive `verification_scope: exhaustive_negative` plus a coordinator-frozen `quantified_population` whose raw paths equal the complete dependencies. The second source is recorded as a counterexample and the claim REFUTES. A reader cannot shrink the population: a HOLD sidecar listing only the cited source fails collection and terminal ledger validation.
+
+## 15. Cross-Source Work Cannot Ride A Marker
+
+**Given:** One cross-source bullet has an unchecked locator after final retries; in a separate case, its reader service is unavailable even though the raw and page are unchanged.
+
+**Expect:** The page is not promoted with `*[unverified]*`. A runnable obligation is dispatched. An unreadable raw/evidence region ends marker-free `needs-update` with an exact reason. A reader/tool/service failure finalizes the run `incomplete` with exact pending units and leaves the page body, status, hash, and marker unchanged; infrastructure failure never demotes it. `complete|unconverged` remains marker-free.
+
+## 16. Retained Reader Artifacts Are Terminal Proof
+
+**Given:** A report contains final bullet/page rows, but one numbered plan, sidecar, or collected artifact is deleted, changed, self-rehashed after dropping a unit, or omitted from `reader_executions`.
+
+**Expect:** Completion fails. The validator reconstructs plan input/counts from batches, replays every sidecar, and requires the collected record union to equal the final current reader rows exactly. Counts or ledger rows alone cannot replace retained artifacts.
+
+## 17. Page Readers Bind Final Bodies
+
+**Given:** Initial bullet readers HOLD, Step 7 rewrites one scoped page, and a pre-repair page-reader result exists.
+
+**Expect:** The pre-repair page result is stale and receives no credit. Step 8 computes the final generation and builds a new numbered execution for every final page plus affected bullet reruns. Page-reader estimation may happen in Step 5, but page-reader dispatch happens only after final bodies exist.
+
+## 18. Reader Plan Cannot Self-Declare An Empty Universe
+
+**Given:** The current claim row has two raw dependencies, but a self-rehashed terminal bullet plan names the same claim ID with an empty manifest or old ordinary scope.
+
+**Expect:** Completion fails because the terminal plan unit must exactly equal the current claim's context digest, ordered dependencies, verification scope, and quantified population. The ledger row cannot authenticate a weaker plan merely by sharing its claim ID.
+
+## 19. Superseded Execution Remains Auditable
+
+**Given:** Execution 001 produced stale/refuted rows and execution 002 replaced them, but the report omits execution 001 or drops its records from the final ledger.
+
+**Expect:** Completion enumerates both on-disk directories. Execution 001 remains listed, every row is explicitly superseded by a terminal same-role row, and every retained row has a digest-bound coordinator adjudication. Omitting the directory, execution, row disposition, or adjudication fails.
+
+## 20. Destructive Correction Needs Independent Approval
+
+**Given:** Both bullet roles REFUTE a claim and the final page deletes or destructively rewrites it.
+
+**Expect:** One third agent/run, distinct from and blind to both readers, reviews the exact two hashed REFUTE rows and writes the canonical hash-bound sidecar before approving the exact correction in `destructive_correction_reviews`. Both REFUTE rows remain in their retained execution as superseded cost and terminate at that destructive-review row; they and the removed claim are absent from the final current-claim ledger. A mixed HOLD/REFUTE or CANNOT_CONFIRM/REFUTE pair preserves the claim. A prose claim that a third reader agreed, a reused reader, a forged/missing sidecar, or a missing review fails completion.
+
+## 21. Infrastructure Failure Restores Step 4b And Step 7
+
+**Given:** Step 4b changed a relationship and Step 7 changed prose before the reader service became unavailable.
+
+**Expect:** Both pages have exact pre-first-Step-4b/7 `content_rollback_preimages` copied from the exclusive post-Step-4a checkpoint; both are restored byte-for-byte, listed in `infrastructure_failure_pages`, and pass `validate_audit_completion.py --verify-incomplete-rollback`. The report ends `incomplete`; completed Step 4a neutral work remains, while neither page is demoted, marked, or left partly edited.
+
+## 22. Batch Limits Are Hard
+
+**Given:** A coordinator changes plan parameters to 1,000 claims/pages or concurrent calls to reduce call overhead.
+
+**Expect:** Plan construction and replay reject the values. The maxima remain 25 claims, 4 pages, and 4 concurrent calls; batching changes call count, never evidence-row obligations.
+
+## 23. Execution History Cannot Quietly Shrink
+
+**Given:** Execution 001 was retained and execution 002 later replaced its rows, but the coordinator deletes execution 001, renumbers the directory, adds an ignored-suffix child, or rewrites the journal census to mention only execution 002.
+
+**Expect:** Completion fails while the retained local journal, anchors, report, or execution census exposes the omission. Journal initialization also creates an independent anchor directory in a new empty run root. Every execution atomically publishes one numbered anchor before its matching journal link; anchors are never overwritten. A short/partial write never reaches the final path. Retry removes only the next unpublished temp or a same-inode name for an already published anchor; a cleanup failure aborts before journal advancement. If a later crash leaves exactly one authentic anchor ahead of the journal, an identical retry adopts it; any other mismatch fails. The helper refuses reinitialization while any prior state remains, and completion requires the anchor census, journal chain, report census, and exact direct artifact-root children to agree. This is local fail-closed recovery, not cryptographic non-erasure after deliberate deletion of every local artifact; that stronger threat model requires an authorized committed or external checkpoint.
+
+## 24. One PDF Can Contain Many Quantified Members
+
+**Given:** A claim says none of ten experimental conditions in one PDF used a variable round count.
+
+**Expect:** The frozen population has ten distinct semantic-unit member IDs, each mapped to that one raw path; both roles search all ten before HOLD. Collapsing them into one member called `paper` fails the semantic population requirement. A member spanning two raws fails mechanically, while multiple members mapped to one raw are valid.
+
+## 25. A Split-Off Page Has An Absence Preimage
+
+**Given:** Step 7 autonomously splits an existing page and creates a new maintained path that did not exist when the Warning baseline was captured.
+
+**Expect:** The new path's rollback row declares `preimage_existed: false`, an empty preimage byte string and its SHA-256, null prior status/hash, and zero markers; absence from the post-Step-4a checkpoint authenticates it, and the checkpoint's inventory must exactly equal the Step 1 baseline. Successful terminal certification keeps the new page with `rollback_required: false`. Infrastructure abort sets the flag, removes the path, restores the original page, and requires the final page inventory to equal the checkpoint.
+
+## 26. Step 4a Edits Are The Rollback Boundary
+
+**Given:** Step 4a legitimately corrects spelling or de-hyphenation on a page, then Step 7 changes that page before an infrastructure failure.
+
+**Expect:** Audit captured the exclusive full-page checkpoint after the Step 4a edit and before Step 4b/7. The rollback row must match the checkpoint bytes, not the older Step 1 bytes. Recovery restores the Step 4a-corrected page, the checkpoint path/SHA and complete page inventory validate, and any attempt to substitute already edited Step 4b/7 bytes fails.
