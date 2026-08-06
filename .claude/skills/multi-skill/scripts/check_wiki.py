@@ -801,16 +801,18 @@ def _load_pagination_map(
     order), and the right side may be `none` (the page prints no determinable
     number). A trailing `# comment` is ignored.
 
-    Tolerant by design (audit edits this file autonomously): a missing or
-    unreadable file returns {} — every raw then reads as unregistered and the
-    locator checks fall back to the `app.`-anchor heuristic (the pre-map
-    behaviour), so lint still runs (recoverable from git). A malformed line is
-    skipped, never raised. Never crashes lint.
+    Tolerant by design (audit edits this file autonomously): a file that is
+    missing, unopenable, or not valid UTF-8 returns {} — every raw then reads as
+    unregistered and the locator checks fall back to the `app.`-anchor heuristic
+    (the pre-map behaviour), so lint still runs (recoverable from git). A
+    malformed line is skipped, never raised. Never crashes lint — this runs at
+    import, so an escaping exception takes down every check, not just the
+    locator ones.
     """
     out: dict[str, dict[int, int | None]] = {}
     try:
         text = path.read_text(encoding='utf-8')
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         return out
     raw: str | None = None
     for line in text.splitlines():

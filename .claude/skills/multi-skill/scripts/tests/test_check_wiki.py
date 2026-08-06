@@ -1850,6 +1850,14 @@ class TestPaginationMap(unittest.TestCase):
     def test_load_map_missing_file_is_empty(self) -> None:
         assert cw._load_pagination_map(self.tmp / 'nope.md') == {}
 
+    def test_load_map_undecodable_file_is_empty(self) -> None:
+        # Regression: the loader runs at import, so an escaping exception takes
+        # down every check rather than only the locator ones. A non-UTF-8 byte
+        # raises UnicodeDecodeError, which is a ValueError and not an OSError.
+        p = self.tmp / 'pagination-map.md'
+        p.write_bytes(b'## 0-raw/papers/X.pdf\n- 1 = 4171 \xff\xfe\n')
+        assert cw._load_pagination_map(p) == {}
+
     def test_load_map_ignores_non_raw_headings(self) -> None:
         # Prose H2 headings and fenced examples must not become entries.
         m = cw._load_pagination_map(self._mapfile(

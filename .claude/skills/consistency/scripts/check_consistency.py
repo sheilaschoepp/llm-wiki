@@ -1251,8 +1251,14 @@ BIBKEY_RE = re.compile(r'\b[A-Z][A-Za-z]+\d{4}[A-Z][A-Za-z]+\b')
 # In Your Lane). These are data, not skill logic: the checks load them at
 # runtime, and their content is by construction this vault's own -- page paths,
 # per-raw pagination maps -- so a corpus bibkey in them is content, not leakage.
-# Same rationale as the `-memory.md` journals. Keep in step with CLAUDE.md when a
-# data file is added or renamed.
+# Same rationale as the `-memory.md` journals.
+#
+# Membership is decided by CONTENT, not by CLAUDE.md's roster. CLAUDE.md names a
+# fourth curated data file, `synonym-ignore.md`; it is deliberately absent here
+# because it holds generic term pairs with no corpus content, so exempting it
+# would blind this check to a file that should be checked. Add a file only when
+# its own content legitimately carries corpus bibkeys or vault page paths --
+# never merely because the schema lists it as agent-writable.
 AGENT_DATA_FILES = frozenset({
     'hyphenation-lists.md',        # hyphenated_open_compound_noun (lint)
     'unlinked-mention-ignore.md',  # unlinked_page_mention suppressions (lint)
