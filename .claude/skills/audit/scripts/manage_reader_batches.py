@@ -26,7 +26,7 @@ from typing import Any
 HEX64 = re.compile(r'^[0-9a-f]{64}$')
 HARD_MAX_BULLET_UNITS = 25
 HARD_MAX_PAGE_UNITS = 4
-HARD_MAX_CONCURRENT_CALLS = 4
+HARD_MAX_CONCURRENT_CALLS = 8
 BULLET_ROLES = ('locator_bullet', 'entailment_bullet')
 PAGE_ROLES = ('locator_page', 'entailment_argument_page')
 COUNTERPART = {
@@ -37,40 +37,83 @@ COUNTERPART = {
 }
 SCOPES = {'ordinary', 'exhaustive_negative'}
 INPUT_KEYS = {
-    'schema_version', 'run_id', 'relationship_epoch', 'bullet_units',
+    'schema_version',
+    'run_id',
+    'relationship_epoch',
+    'bullet_units',
     'page_units',
 }
 PLAN_KEYS = {
-    'schema_version', 'run_id', 'relationship_epoch', 'input_sha256',
-    'max_bullet_units', 'max_page_units', 'max_concurrent_calls',
-    'planned_groups', 'planned_bullet_records', 'planned_page_records',
-    'planned_calls', 'planned_waves', 'batches', 'plan_sha256',
+    'schema_version',
+    'run_id',
+    'relationship_epoch',
+    'input_sha256',
+    'max_bullet_units',
+    'max_page_units',
+    'max_concurrent_calls',
+    'planned_groups',
+    'planned_bullet_records',
+    'planned_page_records',
+    'planned_calls',
+    'planned_waves',
+    'batches',
+    'plan_sha256',
 }
 BATCH_KEYS = {
-    'batch_id', 'kind', 'role', 'counterpart_role', 'manifest_sha256',
-    'batch_number', 'wave_number', 'size', 'units',
+    'batch_id',
+    'kind',
+    'role',
+    'counterpart_role',
+    'manifest_sha256',
+    'batch_number',
+    'wave_number',
+    'size',
+    'units',
 }
 UNIT_KEYS = {
-    'unit_id', 'page_generation', 'raw_manifest', 'verification_scope',
+    'unit_id',
+    'page_generation',
+    'raw_manifest',
+    'verification_scope',
     'quantified_population',
 }
 ARTIFACT_KEYS = {
-    'schema_version', 'run_id', 'relationship_epoch', 'batch_id',
-    'plan_sha256', 'input_sha256', 'role', 'agent_id', 'reader_run_id',
-    'unit_ids', 'records',
+    'schema_version',
+    'run_id',
+    'relationship_epoch',
+    'batch_id',
+    'plan_sha256',
+    'input_sha256',
+    'role',
+    'agent_id',
+    'reader_run_id',
+    'unit_ids',
+    'records',
 }
 EXECUTION_JOURNAL_KEYS = {
-    'schema_version', 'run_id', 'warning_baseline_sha256', 'entries',
+    'schema_version',
+    'run_id',
+    'warning_baseline_sha256',
+    'entries',
     'journal_sha256',
 }
 EXECUTION_JOURNAL_ENTRY_KEYS = {
-    'execution_number', 'plan_sha256', 'collected_sha256',
-    'previous_entry_sha256', 'anchor_sha256', 'entry_sha256',
+    'execution_number',
+    'plan_sha256',
+    'collected_sha256',
+    'previous_entry_sha256',
+    'anchor_sha256',
+    'entry_sha256',
 }
 EXECUTION_ANCHOR_KEYS = {
-    'schema_version', 'run_id', 'warning_baseline_sha256',
-    'execution_number', 'plan_sha256', 'collected_sha256',
-    'previous_anchor_sha256', 'anchor_sha256',
+    'schema_version',
+    'run_id',
+    'warning_baseline_sha256',
+    'execution_number',
+    'plan_sha256',
+    'collected_sha256',
+    'previous_anchor_sha256',
+    'anchor_sha256',
 }
 
 
@@ -113,12 +156,15 @@ def _normalize_manifest(value: Any, *, label: str) -> list[dict[str, str]]:
             or not HEX64.fullmatch(str(item.get('sha256')))
         ):
             raise BatchError(message=f'{label} raw_manifest is malformed')
-        manifest.append({'raw_path': item['raw_path'], 'sha256': item['sha256']})
-    if (
-        manifest != sorted(manifest, key=lambda item: item['raw_path'])
-        or len({item['raw_path'] for item in manifest}) != len(manifest)
-    ):
-        raise BatchError(message=f'{label} raw_manifest is not unique and sorted')
+        manifest.append(
+            {'raw_path': item['raw_path'], 'sha256': item['sha256']}
+        )
+    if manifest != sorted(manifest, key=lambda item: item['raw_path']) or len(
+        {item['raw_path'] for item in manifest}
+    ) != len(manifest):
+        raise BatchError(
+            message=f'{label} raw_manifest is not unique and sorted'
+        )
     return manifest
 
 
@@ -160,10 +206,9 @@ def _normalize_unit(value: Any, *, kind: str, index: int) -> dict[str, Any]:
                 )
             )
         raw_paths = population['raw_paths']
-        if (
-            any(not isinstance(item, str) for item in raw_paths)
-            or raw_paths != [item['raw_path'] for item in manifest]
-        ):
+        if any(
+            not isinstance(item, str) for item in raw_paths
+        ) or raw_paths != [item['raw_path'] for item in manifest]:
             raise BatchError(
                 message=f'{label} quantified raw population differs from manifest'
             )
@@ -193,8 +238,10 @@ def _normalize_unit(value: Any, *, kind: str, index: int) -> dict[str, Any]:
             len(member_ids) != len(set(member_ids))
             or covered_raws != set(raw_paths)
             or member_order != sorted(member_order)
-            or any(len(member['raw_paths']) != 1
-                   for member in population['members'])
+            or any(
+                len(member['raw_paths']) != 1
+                for member in population['members']
+            )
         ):
             raise BatchError(
                 message=(
@@ -249,25 +296,37 @@ def _normalize_input(value: Any) -> dict[str, Any]:
 
 
 def _batch_id(
-    *, run_id: str, epoch: str, input_sha256: str, kind: str, role: str,
-    manifest_sha256: str, batch_number: int, units: list[dict[str, Any]],
+    *,
+    run_id: str,
+    epoch: str,
+    input_sha256: str,
+    kind: str,
+    role: str,
+    manifest_sha256: str,
+    batch_number: int,
+    units: list[dict[str, Any]],
 ) -> str:
-    digest = _sha256(value={
-        'schema_version': 1,
-        'run_id': run_id,
-        'relationship_epoch': epoch,
-        'input_sha256': input_sha256,
-        'kind': kind,
-        'role': role,
-        'manifest_sha256': manifest_sha256,
-        'batch_number': batch_number,
-        'units': units,
-    })
+    digest = _sha256(
+        value={
+            'schema_version': 1,
+            'run_id': run_id,
+            'relationship_epoch': epoch,
+            'input_sha256': input_sha256,
+            'kind': kind,
+            'role': role,
+            'manifest_sha256': manifest_sha256,
+            'batch_number': batch_number,
+            'units': units,
+        }
+    )
     return f'{kind}-{role}-{digest[:24]}'
 
 
 def build_plan(
-    value: Any, *, max_bullet_units: int = 25, max_page_units: int = 4,
+    value: Any,
+    *,
+    max_bullet_units: int = 25,
+    max_page_units: int = 4,
     max_concurrent_calls: int = 4,
 ) -> dict[str, Any]:
     """Return the deterministic pre-dispatch call plan."""
@@ -275,7 +334,9 @@ def build_plan(
         any(
             isinstance(item, bool) or not isinstance(item, int)
             for item in (
-                max_bullet_units, max_page_units, max_concurrent_calls
+                max_bullet_units,
+                max_page_units,
+                max_concurrent_calls,
             )
         )
         or max_bullet_units < 1
@@ -306,25 +367,27 @@ def build_plan(
                 for offset in range(0, len(group), limit):
                     units = group[offset : offset + limit]
                     number = offset // limit + 1
-                    batches.append({
-                        'batch_id': _batch_id(
-                            run_id=normalized['run_id'],
-                            epoch=normalized['relationship_epoch'],
-                            input_sha256=input_sha,
-                            kind=kind,
-                            role=role,
-                            manifest_sha256=manifest_sha,
-                            batch_number=number,
-                            units=units,
-                        ),
-                        'kind': kind,
-                        'role': role,
-                        'counterpart_role': COUNTERPART[role],
-                        'manifest_sha256': manifest_sha,
-                        'batch_number': number,
-                        'size': len(units),
-                        'units': units,
-                    })
+                    batches.append(
+                        {
+                            'batch_id': _batch_id(
+                                run_id=normalized['run_id'],
+                                epoch=normalized['relationship_epoch'],
+                                input_sha256=input_sha,
+                                kind=kind,
+                                role=role,
+                                manifest_sha256=manifest_sha,
+                                batch_number=number,
+                                units=units,
+                            ),
+                            'kind': kind,
+                            'role': role,
+                            'counterpart_role': COUNTERPART[role],
+                            'manifest_sha256': manifest_sha,
+                            'batch_number': number,
+                            'size': len(units),
+                            'units': units,
+                        }
+                    )
     for index, batch in enumerate(batches):
         batch['wave_number'] = index // max_concurrent_calls + 1
     plan: dict[str, Any] = {
@@ -354,7 +417,9 @@ def validate_plan(*, plan: Any) -> dict[str, Any]:
     if not isinstance(plan, dict) or set(plan) != PLAN_KEYS:
         raise BatchError(message='reader plan fields are not schema-exact')
     expected_plan_sha = plan.get('plan_sha256')
-    unhashed = {key: value for key, value in plan.items() if key != 'plan_sha256'}
+    unhashed = {
+        key: value for key, value in plan.items() if key != 'plan_sha256'
+    }
     if (
         plan.get('schema_version') != 1
         or not HEX64.fullmatch(str(expected_plan_sha))
@@ -388,7 +453,8 @@ def validate_plan(*, plan: Any) -> dict[str, Any]:
         raise BatchError(message='reader plan has no executable batches')
 
     unique_units: dict[str, dict[str, dict[str, Any]]] = {
-        'bullet': {}, 'page': {},
+        'bullet': {},
+        'page': {},
     }
     seen_batches: set[str] = set()
     seen_roles: set[tuple[str, str, str]] = set()
@@ -422,7 +488,9 @@ def validate_plan(*, plan: Any) -> dict[str, Any]:
             or number < 1
             or wave != index // concurrency + 1
         ):
-            raise BatchError(message=f'{label} size, number, or wave is malformed')
+            raise BatchError(
+                message=f'{label} size, number, or wave is malformed'
+            )
         normalized_units = [
             _normalize_unit(value=unit, kind=kind, index=unit_index)
             for unit_index, unit in enumerate(units)
@@ -430,10 +498,9 @@ def validate_plan(*, plan: Any) -> dict[str, Any]:
         if normalized_units != units:
             raise BatchError(message=f'{label} units are not canonical')
         manifest_sha = batch.get('manifest_sha256')
-        if (
-            not HEX64.fullmatch(str(manifest_sha))
-            or any(_sha256(value=unit['raw_manifest']) != manifest_sha
-                   for unit in units)
+        if not HEX64.fullmatch(str(manifest_sha)) or any(
+            _sha256(value=unit['raw_manifest']) != manifest_sha
+            for unit in units
         ):
             raise BatchError(message=f'{label} mixes raw manifests')
         expected_id = _batch_id(
@@ -447,7 +514,9 @@ def validate_plan(*, plan: Any) -> dict[str, Any]:
             units=units,
         )
         if batch.get('batch_id') != expected_id or expected_id in seen_batches:
-            raise BatchError(message=f'{label} has invalid or duplicate batch_id')
+            raise BatchError(
+                message=f'{label} has invalid or duplicate batch_id'
+            )
         seen_batches.add(expected_id)
         group_numbers[(kind, role, manifest_sha)].append(number)
         groups.add((kind, manifest_sha))
@@ -462,16 +531,21 @@ def validate_plan(*, plan: Any) -> dict[str, Any]:
             unique_units[kind][unit['unit_id']] = unit
     for key, numbers in group_numbers.items():
         if numbers != list(range(1, len(numbers) + 1)):
-            raise BatchError(message=f'reader plan group batches are noncontiguous: {key}')
+            raise BatchError(
+                message=f'reader plan group batches are noncontiguous: {key}'
+            )
     for kind, units in unique_units.items():
         required = set(BULLET_ROLES if kind == 'bullet' else PAGE_ROLES)
         for unit_id in units:
             actual = {
-                role for row_kind, row_id, role in seen_roles
+                role
+                for row_kind, row_id, role in seen_roles
                 if row_kind == kind and row_id == unit_id
             }
             if actual != required:
-                raise BatchError(message=f'{kind} unit lacks both roles: {unit_id}')
+                raise BatchError(
+                    message=f'{kind} unit lacks both roles: {unit_id}'
+                )
     reconstructed = {
         'schema_version': 1,
         'run_id': plan['run_id'],
@@ -484,7 +558,9 @@ def validate_plan(*, plan: Any) -> dict[str, Any]:
         ),
     }
     if _sha256(value=reconstructed) != plan['input_sha256']:
-        raise BatchError(message='reader plan units do not reconstruct input SHA-256')
+        raise BatchError(
+            message='reader plan units do not reconstruct input SHA-256'
+        )
     expected = {
         'planned_groups': len(groups),
         'planned_bullet_records': 2 * len(unique_units['bullet']),
@@ -494,20 +570,30 @@ def validate_plan(*, plan: Any) -> dict[str, Any]:
     }
     for key, value in expected.items():
         if plan.get(key) != value:
-            raise BatchError(message=f'reader plan {key} does not match batches')
+            raise BatchError(
+                message=f'reader plan {key} does not match batches'
+            )
     return reconstructed
 
 
 def _validate_quantified_scope(
-    record: dict[str, Any], *, label: str, unit: dict[str, Any],
+    record: dict[str, Any],
+    *,
+    label: str,
+    unit: dict[str, Any],
 ) -> None:
     scope = record.get('quantified_scope')
     keys = {
-        'raw_population', 'population', 'searched_members',
-        'counterexamples', 'search_summary',
+        'raw_population',
+        'population',
+        'searched_members',
+        'counterexamples',
+        'search_summary',
     }
     if not isinstance(scope, dict) or set(scope) != keys:
-        raise BatchError(message=f'{label} lacks schema-exact quantified_scope')
+        raise BatchError(
+            message=f'{label} lacks schema-exact quantified_scope'
+        )
     raw_population = scope.get('raw_population')
     population = scope.get('population')
     searched = scope.get('searched_members')
@@ -518,12 +604,13 @@ def _validate_quantified_scope(
         or len(items) != len(set(items))
         for items in (raw_population, population, searched, counterexamples)
     ):
-        raise BatchError(message=f'{label} quantified_scope lists are malformed')
+        raise BatchError(
+            message=f'{label} quantified_scope lists are malformed'
+        )
     frozen = unit['quantified_population']
     if (
         raw_population != frozen['raw_paths']
-        or population
-        != [member['member_id'] for member in frozen['members']]
+        or population != [member['member_id'] for member in frozen['members']]
         or not set(searched).issubset(population)
         or not set(counterexamples).issubset(set(searched))
     ):
@@ -531,7 +618,9 @@ def _validate_quantified_scope(
             message=f'{label} quantified_scope population is malformed'
         )
     if not _nonplaceholder(value=scope.get('search_summary')):
-        raise BatchError(message=f'{label} quantified_scope lacks search_summary')
+        raise BatchError(
+            message=f'{label} quantified_scope lacks search_summary'
+        )
     verdict = record.get('verdict')
     if verdict == 'hold' and (searched != population or counterexamples):
         raise BatchError(message=f'{label} HOLD is not exhaustive')
@@ -540,7 +629,10 @@ def _validate_quantified_scope(
 
 
 def _validate_record(
-    *, record: Any, batch: dict[str, Any], unit: dict[str, Any],
+    *,
+    record: Any,
+    batch: dict[str, Any],
+    unit: dict[str, Any],
     artifact: dict[str, Any],
 ) -> None:
     label = f'{batch["batch_id"]}:{unit["unit_id"]}'
@@ -548,8 +640,7 @@ def _validate_record(
         raise BatchError(message=f'{label} record is missing or truncated')
     if (
         record.get('schema_version') != 1
-        or
-        record.get('run_id') != artifact['run_id']
+        or record.get('run_id') != artifact['run_id']
         or record.get('relationship_epoch') != artifact['relationship_epoch']
         or record.get('role') != artifact['role']
         or record.get('agent_id') != artifact['agent_id']
@@ -569,12 +660,9 @@ def _validate_record(
             or 'correction' not in record
         ):
             raise BatchError(message=f'{label} bullet record is incomplete')
-        if (
-            record.get('verdict') == 'hold'
-            and (
-                not _nonplaceholder(value=record.get('quote'))
-                or record.get('quote_validated') is not True
-            )
+        if record.get('verdict') == 'hold' and (
+            not _nonplaceholder(value=record.get('quote'))
+            or record.get('quote_validated') is not True
         ):
             raise BatchError(message=f'{label} HOLD lacks validated quote')
         if unit['verification_scope'] == 'exhaustive_negative':
@@ -589,11 +677,12 @@ def _validate_record(
             or not _nonplaceholder(value=record.get('evidence'))
         ):
             raise BatchError(message=f'{label} page record is incomplete')
-        if (
-            (record.get('verdict') == 'hold' and record['defects'])
-            or (record.get('verdict') != 'hold' and not record['defects'])
+        if (record.get('verdict') == 'hold' and record['defects']) or (
+            record.get('verdict') != 'hold' and not record['defects']
         ):
-            raise BatchError(message=f'{label} page verdict contradicts defects')
+            raise BatchError(
+                message=f'{label} page verdict contradicts defects'
+            )
 
 
 def _load_artifact(*, path: Path, artifact_root: Path) -> Any:
@@ -641,7 +730,9 @@ def collect_artifacts(plan: Any, artifact_dir: Path) -> dict[str, Any]:
 
     merged: list[dict[str, Any]] = []
     seen_rows: set[str] = set()
-    independence: dict[tuple[str, str], dict[str, tuple[str, str]]] = defaultdict(dict)
+    independence: dict[tuple[str, str], dict[str, tuple[str, str]]] = (
+        defaultdict(dict)
+    )
     receipts: list[dict[str, Any]] = []
     for batch in batches:
         artifact = _load_artifact(
@@ -658,7 +749,8 @@ def collect_artifacts(plan: Any, artifact_dir: Path) -> dict[str, Any]:
         if (
             artifact.get('schema_version') != 1
             or artifact.get('run_id') != plan.get('run_id')
-            or artifact.get('relationship_epoch') != plan.get('relationship_epoch')
+            or artifact.get('relationship_epoch')
+            != plan.get('relationship_epoch')
             or artifact.get('batch_id') != batch['batch_id']
             or artifact.get('plan_sha256') != expected_plan_sha
             or artifact.get('input_sha256') != plan.get('input_sha256')
@@ -675,9 +767,13 @@ def collect_artifacts(plan: Any, artifact_dir: Path) -> dict[str, Any]:
                 )
             )
         records_by_id: dict[str, dict[str, Any]] = {}
-        identity_key = 'claim_instance_id' if batch['kind'] == 'bullet' else 'page_path'
+        identity_key = (
+            'claim_instance_id' if batch['kind'] == 'bullet' else 'page_path'
+        )
         for record in artifact['records']:
-            identity = record.get(identity_key) if isinstance(record, dict) else None
+            identity = (
+                record.get(identity_key) if isinstance(record, dict) else None
+            )
             if not isinstance(identity, str) or identity in records_by_id:
                 raise BatchError(
                     message=(
@@ -691,25 +787,30 @@ def collect_artifacts(plan: Any, artifact_dir: Path) -> dict[str, Any]:
             )
         for unit in batch['units']:
             record = records_by_id[unit['unit_id']]
-            _validate_record(record=record, batch=batch, unit=unit, artifact=artifact)
+            _validate_record(
+                record=record, batch=batch, unit=unit, artifact=artifact
+            )
             row_id = record['row_id']
             if row_id in seen_rows:
                 raise BatchError(message=f'duplicate ledger row_id: {row_id}')
             seen_rows.add(row_id)
             merged.append(record)
             independence[(batch['kind'], unit['unit_id'])][batch['role']] = (
-                artifact['agent_id'], artifact['reader_run_id']
+                artifact['agent_id'],
+                artifact['reader_run_id'],
             )
-        receipts.append({
-            'batch_id': batch['batch_id'],
-            'role': batch['role'],
-            'agent_id': artifact['agent_id'],
-            'reader_run_id': artifact['reader_run_id'],
-            'records': len(artifact['records']),
-            'artifact_sha256': hashlib.sha256(
-                (artifact_dir / f'{batch["batch_id"]}.json').read_bytes()
-            ).hexdigest(),
-        })
+        receipts.append(
+            {
+                'batch_id': batch['batch_id'],
+                'role': batch['role'],
+                'agent_id': artifact['agent_id'],
+                'reader_run_id': artifact['reader_run_id'],
+                'records': len(artifact['records']),
+                'artifact_sha256': hashlib.sha256(
+                    (artifact_dir / f'{batch["batch_id"]}.json').read_bytes()
+                ).hexdigest(),
+            }
+        )
 
     for identity, roles in independence.items():
         kind = identity[0]
@@ -744,7 +845,9 @@ def _atomic_write(path: Path, value: Any) -> None:
     fd, temporary = tempfile.mkstemp(prefix=f'.{path.name}.', dir=path.parent)
     try:
         with os.fdopen(fd, 'w', encoding='utf-8') as handle:
-            json.dump(value, handle, ensure_ascii=False, sort_keys=True, indent=2)
+            json.dump(
+                value, handle, ensure_ascii=False, sort_keys=True, indent=2
+            )
             handle.write('\n')
             handle.flush()
             os.fsync(handle.fileno())
@@ -758,19 +861,24 @@ def _atomic_write(path: Path, value: Any) -> None:
 
 
 def _journal_genesis(*, run_id: str, warning_baseline_sha256: str) -> str:
-    return _sha256(value={
-        'kind': 'audit-reader-execution-journal-genesis',
-        'run_id': run_id,
-        'warning_baseline_sha256': warning_baseline_sha256,
-    })
+    return _sha256(
+        value={
+            'kind': 'audit-reader-execution-journal-genesis',
+            'run_id': run_id,
+            'warning_baseline_sha256': warning_baseline_sha256,
+        }
+    )
 
 
 def _with_journal_sha(value: dict[str, Any]) -> dict[str, Any]:
     result = dict(value)
-    result['journal_sha256'] = _sha256(value={
-        key: item for key, item in result.items()
-        if key != 'journal_sha256'
-    })
+    result['journal_sha256'] = _sha256(
+        value={
+            key: item
+            for key, item in result.items()
+            if key != 'journal_sha256'
+        }
+    )
     return result
 
 
@@ -785,7 +893,9 @@ def _anchor_path(*, journal_path: Path, execution_number: int) -> Path:
 
 
 def _load_execution_anchors(
-    *, journal_path: Path, journal: dict[str, Any],
+    *,
+    journal_path: Path,
+    journal: dict[str, Any],
     trailing_plan_sha256: str | None = None,
     trailing_collected_sha256: str | None = None,
 ) -> list[dict[str, Any]]:
@@ -799,15 +909,15 @@ def _load_execution_anchors(
     )
     expected_count = len(journal['entries']) + (1 if has_trailing else 0)
     expected_names = {
-        f'execution-{index:03d}.json'
-        for index in range(1, expected_count + 1)
+        f'execution-{index:03d}.json' for index in range(1, expected_count + 1)
     }
     actual = list(directory.iterdir())
-    if (
-        {item.name for item in actual} != expected_names
-        or any(item.is_symlink() or not item.is_file() for item in actual)
+    if {item.name for item in actual} != expected_names or any(
+        item.is_symlink() or not item.is_file() for item in actual
     ):
-        raise BatchError(message='execution anchor census differs from journal')
+        raise BatchError(
+            message='execution anchor census differs from journal'
+        )
     anchors: list[dict[str, Any]] = []
     previous = _journal_genesis(
         run_id=journal['run_id'],
@@ -819,17 +929,22 @@ def _load_execution_anchors(
             if index <= len(journal['entries'])
             else None
         )
-        path = _anchor_path(
-            journal_path=journal_path, execution_number=index
-        )
+        path = _anchor_path(journal_path=journal_path, execution_number=index)
         try:
             anchor = json.loads(path.read_text(encoding='utf-8'))
         except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
-            raise BatchError(message='execution anchor is unreadable') from error
-        unhashed = {
-            key: item for key, item in anchor.items()
-            if key != 'anchor_sha256'
-        } if isinstance(anchor, dict) else {}
+            raise BatchError(
+                message='execution anchor is unreadable'
+            ) from error
+        unhashed = (
+            {
+                key: item
+                for key, item in anchor.items()
+                if key != 'anchor_sha256'
+            }
+            if isinstance(anchor, dict)
+            else {}
+        )
         if (
             not isinstance(anchor, dict)
             or set(anchor) != EXECUTION_ANCHOR_KEYS
@@ -873,7 +988,9 @@ def _exclusive_json_write(*, path: Path, value: Any) -> None:
     )
     try:
         with os.fdopen(descriptor, 'w', encoding='utf-8') as handle:
-            json.dump(value, handle, ensure_ascii=False, sort_keys=True, indent=2)
+            json.dump(
+                value, handle, ensure_ascii=False, sort_keys=True, indent=2
+            )
             handle.write('\n')
             handle.flush()
             os.fsync(handle.fileno())
@@ -891,7 +1008,9 @@ def _exclusive_json_write(*, path: Path, value: Any) -> None:
 
 
 def _recover_anchor_temps(
-    *, journal_path: Path, journal: dict[str, Any],
+    *,
+    journal_path: Path,
+    journal: dict[str, Any],
 ) -> None:
     """Remove only unpublished or same-inode anchor temps after interruption."""
     directory = _anchor_directory(journal_path=journal_path)
@@ -939,11 +1058,12 @@ def validate_execution_journal(value: Any) -> dict[str, Any]:
     ):
         raise BatchError(message='execution journal identity is malformed')
     unhashed = {
-        key: item for key, item in value.items()
-        if key != 'journal_sha256'
+        key: item for key, item in value.items() if key != 'journal_sha256'
     }
     if value.get('journal_sha256') != _sha256(value=unhashed):
-        raise BatchError(message='execution journal payload SHA-256 does not match')
+        raise BatchError(
+            message='execution journal payload SHA-256 does not match'
+        )
     previous = _journal_genesis(
         run_id=value['run_id'],
         warning_baseline_sha256=value['warning_baseline_sha256'],
@@ -958,8 +1078,7 @@ def validate_execution_journal(value: Any) -> dict[str, Any]:
                 message=f'execution journal entry {index} is not schema-exact'
             )
         unhashed_entry = {
-            key: item for key, item in entry.items()
-            if key != 'entry_sha256'
+            key: item for key, item in entry.items() if key != 'entry_sha256'
         }
         if (
             entry.get('execution_number') != index
@@ -978,12 +1097,14 @@ def validate_execution_journal(value: Any) -> dict[str, Any]:
 
 
 def init_execution_journal(
-    *, path: Path, run_id: str, warning_baseline_sha256: str,
+    *,
+    path: Path,
+    run_id: str,
+    warning_baseline_sha256: str,
 ) -> dict[str, Any]:
     """Create the baseline-bound journal exactly once without replacement."""
-    if (
-        not _nonplaceholder(value=run_id)
-        or not HEX64.fullmatch(warning_baseline_sha256)
+    if not _nonplaceholder(value=run_id) or not HEX64.fullmatch(
+        warning_baseline_sha256
     ):
         raise BatchError(message='execution journal identity is malformed')
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -992,12 +1113,14 @@ def init_execution_journal(
             message='reader artifact run already has state; refusing reinitialization'
         )
     _anchor_directory(journal_path=path).mkdir()
-    value = _with_journal_sha(value={
-        'schema_version': 1,
-        'run_id': run_id,
-        'warning_baseline_sha256': warning_baseline_sha256,
-        'entries': [],
-    })
+    value = _with_journal_sha(
+        value={
+            'schema_version': 1,
+            'run_id': run_id,
+            'warning_baseline_sha256': warning_baseline_sha256,
+            'entries': [],
+        }
+    )
     try:
         _exclusive_json_write(path=path, value=value)
     except BatchError:
@@ -1007,10 +1130,17 @@ def init_execution_journal(
 
 
 def append_execution_journal(
-    *, path: Path, plan_path: Path, collected_path: Path,
+    *,
+    path: Path,
+    plan_path: Path,
+    collected_path: Path,
 ) -> dict[str, Any]:
     """Validate the existing chain and append exactly one collected execution."""
-    if path.is_symlink() or plan_path.is_symlink() or collected_path.is_symlink():
+    if (
+        path.is_symlink()
+        or plan_path.is_symlink()
+        or collected_path.is_symlink()
+    ):
         raise BatchError(message='execution journal inputs cannot be symlinks')
     try:
         journal = json.loads(path.read_text(encoding='utf-8'))
@@ -1018,7 +1148,9 @@ def append_execution_journal(
         collected_bytes = collected_path.read_bytes()
         collected = json.loads(collected_bytes)
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
-        raise BatchError(message='execution journal inputs are unreadable') from error
+        raise BatchError(
+            message='execution journal inputs are unreadable'
+        ) from error
     validate_execution_journal(value=journal)
     validate_plan(plan=plan)
     if (
@@ -1102,10 +1234,12 @@ def append_execution_journal(
         anchor = trailing_anchor
     entry['anchor_sha256'] = anchor['anchor_sha256']
     entry['entry_sha256'] = _sha256(value=entry)
-    updated = _with_journal_sha(value={
-        **journal,
-        'entries': [*journal['entries'], entry],
-    })
+    updated = _with_journal_sha(
+        value={
+            **journal,
+            'entries': [*journal['entries'], entry],
+        }
+    )
     validate_execution_journal(value=updated)
     _atomic_write(path=path, value=updated)
     _load_execution_anchors(journal_path=path, journal=updated)
@@ -1146,56 +1280,81 @@ def main() -> int:
                 max_concurrent_calls=args.max_concurrent_calls,
             )
             _atomic_write(path=args.output, value=result)
-            print(json.dumps({
-                'result': 'planned',
-                'plan_sha256': result['plan_sha256'],
-                'calls': result['planned_calls'],
-                'waves': result['planned_waves'],
-                'records': (
-                    result['planned_bullet_records']
-                    + result['planned_page_records']
-                ),
-                'output': str(args.output),
-            }, sort_keys=True))
+            print(
+                json.dumps(
+                    {
+                        'result': 'planned',
+                        'plan_sha256': result['plan_sha256'],
+                        'calls': result['planned_calls'],
+                        'waves': result['planned_waves'],
+                        'records': (
+                            result['planned_bullet_records']
+                            + result['planned_page_records']
+                        ),
+                        'output': str(args.output),
+                    },
+                    sort_keys=True,
+                )
+            )
         elif args.command == 'collect':
             plan = json.loads(args.plan.read_text(encoding='utf-8'))
             result = collect_artifacts(
                 plan=plan, artifact_dir=args.artifact_dir
             )
             _atomic_write(path=args.output, value=result)
-            print(json.dumps({
-                'result': 'collected',
-                'plan_sha256': result['plan_sha256'],
-                'calls': result['terminal_calls'],
-                'records': result['terminal_records'],
-                'records_sha256': result['records_sha256'],
-                'output': str(args.output),
-            }, sort_keys=True))
+            print(
+                json.dumps(
+                    {
+                        'result': 'collected',
+                        'plan_sha256': result['plan_sha256'],
+                        'calls': result['terminal_calls'],
+                        'records': result['terminal_records'],
+                        'records_sha256': result['records_sha256'],
+                        'output': str(args.output),
+                    },
+                    sort_keys=True,
+                )
+            )
         elif args.command == 'journal-init':
             result = init_execution_journal(
                 path=args.journal,
                 run_id=args.run_id,
                 warning_baseline_sha256=args.warning_baseline_sha256,
             )
-            print(json.dumps({
-                'result': 'journal-initialized',
-                'entries': 0,
-                'journal_sha256': result['journal_sha256'],
-                'output': str(args.journal),
-            }, sort_keys=True))
+            print(
+                json.dumps(
+                    {
+                        'result': 'journal-initialized',
+                        'entries': 0,
+                        'journal_sha256': result['journal_sha256'],
+                        'output': str(args.journal),
+                    },
+                    sort_keys=True,
+                )
+            )
         else:
             result = append_execution_journal(
                 path=args.journal,
                 plan_path=args.plan,
                 collected_path=args.collected,
             )
-            print(json.dumps({
-                'result': 'journal-appended',
-                'entries': len(result['entries']),
-                'journal_sha256': result['journal_sha256'],
-                'output': str(args.journal),
-            }, sort_keys=True))
-    except (BatchError, OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+            print(
+                json.dumps(
+                    {
+                        'result': 'journal-appended',
+                        'entries': len(result['entries']),
+                        'journal_sha256': result['journal_sha256'],
+                        'output': str(args.journal),
+                    },
+                    sort_keys=True,
+                )
+            )
+    except (
+        BatchError,
+        OSError,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+    ) as error:
         print(f'manage_reader_batches: {error}', file=sys.stderr)
         return 2
     return 0
