@@ -401,7 +401,7 @@ CHECK_MANIFEST = [
         'check_id': 'dir_tree_drift',
         'packet': 'styles-files',
         'name': 'CLAUDE.md directory tree drift',
-        'scope': "CLAUDE.md — parses the ASCII directory tree under 'Directory Structure' and compares it to the actual repo: tree entries that don't exist on disk are flagged stale; on-disk paths that should appear in the tree (top-level docs, top-level dirs, immediate children of 0-raw/, 2-outputs/, a-archive/, plus 1-wiki/'s hot/index/log files and child dirs, plus .claude/skills/) but are missing are flagged. STANDALONE_SKILL_NAMES output folders are exempt — kept out of the tree by design; OUTPUT_EXEMPT_DIRS user-owned free-form folders are exempt the same way.",
+        'scope': "CLAUDE.md — parses the ASCII directory tree and compares it to the actual repo. The tree is the first text-fenced block holding branch characters, located structurally rather than by its heading or its root line, so a repo whose root folder is named something other than the tree's root line still resolves. Tree entries that don't exist on disk are flagged stale; on-disk paths that should appear in the tree (top-level docs, top-level dirs, immediate children of 0-raw/, 2-outputs/, a-archive/, plus 1-wiki/'s hot/index/log files and child dirs, plus .claude/skills/) but are missing are flagged. STANDALONE_SKILL_NAMES output folders are exempt — kept out of the tree by design; OUTPUT_EXEMPT_DIRS user-owned free-form folders are exempt the same way.",
     },
     {
         'check_id': 'unbackticked_paths_resolve',
