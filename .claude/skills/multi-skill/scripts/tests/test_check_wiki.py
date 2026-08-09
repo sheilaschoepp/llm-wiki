@@ -819,8 +819,26 @@ class TestCheckWiki(unittest.TestCase):
         assert cw._load_unlinked_mention_ignore(self.tmp / 'nope.md') == []
 
     def test_unlinked_mention_ignore_real_data_file_loads(self) -> None:
-        # The shipped data file parses (it ships empty — only the example comment).
-        assert cw._load_unlinked_mention_ignore() == []
+        # The shipped file parses and every entry it yields is well-formed.
+        # Deliberately NOT an emptiness assertion: it ships empty, but audit
+        # grows it autonomously (audit Step 7), so a vault running this suite may
+        # hold hundreds of entries — that is the file working as designed, not a
+        # defect. What must hold in an empty and a grown file alike is that the
+        # prose above `## verified-ignore` and the schematic example under it stay
+        # inert to the parser, and that no entry parses half-formed.
+        entries = cw._load_unlinked_mention_ignore()
+        assert isinstance(entries, list)
+        for e in entries:
+            assert e['page'].startswith('1-wiki/'), e
+            assert e['page'].endswith('.md'), e
+            assert e['target'], e
+            assert e['phrase'], e
+            assert isinstance(e['line'], int) and e['line'] > 0, e
+            # The compiled pattern must match the phrase it was built from, or
+            # the entry can never suppress the occurrence it was recorded for.
+            assert e['pattern'].search(e['phrase']), e
+            # A `{host-slug}` field means a schematic from the docs was parsed.
+            assert '{' not in e['page'] + e['target'], e
 
     # --- stale_mention_ignore: an entry that suppresses nothing ------------------
     # A stale entry is inert (phrase-anchored: it can only fail to match), so this
@@ -977,21 +995,54 @@ class TestCheckWiki(unittest.TestCase):
         assert [f['check_id'] for f in finds] == ['callout_block_id']
         assert 'why-it-matters' in finds[0]['fix_hint']
 
-    # --- real-repo anchors -------------------------------------------------------
+    # --- committed-wiki smoke ----------------------------------------------------
+    #
+    # These run the checks over whatever pages this vault actually holds, and
+    # deliberately do NOT assert the wiki is finding-free. They replace a set of
+    # per-check "real-repo anchors" (square citations, unisolated embeds, both
+    # hyphenation checks, log/hot chronology) that each asserted zero findings of
+    # one check across the committed pages.
+    #
+    # Those anchors were unsound in both directions. This project ships as a
+    # template into other vaults, so the suite runs where `1-wiki/` is a working
+    # corpus: a hyphenated compound or an untimed log entry is ordinary content
+    # debt, and lint exists to report it as a worklist — CLAUDE.md -> Workflow
+    # Rules -> Audit preconditions gates audit on lint's `result: clean |
+    # blocking`, which is where cleanliness is actually enforced and where a
+    # skill can fix it. An assertion here instead turns that worklist into a red
+    # suite that no code change can green. And in the template itself the vault
+    # ships empty, so every one of those anchors iterated zero pages and passed
+    # vacuously — enforcing content nowhere it could be met, proving nothing
+    # where it ran.
+    #
+    # What a test can own is that the checks survive real input and emit
+    # well-formed findings, which is what these two pin.
 
-    def test_real_wiki_has_no_square_citations(self) -> None:
-        findings = []
+    def _real_pages(self) -> list[Path]:
+        pages: list[Path] = []
         for folder in ('sources', 'entities', 'concepts', 'syntheses'):
             fp = WIKI / folder
-            if not fp.exists():
-                continue
-            for page in sorted(fp.glob('*.md')):
-                findings.extend(
-                    f
-                    for f in cw.check_page(path=page, wiki_root=WIKI)
-                    if f['check_id'] == 'citation_bracket_style'
-                )
-        assert findings == [], findings
+            if fp.exists():
+                pages.extend(sorted(fp.glob('*.md')))
+        return pages
+
+    def test_check_page_runs_on_real_wiki_with_well_formed_findings(
+        self,
+    ) -> None:
+        findings = [
+            f
+            for page in self._real_pages()
+            for f in cw.check_page(path=page, wiki_root=WIKI)
+        ]
+        findings.extend(cw.check_chronology(wiki_root=WIKI))
+        # Read the vocabulary off the registry rather than restating it, so
+        # renaming a tier cannot leave this test asserting a dead word.
+        severities = {v for v in cw.CHECKS.values() if v is not None}
+        for f in findings:
+            assert f['check_id'] in cw.CHECKS, f
+            assert f['severity'] in severities, f
+            assert f['file'], f
+            assert f['message'], f
 
     def test_full_run_output_is_deterministic(self) -> None:
         r1 = subprocess.run(
@@ -1004,12 +1055,8 @@ class TestCheckWiki(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        assert r1.stdout == r2.stdout
-        # well-formed JSON, and no square-citation findings in the committed wiki
-        data = json.loads(r1.stdout)
-        assert not [
-            f for f in data if f['check_id'] == 'citation_bracket_style'
-        ]
+        assert r1.stdout == r2.stdout  # stable order, not just stable set
+        assert isinstance(json.loads(r1.stdout), list)  # well-formed JSON
 
     # --- embed isolation (embed_not_isolated) -----------------------------------
     #
@@ -1136,21 +1183,8 @@ class TestCheckWiki(unittest.TestCase):
         ids = {f['check_id'] for f in cw.check_page(path=p, wiki_root=wiki)}
         assert 'embed_not_isolated' not in ids
 
-    # real-repo anchor
-
-    def test_real_wiki_has_no_unisolated_embeds(self) -> None:
-        findings = []
-        for folder in ('sources', 'entities', 'concepts', 'syntheses'):
-            fp = WIKI / folder
-            if not fp.exists():
-                continue
-            for page in sorted(fp.glob('*.md')):
-                findings.extend(
-                    f
-                    for f in cw.check_page(path=page, wiki_root=WIKI)
-                    if f['check_id'] == 'embed_not_isolated'
-                )
-        assert findings == [], findings
+    # (The committed-wiki anchor for this check was folded into the
+    # committed-wiki smoke above; see the rationale there.)
 
     # --- hyphenated open compounds (hyphenated_open_compound) --------------------
     #
@@ -1300,35 +1334,11 @@ class TestCheckWiki(unittest.TestCase):
         )
         assert f == []
 
-    # real-repo anchor
-
-    def test_real_wiki_has_no_hyphenated_open_compounds(self) -> None:
-        findings = []
-        for folder in ('sources', 'entities', 'concepts', 'syntheses'):
-            fp = WIKI / folder
-            if not fp.exists():
-                continue
-            for page in sorted(fp.glob('*.md')):
-                findings.extend(
-                    f
-                    for f in cw.check_page(path=page, wiki_root=WIKI)
-                    if f['check_id'] == 'hyphenated_open_compound'
-                )
-        assert findings == [], findings
-
-    def test_real_wiki_has_no_hyphenated_open_compound_noun(self) -> None:
-        findings = []
-        for folder in ('sources', 'entities', 'concepts', 'syntheses'):
-            fp = WIKI / folder
-            if not fp.exists():
-                continue
-            for page in sorted(fp.glob('*.md')):
-                findings.extend(
-                    f
-                    for f in cw.check_page(path=page, wiki_root=WIKI)
-                    if f['check_id'] == 'hyphenated_open_compound_noun'
-                )
-        assert findings == [], findings
+    # (The committed-wiki anchors for both hyphenation checks were folded into
+    # the committed-wiki smoke above; see the rationale there. A hyphenated
+    # compound in a live vault is a de-hyphenation item on audit's worklist —
+    # CLAUDE.md -> Page Status lists both mappings as verification-neutral fixes
+    # audit applies and re-stamps — not a broken build.)
 
     def test_unverified_marker_regex_identical_to_body_hash(self) -> None:
         assert cw.UNVERIFIED_MARKER_RE.pattern == bh._UNVERIFIED_RE.pattern, (
@@ -2091,15 +2101,10 @@ class TestCheckWiki(unittest.TestCase):
         assert bullets == ['2026-06-08 20:00', '2026-06-07 09:15']
         assert '## Open threads\n\n- keep me' in out
 
-    # real-repo anchor: the committed log/hot are timed and sorted
-
-    def test_real_wiki_log_hot_timed_and_sorted(self) -> None:
-        findings = [
-            f
-            for f in cw.check_chronology(wiki_root=WIKI)
-            if f['check_id'].startswith('chronology')
-        ]
-        assert findings == [], findings
+    # (The committed-wiki anchor for chronology was folded into the
+    # committed-wiki smoke above, which runs check_chronology over the real
+    # log/hot; see the rationale there. An untimed or out-of-order entry is a
+    # finding sort_chronology.py is built to repair, not a broken build.)
 
     # --- hyphenated_open_compound_noun: bare-noun de-hyphenation, modifier-safe ----
     # A slug-derived open compound (tool-use, belief-state) is correct OPEN as a noun
@@ -2332,10 +2337,25 @@ class TestPaginationMap(unittest.TestCase):
         )
         assert m == {'0-raw/papers/X.pdf': {1: 5}}
 
-    def test_shipped_template_parses_empty(self) -> None:
-        # The real data file ships with no entries; its example fence/comment
-        # must be inert to the parser.
-        assert cw._load_pagination_map() == {}
+    def test_shipped_map_parses_with_well_formed_entries(self) -> None:
+        # The shipped file parses and every entry it yields is well-formed.
+        # Deliberately NOT an emptiness assertion: it ships with no raws, but a
+        # raw is registered on each ingest, so a vault running this suite may
+        # hold dozens — that is the file working as designed. What must hold in
+        # an empty and a populated map alike is that the prose headings and the
+        # `## <raw path — e.g. …>` example fence stay inert to the parser.
+        m = cw._load_pagination_map()
+        assert isinstance(m, dict)
+        for raw, pages in m.items():
+            assert raw.startswith('0-raw/'), raw
+            # A placeholder delimiter means a schematic heading was parsed.
+            assert '<' not in raw and '{' not in raw, raw
+            assert isinstance(pages, dict), raw
+            for phys, printed in pages.items():
+                assert isinstance(phys, int) and phys > 0, (raw, phys)
+                assert printed is None or (
+                    isinstance(printed, int) and printed > 0
+                ), (raw, phys, printed)
 
     def test_printed_page_three_states(self) -> None:
         with mock.patch.object(
