@@ -2025,11 +2025,18 @@ def check_dir_tree_drift(root: Path) -> list[dict[str, Any]]:
 
     text = claude.read_text(encoding='utf-8')
 
-    # Find the first text-fenced block that looks like the repo tree.
+    # Find the first text-fenced block that IS the repo tree. Identified
+    # structurally, by the branch characters TREE_LINE_RE parses, never by the
+    # root directory's name: this project ships as a template into repos whose
+    # root is named something else, and a name-matched probe would find no tree
+    # there and report the entire documented structure as missing. Matching on
+    # the parser's own regex also guarantees the block it finds is parseable.
+    # The root line itself carries no branch prefix, so parse_directory_tree
+    # skips it and the name never reaches the comparison.
     tree_text: str | None = None
     for match in re.finditer(r'```text\n(.*?)```', text, re.DOTALL):
         block = match.group(1)
-        if 'llm-wiki/' in block:
+        if any(TREE_LINE_RE.match(line) for line in block.splitlines()):
             tree_text = block
             break
 
@@ -2038,8 +2045,8 @@ def check_dir_tree_drift(root: Path) -> list[dict[str, Any]]:
             finding(
                 check_id='dir_tree_drift',
                 file='CLAUDE.md',
-                message='Directory tree block (```text ... ``` rooted at '
-                '`llm-wiki/`) not found.',
+                message='Directory tree block (```text ... ``` with `├──` / '
+                '`└──` branches) not found.',
                 fix_hint='Add a `text`-fenced ASCII tree under the '
                 '`Directory Structure` heading.',
             )

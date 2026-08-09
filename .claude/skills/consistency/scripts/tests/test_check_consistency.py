@@ -100,6 +100,52 @@ class TestCheckConsistency(unittest.TestCase):
         # Must return a list, not raise FileNotFoundError.
         assert isinstance(cc.check_index_vs_files_drift(self.tmp), list)
 
+    # --- regression: dir_tree_drift located the tree by the repo's name ---
+    #
+    # The tree block was found by probing each ```text fence for the literal
+    # string `llm-wiki/`. This project ships as a template into repos with other
+    # root names, where that probe finds nothing and the check reports the whole
+    # documented structure as missing — a false Critical on every run, in the one
+    # repo class that cannot fix it. The block is now identified structurally, by
+    # the ├──/└── branches the parser reads, so the root's name is irrelevant.
+
+    def _tree_repo(self, root_label: str) -> Path:
+        """A minimal repo whose CLAUDE.md tree is rooted at `root_label`."""
+        (self.tmp / '0-raw').mkdir()
+        (self.tmp / 'CLAUDE.md').write_text(
+            '# Schema\n\n'
+            '```text\n'
+            f'{root_label}\n'
+            '├── CLAUDE.md\n'
+            '└── 0-raw/\n'
+            '```\n',
+            encoding='utf-8',
+        )
+        (self.tmp / 'MEMORY.md').write_text('m\n')
+        (self.tmp / 'README.md').write_text('r\n')
+        return self.tmp
+
+    def test_dir_tree_found_under_any_root_name(self) -> None:
+        root = self._tree_repo('some-other-wiki/')
+        messages = [f['message'] for f in cc.check_dir_tree_drift(root)]
+        assert not any('not found' in m for m in messages), messages
+
+    def test_dir_tree_root_line_is_not_compared_as_a_path(self) -> None:
+        # The root line carries no branch prefix, so the parser skips it. Were it
+        # parsed, every repo would be told its tree lists a nonexistent path.
+        root = self._tree_repo('some-other-wiki/')
+        messages = [f['message'] for f in cc.check_dir_tree_drift(root)]
+        assert not any('some-other-wiki' in m for m in messages), messages
+
+    def test_dir_tree_missing_block_still_flagged(self) -> None:
+        # The structural probe must not become a check that never fires: a
+        # CLAUDE.md whose fence holds no branches is still a missing tree.
+        (self.tmp / 'CLAUDE.md').write_text(
+            '# Schema\n\n```text\nnot a tree, just prose\n```\n'
+        )
+        messages = [f['message'] for f in cc.check_dir_tree_drift(self.tmp)]
+        assert any('not found' in m for m in messages), messages
+
     # --- regression: backtick scan inside a non-shell fence ---
 
     def test_referenced_paths_skips_non_bash_fence(self) -> None:
