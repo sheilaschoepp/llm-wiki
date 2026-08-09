@@ -1,11 +1,11 @@
 ---
 name: cleanup
-description: Two-part housekeeping for the knowledge base's working files. (1) Memory graduation — check whether each memory-tier entry (MEMORY.md, multi-skill, or per-skill) has already graduated into its permanent home, classify it, then graduate and clear the absorbed entries. (2) Outputs cleanup — prune 2-outputs files (OS junk, superseded check reports, reports orphaned from a deleted source or skill, and aged artifacts), confirming each deletion file by file. Use when the user wants to clean up, prune, consolidate, or clear memory files or old outputs, asks what is safe to remove, whether memory has been absorbed, to graduate or move an entry, or to clear out old, superseded, orphaned, or junk reports — or as a periodic consolidation pass. Different from consistency (which counts memory entries against a soft cap and checks schema/skill drift) and forget (which removes and quarantines wiki pages); cleanup removes only memory-journal entries and 2-outputs artifacts, which git history alone preserves.
+description: Two-part housekeeping for the wiki's working files. (1) Memory graduation — check whether each memory-tier entry (MEMORY.md, multi-skill, or per-skill) has already graduated into its permanent home, classify it, then graduate and clear the absorbed entries. (2) Outputs cleanup — prune 2-outputs files (OS junk, superseded check reports, reports orphaned from a deleted source or skill, and aged artifacts), confirming each deletion file by file. Use when the user wants to clean up, prune, consolidate, or clear memory files or old outputs, asks what is safe to remove, whether memory has been absorbed, to graduate or move an entry, or to clear out old, superseded, orphaned, or junk reports — or as a periodic consolidation pass. Different from consistency (which counts memory entries against a soft cap and checks schema/skill drift) and forget (which removes and quarantines wiki pages); cleanup removes only memory-journal entries and 2-outputs artifacts, which git history alone preserves.
 ---
 
 # cleanup
 
-Two-part housekeeping for the knowledge base's own working files: graduate-and-clear the memory journals, and prune unneeded artifacts from `2-outputs/`. Both jobs only ever remove with the user's explicit, per-item approval.
+Two-part housekeeping for the wiki's own working files: graduate-and-clear the memory journals, and prune unneeded artifacts from `2-outputs/`. Both jobs only ever remove with the user's explicit, per-item approval.
 
 A run does both jobs by default. The user may scope it to one ("just clean memory", "just clean old outputs").
 
