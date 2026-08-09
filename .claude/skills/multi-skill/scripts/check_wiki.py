@@ -1295,8 +1295,8 @@ def parse_frontmatter(text: str) -> tuple[dict[str, Any] | None, int]:
     Return (frontmatter_dict, end_line_index) — minimal YAML-ish parser.
 
     Handles the wiki's frontmatter shape: `key: value`, `key: "quoted"`,
-    `key: [list, items]`, multiline list `\n  - item`. Doesn't try to be a
-    full YAML — pyyaml isn't always installed, and this covers our
+    `key: [list, items]`, multiline list `\n  - item`. Doesn't try to
+    be a full YAML — pyyaml isn't always installed, and this covers our
     schema.
     """
     lines = text.split('\n')
@@ -2402,9 +2402,9 @@ def _redundancy_tokens(bullet: str) -> set[str]:
 
 
 def check_intra_page_redundancy(body: str, rel: str, end: int) -> list[dict[str, Any]]:
-    """Flag two bullets on ONE page that make the same point (CLAUDE.md -> Body
-    Sections As Callouts: "do not paraphrase the same point across
-    sections").
+    """Flag two bullets on ONE page that make the same point (CLAUDE.md
+    -> Body Sections As Callouts: "do not paraphrase the same point
+    across sections").
 
     Scoped by the caller to concept/entity/synthesis pages: source pages
     intentionally restate a Key Claim as a verbatim Evidence anchor, so

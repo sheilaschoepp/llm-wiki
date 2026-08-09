@@ -331,8 +331,8 @@ def check_body_length(
     Two measures because this repo writes each paragraph as one physical
     line (no hard wrap): the physical-line count under-counts a dense
     body, so a word count is the primary signal and the line count is a
-    backstop
-    for a genuinely many-lined file. Flag when either budget is exceeded.
+    backstop for a genuinely many-lined file. Flag when either budget is
+    exceeded.
 
     The word count deliberately includes fenced code and tables, unlike
     the prose-hunting sibling checks: the budget is a token-cost proxy,
@@ -791,7 +791,8 @@ def check_inline_code_refs(
     repo_root: Path,
     files: list[tuple[str, list[str], int]],
 ) -> list[dict[str, Any]]:
-    """Flag inline-code skill-infra paths (.md/.py) that resolve nowhere.
+    """Flag inline-code skill-infra paths (.md/.py) that resolve
+    nowhere.
 
     `files` is a list of (file_rel, lines, line_offset) to scan —
     SKILL.md (body lines, offset = frontmatter end) plus each reference

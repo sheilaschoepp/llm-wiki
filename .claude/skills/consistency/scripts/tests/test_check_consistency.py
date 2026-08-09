@@ -102,9 +102,9 @@ class TestCheckConsistency(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        # 0 = clean, 1 = findings; both are ordinary outcomes. Only 2 (an
-        # invocation error or mid-battery crash) is a defect, and it is
-        # the one the audit gate must never read as clean.
+        # 0 = clean, 1 = findings; both are ordinary outcomes. Only 2
+        # (an invocation error or mid-battery crash) is a defect, and it
+        # is the one the audit gate must never read as clean.
         assert r1.returncode in (0, 1), r1.stderr
         assert r1.stdout == r2.stdout  # stable order, not just stable set
         assert isinstance(json.loads(r1.stdout), list)
