@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Standalone backstop: is a cited numeric figure actually on the cited page?
+"""
+Standalone backstop: is a cited numeric figure actually on the cited
+page?
 
 A detect-only check for the cross-source mis-location defect (CLAUDE.md ->
 Source Support And Verification, the multi-source-bullet rule): a true,
@@ -80,9 +82,11 @@ FIGURE_RE = re.compile(
 
 
 def mask_spans(*, line: str) -> str:
-    """Blank inline-code and wikilink spans so their digits are not read as
-    claim figures. Each span becomes spaces of equal length to keep offsets
-    stable.
+    """
+    Blank inline-code and wikilink spans so their digits are not read as
+    claim figures.
+
+    Each span becomes spaces of equal length to keep offsets stable.
     """
 
     def blank(match: re.Match[str]) -> str:
@@ -92,26 +96,29 @@ def mask_spans(*, line: str) -> str:
 
 
 def extract_figures(*, line: str) -> list[str]:
-    """Return the distinctive numeric figures in a bullet's prose, with locator
-    machinery and code already masked out.
+    """
+    Return the distinctive numeric figures in a bullet's prose, with
+    locator machinery and code already masked out.
     """
     return FIGURE_RE.findall(mask_spans(line=line))
 
 
 def extract_deeplinks(*, line: str) -> list[tuple[str, int]]:
-    """Return (raw_relative_path, physical_page_n) for each raw deep-link on a
-    bullet.
+    """
+    Return (raw_relative_path, physical_page_n) for each raw deep-link
+    on a bullet.
     """
     return [(m.group(1), int(m.group(2))) for m in DEEPLINK_RE.finditer(line)]
 
 
 def figure_present(*, token: str, page_text: str) -> bool:
-    """Whether a numeric figure appears in a page's extracted text.
+    """
+    Whether a numeric figure appears in a page's extracted text.
 
-    Generous by design (whitespace-tolerant; matches the decimal core of a
-    percentage) so the check errs toward "present". A false "present" drops a
-    finding — the safe direction for a detect-only backstop — whereas a false
-    "absent" would cry wolf.
+    Generous by design (whitespace-tolerant; matches the decimal core of
+    a percentage) so the check errs toward "present". A false "present"
+    drops a finding — the safe direction for a detect-only backstop —
+    whereas a false "absent" would cry wolf.
     """
     core = token.rstrip('%')
     stripped = re.sub(r'\s+', '', page_text)
@@ -119,7 +126,8 @@ def figure_present(*, token: str, page_text: str) -> bool:
 
 
 class RawTextCache:
-    """Lazily opens raw PDFs and caches extracted page text across a run.
+    """
+    Lazily opens raw PDFs and caches extracted page text across a run.
 
     Attributes
     ----------
@@ -135,9 +143,12 @@ class RawTextCache:
         self._pages: dict[tuple[str, int], str | None] = {}
 
     def page_text(self, *, raw_rel: str, page_n: int) -> str | None:
-        """Return the text of physical page `page_n` (1-indexed) of a raw PDF,
-        or None if the file is missing, is not a readable PDF, or has no such
-        page. None means "cannot check", not "figure absent".
+        """
+        Return the text of physical page `page_n` (1-indexed) of a raw
+        PDF, or None if the file is missing, is not a readable PDF, or
+        has no such page.
+
+        None means "cannot check", not "figure absent".
         """
         key = (raw_rel, page_n)
         if key not in self._pages:
@@ -179,10 +190,12 @@ def check_page(
     repo_root: Path,
     cache: RawTextCache,
 ) -> list[dict[str, Any]]:
-    """Scan one wiki page for cited figures on none of a bullet's cited pages.
+    """
+    Scan one wiki page for cited figures on none of a bullet's cited
+    pages.
 
-    Only flags a bullet whose cited pages were all readable, so an unreadable
-    raw never produces a false "off page" finding.
+    Only flags a bullet whose cited pages were all readable, so an
+    unreadable raw never produces a false "off page" finding.
     """
     findings: list[dict[str, Any]] = []
     rel = path.relative_to(repo_root).as_posix()
@@ -219,7 +232,10 @@ def check_page(
 
 
 def iter_pages(*, wiki_root: Path) -> list[Path]:
-    """Return the wiki `.md` pages to scan, sorted, across the page folders."""
+    """
+    Return the wiki `.md` pages to scan, sorted, across the page
+    folders.
+    """
     pages: list[Path] = []
     for sub in PAGE_DIRS:
         folder = wiki_root / sub
@@ -261,9 +277,7 @@ def main(argv: list[str] | None = None) -> int:
     cache = RawTextCache(repo_root=repo_root)
     findings: list[dict[str, Any]] = []
     for page in iter_pages(wiki_root=wiki_root):
-        findings.extend(
-            check_page(path=page, repo_root=repo_root, cache=cache)
-        )
+        findings.extend(check_page(path=page, repo_root=repo_root, cache=cache))
 
     print(json.dumps(findings, indent=2))
     return 0

@@ -1,4 +1,5 @@
-"""Regression tests for check_structure.py.
+"""
+Regression tests for check_structure.py.
 
 Pins the defects a two-council review found in the freshly-shipped checks:
 the `broken_inline_ref` recognizer was blind to the bare `<skill>/<file>.md`
@@ -86,9 +87,7 @@ class TestBrokenInlineRefIntegration(unittest.TestCase):
 
     def test_does_not_flag_fenced_illustrative_path(self) -> None:
         # A path inside a fenced block is an example, not a reference.
-        found = self._scan(
-            ['```', 'a broken `forget/removal-mechanics.md`', '```']
-        )
+        found = self._scan(['```', 'a broken `forget/removal-mechanics.md`', '```'])
         assert found == [], found
 
     def test_does_not_flag_templated_path(self) -> None:

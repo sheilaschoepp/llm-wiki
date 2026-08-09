@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Run the consistency check battery from consistency/SKILL.md in Python.
+"""
+Run the consistency check battery from consistency/SKILL.md in Python.
 
 Usage:
     check_consistency.py <project-root>
@@ -471,7 +472,9 @@ def finding(
     fix_hint: str = '',
     line: int | None = None,
 ) -> dict[str, Any]:
-    """Build a finding dict from check ID, file, message, and fix hint."""
+    """
+    Build a finding dict from check ID, file, message, and fix hint.
+    """
     return {
         'check_id': check_id,
         'file': file,
@@ -487,8 +490,10 @@ def search_files(
     paths: list[str],
     exclude_paths: Sequence[str] = (),
 ) -> list[tuple[Path, int, str]]:
-    """Return (path, line_no, line_content) for every line in `paths` matching
-    any of `patterns`, with substring-match exclusions applied."""
+    """
+    Return (path, line_no, line_content) for every line in `paths`
+    matching any of `patterns`, with substring-match exclusions applied.
+    """
     hits: list[tuple[Path, int, str]] = []
     for rel in paths:
         full = root / rel
@@ -549,9 +554,7 @@ def check_working_skill_count_prose(root: Path) -> list[dict[str, Any]]:
         and p.name not in STANDALONE_SKILL_NAMES
         and (p / 'SKILL.md').exists()
     )
-    expected_word = {10: 'ten', 11: 'eleven', 12: 'twelve'}.get(
-        actual, str(actual)
-    )
+    expected_word = {10: 'ten', 11: 'eleven', 12: 'twelve'}.get(actual, str(actual))
 
     # Walk files directly — search_files is substring-only and this check
     # needs the SKILL_COUNT_PROSE regex.
@@ -1059,9 +1062,7 @@ def check_orphan_skill_scripts(root: Path) -> list[dict[str, Any]]:
             dir_parts = f.relative_to(scripts).parts[:-1]
             if any(p == '__pycache__' or p.startswith('.') for p in dir_parts):
                 continue
-            if f.name.startswith(
-                '.'
-            ):  # dotfiles (e.g. .gitkeep) are not scripts
+            if f.name.startswith('.'):  # dotfiles (e.g. .gitkeep) are not scripts
                 continue
             if f.suffix in skip_suffixes:
                 continue
@@ -1086,20 +1087,20 @@ def check_orphan_skill_scripts(root: Path) -> list[dict[str, Any]]:
 # The final label must be alphabetic (a real TLD is letters), so metric
 # notation like `mAP@0.5` or `recall@0.95` is not read as an email.
 EMAIL_RE = re.compile(r'\b[\w.+-]+@[\w-]+(?:\.[\w-]+)*\.[A-Za-z]{2,}\b')
-PHONE_RE = re.compile(
-    r'\(\d{3}\)\s*\d{3}[-.\s]\d{4}|\b\d{3}[-.]\d{3}[-.]\d{4}\b'
-)
+PHONE_RE = re.compile(r'\(\d{3}\)\s*\d{3}[-.\s]\d{4}|\b\d{3}[-.]\d{3}[-.]\d{4}\b')
 # Automated addresses that are never personal information — e.g. the
 # Co-Authored-By commit-trailer email. Any 'noreply' local-part is skipped.
 EMAIL_ALLOWLIST_LOCALPARTS = {'noreply'}
 
 
 def _under_standalone_skill(path: Path, root: Path) -> bool:
-    """True if path lies inside a STANDALONE_SKILL_NAMES skill folder.
+    """
+    True if path lies inside a STANDALONE_SKILL_NAMES skill folder.
 
-    A standalone skill is wiki-orthogonal — it serves some out-of-band purpose,
-    not the wiki — so the leakage/privacy checks skip its folder. The set is
-    currently empty, so this returns False for every path.
+    A standalone skill is wiki-orthogonal — it serves some out-of-band
+    purpose, not the wiki — so the leakage/privacy checks skip its
+    folder. The set is currently empty, so this returns False for every
+    path.
     """
     parts = path.relative_to(root).parts
     return (
@@ -1164,10 +1165,7 @@ def check_personal_info_leakage(root: Path) -> list[dict[str, Any]]:
         rel = str(f.relative_to(root))
         for i, line in enumerate(content.splitlines(), start=1):
             for m in EMAIL_RE.finditer(line):
-                if (
-                    m.group(0).split('@', 1)[0].lower()
-                    in EMAIL_ALLOWLIST_LOCALPARTS
-                ):
+                if m.group(0).split('@', 1)[0].lower() in EMAIL_ALLOWLIST_LOCALPARTS:
                     continue
                 key = (rel, 'email:' + m.group(0))
                 if key in seen:
@@ -1635,10 +1633,13 @@ def _check_kebab(
 
 
 def _collect_raw_stems(root: Path) -> set[str]:
-    """Stems of every file under `0-raw/` (without extension). Source pages,
-    their attachment folders, and outputs that reference a source by its
-    stem all preserve the raw filename verbatim per CLAUDE.md, so these
-    stems are exempt from kebab-case checking."""
+    """
+    Stems of every file under `0-raw/` (without extension).
+
+    Source pages, their attachment folders, and outputs that reference a
+    source by its stem all preserve the raw filename verbatim per
+    CLAUDE.md, so these stems are exempt from kebab-case checking.
+    """
     raw_root = root / '0-raw'
     stems: set[str] = set()
     if not raw_root.exists():
@@ -1866,7 +1867,8 @@ def check_filename_references_resolve(root: Path) -> list[dict[str, Any]]:
 
 
 def check_memory_file_graduation_prompt(root: Path) -> list[dict[str, Any]]:
-    """Memory file graduation prompt.
+    """
+    Memory file graduation prompt.
 
     Counts H2-level entries in `MEMORY.md`, `.claude/skills/multi-skill/multi-skill-memory.md`,
     and each `.claude/skills/<skill>/<skill>-memory.md`. Files past their soft
@@ -1899,9 +1901,7 @@ def check_memory_file_graduation_prompt(root: Path) -> list[dict[str, Any]]:
                 continue
             mem = sub / f'{sub.name}-memory.md'
             if mem.exists():
-                memory_files.append(
-                    (mem, MEMORY_FILE_ENTRY_CAP, journal_target)
-                )
+                memory_files.append((mem, MEMORY_FILE_ENTRY_CAP, journal_target))
 
     for path, cap, target in memory_files:
         try:
@@ -1911,9 +1911,7 @@ def check_memory_file_graduation_prompt(root: Path) -> list[dict[str, Any]]:
         # Count H2 entries; MEMORY.md's "## Index" is a table of contents, not an
         # entry, so it is not counted toward the cap.
         entries = sum(
-            1
-            for line in lines
-            if line.startswith('## ') and line.strip() != '## Index'
+            1 for line in lines if line.startswith('## ') and line.strip() != '## Index'
         )
         if entries > cap:
             rel = str(path.relative_to(root))
@@ -1938,11 +1936,12 @@ TREE_LINE_RE = re.compile(r'^((?:│   |    )*)([├└]── )(.+)$')
 
 
 def parse_directory_tree(tree_text: str) -> set[str]:
-    """Parse an ASCII directory tree into a set of relative paths.
+    """
+    Parse an ASCII directory tree into a set of relative paths.
 
-    Handles the standard tree-rendering convention (├──, └──, │ prefixes)
-    used in the CLAUDE.md `Directory Structure` block. Each emitted path
-    is repo-root-relative, with no trailing slash.
+    Handles the standard tree-rendering convention (├──, └──, │
+    prefixes) used in the CLAUDE.md `Directory Structure` block. Each
+    emitted path is repo-root-relative, with no trailing slash.
     """
     paths: set[str] = set()
     stack: list[str] = []
@@ -1963,7 +1962,8 @@ def parse_directory_tree(tree_text: str) -> set[str]:
 
 
 def expected_tree_paths(root: Path) -> set[str]:
-    """Collect repo paths that should appear in CLAUDE.md's directory tree.
+    """
+    Collect repo paths that should appear in CLAUDE.md's directory tree.
 
     Includes top-level docs (CLAUDE.md, MEMORY.md, README.md), top-level
     non-hidden directories, immediate children of 0-raw/, 2-outputs/,
@@ -1998,8 +1998,7 @@ def expected_tree_paths(root: Path) -> set[str]:
             # Standalone skills' 2-outputs/ folders are kept out of the tree;
             # so are any user-owned free-form folders in OUTPUT_EXEMPT_DIRS.
             if parent == '2-outputs' and (
-                child.name in STANDALONE_SKILL_NAMES
-                or child.name in OUTPUT_EXEMPT_DIRS
+                child.name in STANDALONE_SKILL_NAMES or child.name in OUTPUT_EXEMPT_DIRS
             ):
                 continue
             paths.add(f'{parent}/{child.name}')
@@ -2177,9 +2176,7 @@ def check_operations_list_matches_skills(root: Path) -> list[dict[str, Any]]:
     on_disk = {
         p.name
         for p in skills_dir.iterdir()
-        if p.is_dir()
-        and not p.name.startswith('.')
-        and (p / 'SKILL.md').exists()
+        if p.is_dir() and not p.name.startswith('.') and (p / 'SKILL.md').exists()
     }
 
     # Standalone skills are deliberately out of the Operations catalogue, so
@@ -2233,7 +2230,9 @@ BACKTICKED_SKILL_TOKEN_RE = re.compile(r'`([a-z][a-z0-9-]*)`')
 
 
 def _retired_routing_exempt(rel: str, line: str) -> bool:
-    """Lines where naming a retired skill is legitimate, not drift."""
+    """
+    Lines where naming a retired skill is legitimate, not drift.
+    """
     slashed = '/' + rel.replace('\\', '/')
     # The ingest skill owns the mode names (log-verb template); the consistency
     # skill documents this very check.
@@ -2349,23 +2348,22 @@ def _norm_section_label(line: str) -> str:
 def _parse_claude_section_lists(
     text: str,
 ) -> tuple[dict[str, list[str]], list[str]]:
-    """Parse the slug lists under CLAUDE.md '### Required Callout Sections'.
+    """
+    Parse the slug lists under CLAUDE.md '### Required Callout
+    Sections'.
 
-    Returns (lists-by-page-type, unrecognized-page-type-labels). `current` is
-    reset on any label/heading line that is not a recognized page type, so a
-    stray numbered list under a new or unrecognized heading is not appended to
-    whichever recognized list came last.
+    Returns (lists-by-page-type, unrecognized-page-type-labels).
+    `current` is reset on any label/heading line that is not a
+    recognized page type, so a stray numbered list under a new or
+    unrecognized heading is not appended to whichever recognized list
+    came last.
     """
     m = re.search(r'^### Required Callout Sections\s*$', text, re.MULTILINE)
     if not m:
         return {}, []
     body_start = m.end()
     nxt = re.search(r'^## ', text[body_start:], re.MULTILINE)
-    body = (
-        text[body_start : body_start + nxt.start()]
-        if nxt
-        else text[body_start:]
-    )
+    body = text[body_start : body_start + nxt.start()] if nxt else text[body_start:]
     result: dict[str, list[str]] = {}
     unrecognized: list[str] = []
     current: str | None = None
@@ -2595,8 +2593,10 @@ def check_catalogue_matches_manifest(root: Path) -> list[dict[str, Any]]:
 
 
 def check_shared_reference_integrity(root: Path) -> list[dict[str, Any]]:
-    """Enforce the `multi-skill/references/` contract (CLAUDE.md -> Stay In Your
-    Lane): a file there must be genuinely shared and exist as a single copy.
+    """
+    Enforce the `multi-skill/references/` contract (CLAUDE.md -> Stay In
+    Your Lane): a file there must be genuinely shared and exist as a
+    single copy.
 
     For each `.claude/skills/multi-skill/references/*.md`:
       (a) it is cited by >= 2 distinct skills — that location is for cross-skill
@@ -2621,9 +2621,7 @@ def check_shared_reference_integrity(root: Path) -> list[dict[str, Any]]:
     skill_dirs = [
         p
         for p in sorted(skills_dir.iterdir())
-        if p.is_dir()
-        and p.name != 'multi-skill'
-        and not p.name.startswith('.')
+        if p.is_dir() and p.name != 'multi-skill' and not p.name.startswith('.')
     ]
 
     # Per-skill concatenated text (md + py) for citation scanning, and a map of
@@ -2718,16 +2716,18 @@ CHECK_FUNCTIONS = {
 def parse_check_ids(raw: str) -> list[str]:
     # Dedupe while preserving order so a copy-paste-repeated id does not run a
     # check twice and double its findings.
-    return list(
-        dict.fromkeys(part.strip() for part in raw.split(',') if part.strip())
-    )
+    return list(dict.fromkeys(part.strip() for part in raw.split(',') if part.strip()))
 
 
 def _assert_manifest_consistency() -> list[str]:
-    """Check the script's own wiring: CHECK_FUNCTIONS, CHECK_MANIFEST, and
-    PACKET_CHECKS must describe the same set of checks, and the entity/concept
-    shared-list assumption that lets section_lists_match_schema skip 'entity'
-    must hold. Returns a list of problems (empty when wiring is sound)."""
+    """
+    Check the script's own wiring: CHECK_FUNCTIONS, CHECK_MANIFEST, and
+    PACKET_CHECKS must describe the same set of checks, and the
+    entity/concept shared-list assumption that lets
+    section_lists_match_schema skip 'entity' must hold.
+
+    Returns a list of problems (empty when wiring is sound).
+    """
     problems: list[str] = []
     fn_ids = set(CHECK_FUNCTIONS)
     manifest_ids = [x['check_id'] for x in CHECK_MANIFEST]
@@ -2741,9 +2741,7 @@ def _assert_manifest_consistency() -> list[str]:
             f'only in functions={sorted(fn_ids - manifest_set)}, '
             f'only in manifest={sorted(manifest_set - fn_ids)}'
         )
-    packet_union = (
-        set().union(*PACKET_CHECKS.values()) if PACKET_CHECKS else set()
-    )
+    packet_union = set().union(*PACKET_CHECKS.values()) if PACKET_CHECKS else set()
     if fn_ids != packet_union:
         problems.append(
             f'CHECK_FUNCTIONS vs PACKET_CHECKS mismatch: '
@@ -2760,9 +2758,7 @@ def _assert_manifest_consistency() -> list[str]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description='Run schema consistency checks.'
-    )
+    parser = argparse.ArgumentParser(description='Run schema consistency checks.')
     parser.add_argument('project_root', nargs='?')
     parser.add_argument(
         '--checks',

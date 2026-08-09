@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Mechanical wiki structural checks (subset of lint/SKILL.md's check battery).
+"""
+Mechanical wiki structural checks (subset of lint/SKILL.md's check
+battery).
 
 The list below is a REPRESENTATIVE sample, not the full emitted set. The
 canonical check_id -> severity map is the `CHECKS` registry near the top of this
@@ -102,9 +104,7 @@ JACCARD_THRESHOLD = 0.75
 BULLET_JACCARD_THRESHOLD = 0.6
 BULLET_OVERLAP_THRESHOLD = 0.8
 MIN_BULLET_CONTENT_TOKENS = 5  # both bullets, Jaccard arm
-MIN_OVERLAP_SHORTER_TOKENS = (
-    6  # the shorter bullet, overlap arm (≥ a real point)
-)
+MIN_OVERLAP_SHORTER_TOKENS = 6  # the shorter bullet, overlap arm (≥ a real point)
 
 # Function words and wiki-generic terms stripped before redundancy comparison.
 # Deliberately small — content words carry the signal; this just removes the
@@ -393,8 +393,10 @@ BLOCK_ID_OVERRIDES = {
 
 
 def expected_block_id(slug: str) -> str:
-    """The block ID a `[!{slug}]` callout must carry (CLAUDE.md -> Callout Block
-    IDs): the type slug, unless the type is abbreviated below its display title.
+    """
+    The block ID a `[!{slug}]` callout must carry (CLAUDE.md -> Callout
+    Block IDs): the type slug, unless the type is abbreviated below its
+    display title.
     """
     return BLOCK_ID_OVERRIDES.get(slug, slug)
 
@@ -413,9 +415,10 @@ def _derive_source_common_schema(
     required_fields: dict[str, list[str]],
     required_sections: dict[str, list[str]],
 ) -> tuple[list[str], list[str]]:
-    """Validate the source-schema tables and derive the common-denominator field
-    and section lists the `unknown_source_type` fallback checks an unrecognized
-    source page against (see `check_page`).
+    """
+    Validate the source-schema tables and derive the common-denominator
+    field and section lists the `unknown_source_type` fallback checks an
+    unrecognized source page against (see `check_page`).
 
     check_wiki.py prints its findings as JSON that the `lint` skill parses, and a
     hard exception mid-run yields no JSON at all — so one malformed page must not
@@ -596,9 +599,7 @@ CITATION_DEEPLINK_KEY_RE = re.compile(r'\[\[(0-raw/[^\]#|]+)#page=(\d+)\|')
 # The printed-page NUMBER cited in a display: `p. M` (single page only — `pp.`
 # ranges are intentionally not matched, so locator_page_mismatch stays
 # conservative). `\b`-guarded so the `p.` inside `app.` never matches.
-CITATION_PAGE_NUM_RE = re.compile(
-    r'\bp\.\s?(\d+)\b(?!\s*[–-]\s*\d)', re.IGNORECASE
-)
+CITATION_PAGE_NUM_RE = re.compile(r'\bp\.\s?(\d+)\b(?!\s*[–-]\s*\d)', re.IGNORECASE)
 # A structural anchor inside a citation display: section/appendix/chapter,
 # figure/table/equation, OR theorem-environment result — definition/theorem/lemma/
 # proposition/corollary/algorithm (the CLAUDE.md anchor set), plus the front-matter
@@ -626,9 +627,10 @@ CITATION_APPENDIX_ANCHOR_RE = re.compile(r'\bapp\.', re.IGNORECASE)
 def locator_display_complete(
     *, display: str, raw: str | None = None, phys: int | None = None
 ) -> bool:
-    """Whether a `#page=N` deep-link display carries a complete locator: a
-    structural anchor AND a printed page, with the page requirement relaxed for a
-    genuinely unpaginated region.
+    """
+    Whether a `#page=N` deep-link display carries a complete locator: a
+    structural anchor AND a printed page, with the page requirement
+    relaxed for a genuinely unpaginated region.
 
     When `raw` and `phys` are supplied and the pagination map covers that page,
     the map is authoritative: a page that PRINTS a number must carry `p. M`
@@ -663,9 +665,7 @@ LOCATOR_ANCHOR_TOKEN_RE = re.compile(
     re.IGNORECASE,
 )
 # A source-page wikilink in citation form (no `#^callout` section anchor).
-SOURCE_PAGE_LINK_RE = re.compile(
-    r'\[\[1-wiki/sources/[^\]|#]+\.md\|[^\]]*\]\]'
-)
+SOURCE_PAGE_LINK_RE = re.compile(r'\[\[1-wiki/sources/[^\]|#]+\.md\|[^\]]*\]\]')
 # A callout body bullet that opens with a wiki-PAGE wikilink: `> - [[1-wiki/…|display]]…`.
 # Group 1 is the display text. Tolerates indented sub-bullets (`>   - `). Only
 # matches when the wikilink is the first content on the bullet (sentence-initial),
@@ -793,8 +793,7 @@ OPEN_COMPOUND_SUGGEST: dict[str, str] = {
 HYPHENATED_OPEN_COMPOUND = re.compile(
     r'\b('
     + '|'.join(
-        re.escape(k)
-        for k in sorted(OPEN_COMPOUND_SUGGEST, key=len, reverse=True)
+        re.escape(k) for k in sorted(OPEN_COMPOUND_SUGGEST, key=len, reverse=True)
     )
     + r')\b(?!-)',
     re.IGNORECASE,
@@ -822,19 +821,19 @@ HYPHENATED_OPEN_COMPOUND = re.compile(
 #   VERIFIED-IGNORE (HYPHENATION_VERIFIED_IGNORE): confirmed-correct phrases,
 #     skipped both directions.
 # Data file: .claude/skills/multi-skill/hyphenation-lists.md.
-HYPHENATION_LISTS_FILE = (
-    Path(__file__).resolve().parent.parent / 'hyphenation-lists.md'
-)
+HYPHENATION_LISTS_FILE = Path(__file__).resolve().parent.parent / 'hyphenation-lists.md'
 
 
 def _load_hyphenation_lists(
     path: Path = HYPHENATION_LISTS_FILE,
 ) -> tuple[dict[str, str], frozenset[str], frozenset[str], frozenset[str]]:
-    """Parse the four `## section` lists from the hyphenation data file.
+    """
+    Parse the four `## section` lists from the hyphenation data file.
 
-    Tolerant by design (audit edits this file autonomously): a missing/unreadable
-    file returns empty lists (the check silently no-ops — recoverable from git),
-    and a malformed line is skipped, never raised. Never crashes lint.
+    Tolerant by design (audit edits this file autonomously): a
+    missing/unreadable file returns empty lists (the check silently no-
+    ops — recoverable from git), and a malformed line is skipped, never
+    raised. Never crashes lint.
     """
     disallowed: dict[str, str] = {}
     allowed: set[str] = set()
@@ -896,14 +895,15 @@ UNLINKED_MENTION_IGNORE_FILE = (
 def _load_unlinked_mention_ignore(
     path: Path = UNLINKED_MENTION_IGNORE_FILE,
 ) -> list[dict[str, Any]]:
-    """Parse the verified-ignore entries, one dict per line: page, target, phrase,
-    the 1-based `line` in the data file (so a stale entry can be reported at its
-    own line), and the compiled phrase `pattern`.
+    """
+    Parse the verified-ignore entries, one dict per line: page, target,
+    phrase, the 1-based `line` in the data file (so a stale entry can be
+    reported at its own line), and the compiled phrase `pattern`.
 
-    Tolerant by design (audit edits this file autonomously): a missing or
-    unreadable file returns no entries — the check then runs fully unsuppressed,
-    which is the safe direction — and a malformed line is skipped, never raised.
-    Never crashes lint.
+    Tolerant by design (audit edits this file autonomously): a missing
+    or unreadable file returns no entries — the check then runs fully
+    unsuppressed, which is the safe direction — and a malformed line is
+    skipped, never raised. Never crashes lint.
     """
     entries: list[dict[str, Any]] = []
     try:
@@ -959,13 +959,15 @@ UNLINKED_MENTION_IGNORE = _load_unlinked_mention_ignore()
 # this map — so lint stays cheap and dependency-free. The map drives the
 # anchor-only exemption in the two locator-completeness checks and the
 # `locator_page_mismatch` check.
-PAGINATION_MAP_FILE = (
-    Path(__file__).resolve().parent.parent / 'pagination-map.md'
-)
+PAGINATION_MAP_FILE = Path(__file__).resolve().parent.parent / 'pagination-map.md'
 
 
 def _parse_page_span(text: str) -> list[int] | None:
-    """`5` -> [5]; `1-9` -> [1, 2, …, 9]. None when unparseable."""
+    """
+    `5` -> [5]; `1-9` -> [1, 2, …, 9].
+
+    None when unparseable.
+    """
     text = text.strip()
     if text.isdigit():
         return [int(text)]
@@ -1033,13 +1035,15 @@ PAGINATION_MAP = _load_pagination_map()
 
 
 def printed_page(raw: str, phys: int) -> tuple[str, int | None]:
-    """What physical page `phys` of `raw` prints, per the pagination map:
+    """
+    What physical page `phys` of `raw` prints, per the pagination map:
 
-    ('paginated', M)        the page prints M — a locator must cite `p. M`.
-    ('unpaginated', None)   the page prints no number — a locator correctly
-                            cites its structural anchor alone.
-    ('unregistered', None)  no map entry covers this page; callers fall back
-                            to the display heuristic rather than invent a fact.
+    ('paginated', M)        the page prints M — a locator must cite `p.
+    M`. ('unpaginated', None)   the page prints no number — a locator
+    correctly                         cites its structural anchor alone.
+    ('unregistered', None)  no map entry covers this page; callers fall
+    back                         to the display heuristic rather than
+    invent a fact.
     """
     pages = PAGINATION_MAP.get(raw)
     if pages is None or phys not in pages:
@@ -1049,8 +1053,11 @@ def printed_page(raw: str, phys: int) -> tuple[str, int | None]:
 
 
 def _never_match() -> re.Pattern[str]:
-    """A regex that matches nothing — used when a list is empty so an empty
-    alternation never degenerates into matching the empty string everywhere."""
+    """
+    A regex that matches nothing — used when a list is empty so an empty
+    alternation never degenerates into matching the empty string
+    everywhere.
+    """
     return re.compile(r'(?!)')
 
 
@@ -1084,9 +1091,7 @@ OPEN_COMPOUND_MODIFIER = (
         r'\b('
         + '|'.join(
             re.escape(v)
-            for v in sorted(
-                OPEN_COMPOUND_NOUN_SUGGEST.values(), key=len, reverse=True
-            )
+            for v in sorted(OPEN_COMPOUND_NOUN_SUGGEST.values(), key=len, reverse=True)
         )
         + r')\b',
         re.IGNORECASE,
@@ -1094,9 +1099,7 @@ OPEN_COMPOUND_MODIFIER = (
     if OPEN_COMPOUND_NOUN_SUGGEST
     else _never_match()
 )
-_OPEN_TO_HYPHEN: dict[str, str] = {
-    v: k for k, v in OPEN_COMPOUND_NOUN_SUGGEST.items()
-}
+_OPEN_TO_HYPHEN: dict[str, str] = {v: k for k, v in OPEN_COMPOUND_NOUN_SUGGEST.items()}
 # Noun-position signal: the compound is followed (after optional spaces) by a
 # clause boundary or a copula/comparison word — never a noun it could modify.
 # DELIBERATELY CONSERVATIVE: a following comma or word is ambiguous (a modifier
@@ -1138,8 +1141,10 @@ WIKILINK_BASENAME_RE = re.compile(r'^\[\[([^\]|]+?)(?:\|[^\]]+)?\]\]$')
 
 
 def _link_stem(raw: str) -> str:
-    """Normalize a wikilink target to its identity stem. Targets are
-    path-qualified (`1-wiki/concepts/foo.md`), but older bare forms (`foo.md`,
+    """
+    Normalize a wikilink target to its identity stem.
+
+    Targets are path-qualified (`1-wiki/concepts/foo.md`), but older bare forms (`foo.md`,
     `foo`) normalize the same way. `Path(...).stem` drops the folder path and
     the final extension: `1-wiki/concepts/foo.md` -> `foo`, `foo` -> `foo`.
 
@@ -1158,27 +1163,37 @@ def _link_stem(raw: str) -> str:
 
 
 def _link_name(raw: str) -> str:
-    """Normalize a wikilink target to its basename WITH extension, for
-    attachment and raw-file references. `1-wiki/attachments/s/fig.png` ->
-    `fig.png`, `0-raw/papers/X.pdf` -> `X.pdf`.
+    """
+    Normalize a wikilink target to its basename WITH extension, for
+    attachment and raw-file references.
+
+    `1-wiki/attachments/s/fig.png` -> `fig.png`, `0-raw/papers/X.pdf` ->
+    `X.pdf`.
     """
     return Path(raw.strip()).name
 
 
 def _mask_code_spans(text: str) -> str:
-    """Blank inline-code spans (length-preserving) so a prose-level scanner does
-    not match inside `` `code` ``. Same-length spaces keep every offset stable,
-    so match positions map back onto the original text unchanged. (Does not mask
-    multi-line ``` fenced blocks — wiki page bodies use callouts, not fences, so
-    no current page triggers that; revisit here if that changes.) Shared by the
-    pipe-spacing and bare-basename scans, and by `_mask_noscan_spans`.
+    """
+    Blank inline-code spans (length-preserving) so a prose-level scanner
+    does not match inside `` `code` ``.
+
+    Same-length spaces keep every offset stable, so match positions map
+    back onto the original text unchanged. (Does not mask multi-line ```
+    fenced blocks — wiki page bodies use callouts, not fences, so no
+    current page triggers that; revisit here if that changes.) Shared by
+    the pipe-spacing and bare-basename scans, and by
+    `_mask_noscan_spans`.
     """
     return re.sub(r'`[^`]*`', lambda m: ' ' * len(m.group(0)), text)
 
 
 def _mask_noscan_spans(text: str) -> str:
-    """Blank inline-code spans and wikilink spans (length-preserving) so a
-    prose-level scanner does not match inside `` `code` `` or `[[links]]`.
+    """
+    Blank inline-code spans and wikilink spans (length-preserving) so a
+    prose-level scanner does not match inside `` `code` `` or
+    `[[links]]`.
+
     Used by the page-locator scan (a `p. N` inside a `[[…#page=N|p. N]]`
     deep-link or inside inline code is not a bare locator).
     """
@@ -1187,10 +1202,13 @@ def _mask_noscan_spans(text: str) -> str:
 
 
 def _blank_sources_callout(text: str) -> str:
-    """Blank the `> [!sources]` callout block (length-preserving) so its
-    support-list source links are not read as inline citations. The block runs
-    from the `> [!sources]` header line through its `> ^sources` block-id line.
-    Same-length blanking keeps every offset stable for line-number mapping.
+    """
+    Blank the `> [!sources]` callout block (length-preserving) so its
+    support-list source links are not read as inline citations.
+
+    The block runs from the `> [!sources]` header line through its `>
+    ^sources` block-id line. Same-length blanking keeps every offset
+    stable for line-number mapping.
     """
     out = []
     in_sources = False
@@ -1207,7 +1225,8 @@ def _blank_sources_callout(text: str) -> str:
 
 
 def parse_frontmatter(text: str) -> tuple[dict[str, Any] | None, int]:
-    """Return (frontmatter_dict, end_line_index) — minimal YAML-ish parser.
+    """
+    Return (frontmatter_dict, end_line_index) — minimal YAML-ish parser.
 
     Handles the wiki's frontmatter shape: `key: value`, `key: "quoted"`,
     `key: [list, items]`, multiline list `\n  - item`. Doesn't try to be a
@@ -1271,7 +1290,9 @@ def extract_section_slugs(body: str) -> list[str]:
 
 
 def extract_embeds(body: str) -> list[str]:
-    """Return the basename of every image embed in `body`."""
+    """
+    Return the basename of every image embed in `body`.
+    """
     out = []
     for m in EMBED_RE.finditer(body):
         # Embed may be `basename.png` or `subdir/basename.png` — keep just the
@@ -1281,14 +1302,13 @@ def extract_embeds(body: str) -> list[str]:
 
 
 def attachments_basenames(fm: dict[str, Any]) -> list[str]:
-    """Pull basenames from a parsed `attachments:` list. Entries are wikilinks
-    like `[[fig3-layouts.png]]`; if they aren't wikilinks, take the entry as-is.
     """
-    raw = (
-        fm.get('attachments')
-        if isinstance(fm.get('attachments'), list)
-        else []
-    )
+    Pull basenames from a parsed `attachments:` list.
+
+    Entries are wikilinks like `[[fig3-layouts.png]]`; if they aren't
+    wikilinks, take the entry as-is.
+    """
+    raw = fm.get('attachments') if isinstance(fm.get('attachments'), list) else []
     out = []
     for entry in raw:
         if not isinstance(entry, str) or not entry.strip():
@@ -1300,8 +1320,11 @@ def attachments_basenames(fm: dict[str, Any]) -> list[str]:
 
 
 def index_attachments_by_basename(wiki_root: Path) -> dict[str, list[Path]]:
-    """Map basename -> list of files in `1-wiki/attachments/**`. List because
-    duplicate basenames across stems are a real (and lint-flagged) failure mode.
+    """
+    Map basename -> list of files in `1-wiki/attachments/**`.
+
+    List because duplicate basenames across stems are a real (and lint-
+    flagged) failure mode.
     """
     out: dict[str, list[Path]] = {}
     attachments_root = wiki_root / 'attachments'
@@ -1314,12 +1337,13 @@ def index_attachments_by_basename(wiki_root: Path) -> dict[str, list[Path]]:
 
 
 def detect_page_kind(path: Path, fm: dict[str, Any]) -> str:
-    """Return the schema key for REQUIRED_FIELDS / REQUIRED_SECTIONS lookup."""
+    """
+    Return the schema key for REQUIRED_FIELDS / REQUIRED_SECTIONS
+    lookup.
+    """
     parts = path.parts
     if 'sources' in parts:
-        return str(
-            fm.get('type', '')
-        ).lower()  # paper/article/book/media/other
+        return str(fm.get('type', '')).lower()  # paper/article/book/media/other
     if 'entities' in parts:
         return 'entity'
     if 'concepts' in parts:
@@ -1336,21 +1360,20 @@ def finding(
     fix_hint: str = '',
     severity: str | None = None,
 ) -> dict[str, Any]:
-    """Build a finding. Severity comes from the CHECKS registry (the single
-    source of truth); the `severity` argument is used only for a registry entry
+    """
+    Build a finding.
+
+    Severity comes from the CHECKS registry (the single source of
+    truth); the `severity` argument is used only for a registry entry
     whose value is None (caller-determined, e.g. zero_source_page).
     """
     if check not in CHECKS:
-        raise ValueError(
-            f'unregistered check_id: {check!r} (add it to CHECKS)'
-        )
+        raise ValueError(f'unregistered check_id: {check!r} (add it to CHECKS)')
     canonical = CHECKS[check]
     if canonical is not None:
         severity = canonical
     elif severity is None:
-        raise ValueError(
-            f'check_id {check!r} needs a caller-supplied severity'
-        )
+        raise ValueError(f'check_id {check!r} needs a caller-supplied severity')
     return {
         'severity': severity,
         'check_id': check,
@@ -1365,9 +1388,13 @@ GIT_SHOW_TIMEOUT_S = 15
 
 
 def _git_show_head(rel: str) -> str | None:
-    """The file's content at git HEAD, or None if unavailable (not a git repo, a
-    new/untracked file, or any git error). The diff-guard is best-effort: with no
-    HEAD to compare against it is a silent no-op."""
+    """
+    The file's content at git HEAD, or None if unavailable (not a git
+    repo, a new/untracked file, or any git error).
+
+    The diff-guard is best-effort: with no
+    HEAD to compare against it is a silent no-op.
+    """
     try:
         r = subprocess.run(
             ['git', 'show', f'HEAD:{rel}'],
@@ -1392,14 +1419,17 @@ def anchor_change_findings(
     status: str | None,
     head_status: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Mechanism 1 (the diff-guard), pure core: flag a `status: verified` page on
-    which a raw-locator's structural anchor was ADDED or CHANGED relative to its
-    HEAD version while the page stayed `verified`. A section change is a factual
-    claim about where the cited content sits — excluded from the verification-
-    neutral allowlist (CLAUDE.md -> Page Status) — so only a raw fact-check (audit)
-    may keep the page verified. A pure RELOCATION (the same anchor + page,
-    repositioned relative to the link) and any minor typo/format edit are neutral
-    and not flagged; a bullet marked `*[unverified]*` is exempt (already pending).
+    """
+    Mechanism 1 (the diff-guard), pure core: flag a `status: verified`
+    page on which a raw-locator's structural anchor was ADDED or CHANGED
+    relative to its HEAD version while the page stayed `verified`. A
+    section change is a factual claim about where the cited content sits
+    — excluded from the verification- neutral allowlist (CLAUDE.md ->
+    Page Status) — so only a raw fact-check (audit) may keep the page
+    verified. A pure RELOCATION (the same anchor + page, repositioned
+    relative to the link) and any minor typo/format edit are neutral and
+    not flagged; a bullet marked `*[unverified]*` is exempt (already
+    pending).
 
     Detection works on the line diff so no bullet-matching is needed: for each
     added/changed line carrying a locator whose display now holds anchor A for
@@ -1450,8 +1480,7 @@ def anchor_change_findings(
             # HEAD (in a removed line). Compare on the same removed line so a
             # coincidental match elsewhere does not mask a real change.
             if pageN and any(
-                f'#page={pageN}' in rl and anchor in rl.lower()
-                for rl in removed
+                f'#page={pageN}' in rl and anchor in rl.lower() for rl in removed
             ):
                 continue
             findings.append(
@@ -1480,8 +1509,13 @@ def anchor_change_findings(
 def check_verified_anchor_change(
     text: str, fm: dict[str, Any], rel: str
 ) -> list[dict[str, Any]]:
-    """Mechanism 1 (the diff-guard): git wrapper around anchor_change_findings.
-    Fetches the page at HEAD and diffs the working tree. No-op without git."""
+    """
+    Mechanism 1 (the diff-guard): git wrapper around
+    anchor_change_findings.
+
+    Fetches the page at HEAD and diffs the working tree. No-op without
+    git.
+    """
     if fm.get('status') != 'verified':
         return []
     head = _git_show_head(rel=rel)
@@ -1500,17 +1534,21 @@ def check_verified_anchor_change(
 def check_verified_hash(
     path: Path, fm: dict[str, Any], rel: str
 ) -> list[dict[str, Any]]:
-    """Mechanism 2 (the committed-state backstop): flag a `status: verified` page
-    whose stored `verified_hash:` no longer matches the current masked body hash (its
-    checked, unmarked content changed since `audit` stamped it), or that carries no
-    stamp at all. Unlike the diff-guard (Mechanism 1), this needs no git working tree
-    and survives a commit, so it is the durable backstop once a change is committed.
+    """
+    Mechanism 2 (the committed-state backstop): flag a `status:
+    verified` page whose stored `verified_hash:` no longer matches the
+    current masked body hash (its checked, unmarked content changed
+    since `audit` stamped it), or that carries no stamp at all. Unlike
+    the diff-guard (Mechanism 1), this needs no git working tree and
+    survives a commit, so it is the durable backstop once a change is
+    committed.
 
     Detection only: the re-stamp-vs-demote DECISION stays with the calling skill
     (lint SKILL.md), which has the run-state to tell an allowlisted verification-
     neutral re-stamp from a genuine demotion. The script only flags the mismatch.
     CLAUDE.md -> Page Status; hashes computed with the shared `body_hash` so lint and
-    audit never disagree."""
+    audit never disagree.
+    """
     if fm.get('status') != 'verified':
         return []
     stored = fm.get('verified_hash')
@@ -1597,9 +1635,7 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
 
     kind = detect_page_kind(path=path, fm=fm)
     if not kind and 'sources' not in path.parts:
-        return (
-            findings  # non-page file (hot/index/log/etc) — out of scope here
-        )
+        return findings  # non-page file (hot/index/log/etc) — out of scope here
 
     # A source page's schema kind is its `type:` value verbatim (detect_page_kind
     # returns it for pages under sources/), so an empty or unrecognized value is a
@@ -1638,9 +1674,7 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
 
     # Frontmatter completeness (check_id: frontmatter_missing_field). An unknown
     # source type falls back to the fields common to every source kind.
-    required = (
-        SOURCE_COMMON_FIELDS if unknown_source_type else REQUIRED_FIELDS[kind]
-    )
+    required = SOURCE_COMMON_FIELDS if unknown_source_type else REQUIRED_FIELDS[kind]
     for field in required:
         if field not in fm:
             findings.append(
@@ -1711,8 +1745,7 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
         if kind == 'synthesis' and actual == 1:
             stub_flag = fm.get('single_source_stub')
             is_stub = stub_flag is True or (
-                isinstance(stub_flag, str)
-                and stub_flag.strip().lower() == 'true'
+                isinstance(stub_flag, str) and stub_flag.strip().lower() == 'true'
             )
             if not is_stub:
                 findings.append(
@@ -1738,9 +1771,7 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
     body = '\n'.join(text.split('\n')[end + 1 :])
     actual_slugs = extract_section_slugs(body=body)
     expected_slugs = (
-        SOURCE_COMMON_SECTIONS
-        if unknown_source_type
-        else REQUIRED_SECTIONS[kind]
+        SOURCE_COMMON_SECTIONS if unknown_source_type else REQUIRED_SECTIONS[kind]
     )
     if expected_slugs and actual_slugs != expected_slugs:
         # Distinguish missing-section vs wrong-order for a more useful message.
@@ -1888,9 +1919,7 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
     # the "every non-obvious claim must be cited" rule is audit/ingest's.
     if kind in {'concept', 'entity', 'synthesis'}:
         findings.extend(check_citation_form(body=body, rel=rel, end=end))
-        findings.extend(
-            check_citation_bracket_style(body=body, rel=rel, end=end)
-        )
+        findings.extend(check_citation_bracket_style(body=body, rel=rel, end=end))
 
     # Source pages use the same anchor-inside-the-display locator form, minus the
     # paired source-page wikilink (which would self-link): the `#page=N` deep-link
@@ -1898,9 +1927,7 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
     # source_locator_incomplete). The source-page counterpart of
     # citation_locator_incomplete; inverse of the retired source_locator_anchor_inlined.
     if kind in SOURCE_KINDS:
-        findings.extend(
-            check_source_locator_complete(body=body, rel=rel, end=end)
-        )
+        findings.extend(check_source_locator_complete(body=body, rel=rel, end=end))
 
     # Every #page=N locator's cited `p. M` must match what the pagination map
     # says that physical page prints (check_id: locator_page_mismatch). Applies
@@ -1917,9 +1944,7 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
     # — source pages legitimately restate a Key Claim as a verbatim Evidence
     # anchor. Lexical half only; the semantic half is ingest/audit's.
     if kind in {'concept', 'entity', 'synthesis'}:
-        findings.extend(
-            check_intra_page_redundancy(body=body, rel=rel, end=end)
-        )
+        findings.extend(check_intra_page_redundancy(body=body, rel=rel, end=end))
 
     # Established open compounds hyphenated as attributive modifiers
     # (check_id: hyphenated_open_compound). The wiki writes "reinforcement
@@ -2026,9 +2051,7 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
     # Claim-level verification: surface `*[unverified]*` claims (the pending delta
     # audit re-checks). Info-level visibility — these are a normal transient state,
     # not drift; lint does not clear them (audit does, after a raw fact-check).
-    n_unverified = len(
-        UNVERIFIED_MARKER_RE.findall(_mask_code_spans(text=body))
-    )
+    n_unverified = len(UNVERIFIED_MARKER_RE.findall(_mask_code_spans(text=body)))
     if n_unverified:
         findings.append(
             finding(
@@ -2071,9 +2094,7 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
         updated_raw = fm.get('updated')
         if isinstance(updated_raw, str):
             try:
-                updated_date = datetime.strptime(
-                    updated_raw.strip(), '%Y-%m-%d'
-                ).date()
+                updated_date = datetime.strptime(updated_raw.strip(), '%Y-%m-%d').date()
                 age_days = (date.today() - updated_date).days
                 if status == 'draft' and age_days > STALE_DRAFT_DAYS:
                     findings.append(
@@ -2091,10 +2112,7 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
                             ),
                         )
                     )
-                elif (
-                    status == 'needs-update'
-                    and age_days > STALE_NEEDS_UPDATE_DAYS
-                ):
+                elif status == 'needs-update' and age_days > STALE_NEEDS_UPDATE_DAYS:
                     findings.append(
                         finding(
                             check='stale_needs_update',
@@ -2119,12 +2137,14 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
 
 
 def _is_placeholder_only(body: str, expected_slugs: list[str]) -> bool:
-    """Return True if every required callout body is only an empty placeholder.
+    """
+    Return True if every required callout body is only an empty
+    placeholder.
 
-    Splits body into callout chunks by the callout-header line, then checks
-    each chunk for a single placeholder bullet. Returns False if any required
-    callout has substantive content (anything other than the empty placeholder
-    bullet and blank quoted lines).
+    Splits body into callout chunks by the callout-header line, then
+    checks each chunk for a single placeholder bullet. Returns False if
+    any required callout has substantive content (anything other than
+    the empty placeholder bullet and blank quoted lines).
     """
     # Find all callout header positions.
     headers = list(CALLOUT_RE.finditer(body))
@@ -2135,9 +2155,7 @@ def _is_placeholder_only(body: str, expected_slugs: list[str]) -> bool:
     for i, m in enumerate(headers):
         slug = m.group(1)
         chunk_start = m.end()
-        chunk_end = (
-            headers[i + 1].start() if i + 1 < len(headers) else len(body)
-        )
+        chunk_end = headers[i + 1].start() if i + 1 < len(headers) else len(body)
         chunks[slug] = body[chunk_start:chunk_end]
     # Every required slug must be present and placeholder-only.
     for slug in expected_slugs:
@@ -2157,9 +2175,7 @@ def _is_placeholder_only(body: str, expected_slugs: list[str]) -> bool:
         # (the `> - None ...` bullet) plus optional `>` blank quoted lines and
         # the callout's `> ^slug` block-ID line, which is not body content.
         content_lines = [
-            line
-            for line in lines
-            if line != '>' and not BLOCK_ID_RE.match(line)
+            line for line in lines if line != '>' and not BLOCK_ID_RE.match(line)
         ]
         if len(content_lines) != 1:
             return False
@@ -2169,15 +2185,18 @@ def _is_placeholder_only(body: str, expected_slugs: list[str]) -> bool:
 
 
 def check_callout_block_ids(body: str, rel: str) -> list[dict[str, Any]]:
-    """Every callout carries its block ID `> ^<block-id>` as the last line
-    inside the `>` block (CLAUDE.md -> Callout Block IDs), so each section is
-    linkable via `[[path#^block-id|Display]]` (Obsidian does not anchor to
-    callout titles). The block ID is the kebab-case of the callout's display
-    title — the type slug for most callouts, but an expanded form where the type
-    is abbreviated (`[!why]` -> `^why-it-matters`). Flag callouts whose block ID
-    is missing, doesn't match the expected ID, is duplicated, or isn't the last
-    quoted line. Each case has a deterministic fix, so lint applies it
-    mechanically.
+    """
+    Every callout carries its block ID `> ^<block-id>` as the last line
+    inside the `>` block (CLAUDE.md -> Callout Block IDs), so each
+    section is linkable via `[[path#^block-id|Display]]` (Obsidian does
+    not anchor to callout titles).
+
+    The block ID is the kebab-case of the callout's display title — the
+    type slug for most callouts, but an expanded form where the type is
+    abbreviated (`[!why]` -> `^why-it-matters`). Flag callouts whose
+    block ID is missing, doesn't match the expected ID, is duplicated,
+    or isn't the last quoted line. Each case has a deterministic fix, so
+    lint applies it mechanically.
     """
     findings: list[dict[str, Any]] = []
     headers = list(CALLOUT_RE.finditer(body))
@@ -2186,9 +2205,7 @@ def check_callout_block_ids(body: str, rel: str) -> list[dict[str, Any]]:
         bid = expected_block_id(slug=slug)
         start = m.end()
         end_pos = headers[i + 1].start() if i + 1 < len(headers) else len(body)
-        quoted = [
-            ln for ln in body[start:end_pos].splitlines() if ln.startswith('>')
-        ]
+        quoted = [ln for ln in body[start:end_pos].splitlines() if ln.startswith('>')]
         if not quoted:
             continue  # malformed/empty callout — other checks own that
         id_hits = [
@@ -2262,32 +2279,28 @@ def check_callout_block_ids(body: str, rel: str) -> list[dict[str, Any]]:
 # carry no dash and so are excluded, which is what we want.
 BULLET_RE = re.compile(r'^>\s*-\s+(.+?)\s*$')
 # Empty-section placeholder bullets — never redundancy candidates.
-PLACEHOLDER_BULLET_RE = re.compile(
-    r'^none(?:\s+yet|\s+noted)?\.?$', re.IGNORECASE
-)
+PLACEHOLDER_BULLET_RE = re.compile(r'^none(?:\s+yet|\s+noted)?\.?$', re.IGNORECASE)
 
 
 def _redundancy_tokens(bullet: str) -> set[str]:
-    """Content-token set for intra-page redundancy comparison.
+    """
+    Content-token set for intra-page redundancy comparison.
 
-    Drops the parts that are navigational or formatting rather than the bullet's
-    point — wikilinks and image embeds (target AND display, so two bullets citing
-    the same source don't collide), `*[marker]*` tokens, and inline code (file
-    paths, snippets) — then lowercases, splits on non-alphanumerics, and removes
-    stopwords. What remains is the propositional content the comparison keys on.
+    Drops the parts that are navigational or formatting rather than the
+    bullet's point — wikilinks and image embeds (target AND display, so
+    two bullets citing the same source don't collide), `*[marker]*`
+    tokens, and inline code (file paths, snippets) — then lowercases,
+    splits on non-alphanumerics, and removes stopwords. What remains is
+    the propositional content the comparison keys on.
     """
     t = re.sub(r'!?\[\[[^\]]*\]\]', ' ', bullet)  # wikilinks + image embeds
     t = re.sub(r'\*\[[^\]]*\]\*', ' ', t)  # *[unverified]* / *[tentative]*
     t = re.sub(r'`[^`]*`', ' ', t)  # inline code spans
     t = re.sub(r'[^a-z0-9]+', ' ', t.lower())
-    return {
-        w for w in t.split() if len(w) >= 2 and w not in REDUNDANCY_STOPWORDS
-    }
+    return {w for w in t.split() if len(w) >= 2 and w not in REDUNDANCY_STOPWORDS}
 
 
-def check_intra_page_redundancy(
-    body: str, rel: str, end: int
-) -> list[dict[str, Any]]:
+def check_intra_page_redundancy(body: str, rel: str, end: int) -> list[dict[str, Any]]:
     """Flag two bullets on ONE page that make the same point (CLAUDE.md -> Body
     Sections As Callouts: "do not paraphrase the same point across sections").
 
@@ -2319,9 +2332,7 @@ def check_intra_page_redundancy(
 
     findings: list[dict[str, Any]] = []
     for i, (slug_a, ta, snip_a, _line_a) in enumerate(bullets):
-        if len(ta) < min(
-            MIN_BULLET_CONTENT_TOKENS, MIN_OVERLAP_SHORTER_TOKENS
-        ):
+        if len(ta) < min(MIN_BULLET_CONTENT_TOKENS, MIN_OVERLAP_SHORTER_TOKENS):
             continue
         for slug_b, tb, snip_b, line_b in bullets[i + 1 :]:
             inter = ta & tb
@@ -2367,12 +2378,15 @@ def check_intra_page_redundancy(
 
 
 def check_page_locators_linked(body: str, rel: str) -> list[dict[str, Any]]:
-    """Every page locator (`p. N`, `pp. N–M`) on a wiki page carries a `#page=N`
-    raw-file deep-link (CLAUDE.md -> Source Support And Verification), so a click
-    opens the source at that page. Flag bare locators. Not auto-fixable: N is the
-    physical PDF page, which lint cannot derive without opening the PDF — the
-    agent (or audit) computes it from the printed->physical offset. One finding
-    per distinct bare token per page.
+    """
+    Every page locator (`p.
+
+    N`, `pp. N–M`) on a wiki page carries a `#page=N` raw-file deep-link
+    (CLAUDE.md -> Source Support And Verification), so a click opens the
+    source at that page. Flag bare locators. Not auto-fixable: N is the
+    physical PDF page, which lint cannot derive without opening the PDF
+    — the agent (or audit) computes it from the printed->physical
+    offset. One finding per distinct bare token per page.
     """
     findings: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -2402,13 +2416,15 @@ def check_page_locators_linked(body: str, rel: str) -> list[dict[str, Any]]:
 
 
 def check_citation_form(body: str, rel: str, end: int) -> list[dict[str, Any]]:
-    """Mechanical citation-form checks for concept/entity/synthesis pages
-    (CLAUDE.md -> Source Support And Verification, canonical form). Lint owns the
-    *format* of citations that carry a locator; the semantic rule that every
-    non-obvious claim must carry the full form is audit/ingest's, since lint
-    cannot judge whether a bullet is a non-obvious claim or an allowed bare
-    general attribution. Source pages are exempt — their Evidence locators use a
-    different (page-token-as-link) form.
+    """
+    Mechanical citation-form checks for concept/entity/synthesis pages
+    (CLAUDE.md -> Source Support And Verification, canonical form). Lint
+    owns the *format* of citations that carry a locator; the semantic
+    rule that every non-obvious claim must carry the full form is
+    audit/ingest's, since lint cannot judge whether a bullet is a non-
+    obvious claim or an allowed bare general attribution. Source pages
+    are exempt — their Evidence locators use a different (page-token-as-
+    link) form.
 
     - citation_locator_incomplete: a raw `#page=N` deep-link whose display lacks
       a structural anchor (sec./app./ch./fig./tab./eq./def./thm./lem./prop./cor./alg.)
@@ -2428,9 +2444,7 @@ def check_citation_form(body: str, rel: str, end: int) -> list[dict[str, Any]]:
         km = CITATION_DEEPLINK_KEY_RE.search(m.group(0))
         raw_path = km.group(1) if km else None
         phys = int(km.group(2)) if km else None
-        if not locator_display_complete(
-            display=display, raw=raw_path, phys=phys
-        ):
+        if not locator_display_complete(display=display, raw=raw_path, phys=phys):
             findings.append(
                 finding(
                     check='citation_locator_incomplete',
@@ -2478,23 +2492,25 @@ def check_citation_form(body: str, rel: str, end: int) -> list[dict[str, Any]]:
     return findings
 
 
-def check_citation_bracket_style(
-    body: str, rel: str, end: int
-) -> list[dict[str, Any]]:
-    """Flag the superseded square-bracket Form 2 citation on concept/entity/
-    synthesis pages. CLAUDE.md -> Source Support And Verification mandates the
-    round-bracket Form 2 `([[…|key]]; [[…|sec. X, p. M]])`; the old form wrapped
-    the same wikilinks in a literal outer `[ ]` (rendering `[key; loc]`), which
-    surfaces as the triple-bracket `[[[` opener. Auto-fixable: within the
-    code-/Sources-/quote-masked scan built below, and per flagged occurrence only,
-    swap the outer `[ ]` for `( )` (the inner wikilinks, which carry source identity
-    and the locator, are unchanged) — never a global `.sub` over the unmasked body,
-    which would rewrite a `[[[…]]]` literal inside a quote (a re-stamp-eligible false
-    green; see the quote mask below).
+def check_citation_bracket_style(body: str, rel: str, end: int) -> list[dict[str, Any]]:
+    """
+    Flag the superseded square-bracket Form 2 citation on
+    concept/entity/ synthesis pages. CLAUDE.md -> Source Support And
+    Verification mandates the round-bracket Form 2 `([[…|key]]; [[…|sec.
+    X, p. M]])`; the old form wrapped the same wikilinks in a literal
+    outer `[ ]` (rendering `[key; loc]`), which surfaces as the triple-
+    bracket `[[[` opener. Auto-fixable: within the code-/Sources-/quote-
+    masked scan built below, and per flagged occurrence only, swap the
+    outer `[ ]` for `( )` (the inner wikilinks, which carry source
+    identity and the locator, are unchanged) — never a global `.sub`
+    over the unmasked body, which would rewrite a `[[[…]]]` literal
+    inside a quote (a re-stamp-eligible false green; see the quote mask
+    below).
 
-    Scoped to concept/entity/synthesis pages, matching the other citation-form
-    checks. Source pages use a different (page-token-as-link) form and are exempt.
-    Inline code and the Sources callout are masked, as in check_citation_form.
+    Scoped to concept/entity/synthesis pages, matching the other
+    citation-form checks. Source pages use a different (page-token-as-
+    link) form and are exempt. Inline code and the Sources callout are
+    masked, as in check_citation_form.
     """
     findings: list[dict[str, Any]] = []
     scan = _blank_sources_callout(text=_mask_code_spans(text=body))
@@ -2534,24 +2550,28 @@ def check_citation_bracket_style(
 def check_source_locator_complete(
     body: str, rel: str, end: int
 ) -> list[dict[str, Any]]:
-    """On a source page, a `#page=N` locator deep-link must list its structural
-    anchor (sec./fig./tab./eq./app./ch./def./thm./lem./prop./cor./alg.) AND its
-    page together INSIDE the link
-    display — `[[…#page=1|sec. 1, p. 1]]` — never split with the anchor outside
-    (`sec. 1, [[…#page=1|p. 1]]`) or page-only (`[[…#page=1|p. 1]]`). An
-    `app.`-anchored display may stand on the anchor alone (the unpaginated-supplement
-    exemption; see locator_display_complete).
+    """
+    On a source page, a `#page=N` locator deep-link must list its
+    structural anchor
+    (sec./fig./tab./eq./app./ch./def./thm./lem./prop./cor./alg.) AND its
+    page together INSIDE the link display — `[[…#page=1|sec. 1, p. 1]]`
+    — never split with the anchor outside (`sec. 1, [[…#page=1|p. 1]]`)
+    or page-only (`[[…#page=1|p. 1]]`). An `app.`-anchored display may
+    stand on the anchor alone (the unpaginated-supplement exemption; see
+    locator_display_complete).
 
-    The source-page counterpart of citation_locator_incomplete (which enforces the
-    same anchor-inside-the-display form on concept/entity/synthesis pages). Source
-    pages use the identical form, just without the paired source-page wikilink
-    (that would be a self-link), so this check shares the completeness test but not
-    citation_unpaired. This is the inverse of the retired source_locator_anchor_inlined,
-    which wrongly required the anchor OUTSIDE the link on source pages
-    (CLAUDE.md -> Source Support And Verification).
+    The source-page counterpart of citation_locator_incomplete (which
+    enforces the same anchor-inside-the-display form on
+    concept/entity/synthesis pages). Source pages use the identical
+    form, just without the paired source-page wikilink (that would be a
+    self-link), so this check shares the completeness test but not
+    citation_unpaired. This is the inverse of the retired
+    source_locator_anchor_inlined, which wrongly required the anchor
+    OUTSIDE the link on source pages (CLAUDE.md -> Source Support And
+    Verification).
 
-    Inline code and the Sources callout are masked, length-preserving so match
-    offsets map back to real line numbers.
+    Inline code and the Sources callout are masked, length-preserving so
+    match offsets map back to real line numbers.
     """
     findings: list[dict[str, Any]] = []
     scan = _blank_sources_callout(text=_mask_code_spans(text=body))
@@ -2560,9 +2580,7 @@ def check_source_locator_complete(
         km = CITATION_DEEPLINK_KEY_RE.search(m.group(0))
         raw_path = km.group(1) if km else None
         phys = int(km.group(2)) if km else None
-        if not locator_display_complete(
-            display=display, raw=raw_path, phys=phys
-        ):
+        if not locator_display_complete(display=display, raw=raw_path, phys=phys):
             actual_line = end + 1 + scan[: m.start()].count('\n') + 1
             findings.append(
                 finding(
@@ -2587,11 +2605,11 @@ def check_source_locator_complete(
     return findings
 
 
-def check_locator_page_match(
-    body: str, rel: str, end: int
-) -> list[dict[str, Any]]:
-    """A `#page=N` deep-link whose display cites `p. M`, but the pagination map
-    says physical page N of that raw prints a DIFFERENT number — or prints none
+def check_locator_page_match(body: str, rel: str, end: int) -> list[dict[str, Any]]:
+    """
+    A `#page=N` deep-link whose display cites `p.
+
+    M`, but the pagination map says physical page N of that raw prints a DIFFERENT number — or prints none
     at all. The one check that catches a confidently-wrong printed page: a
     locator that renders plausibly and passes every completeness check yet sends
     a reader to a page number the source does not carry (CLAUDE.md -> Source
@@ -2656,14 +2674,14 @@ def check_locator_page_match(
     return findings
 
 
-def check_wikilink_display_caps(
-    body: str, rel: str, end: int
-) -> list[dict[str, Any]]:
-    """A bullet that opens with a wikilink takes a leading capital on the link's
-    display, because it is sentence-initial (CLAUDE.md -> Wikilink Format:
-    "Sentence-initial uses leading capital"). A bullet-initial display whose first
-    character is a lowercase letter is drift — a common-noun display stays
-    lowercase mid-sentence but capitalizes when it opens the bullet.
+def check_wikilink_display_caps(body: str, rel: str, end: int) -> list[dict[str, Any]]:
+    """
+    A bullet that opens with a wikilink takes a leading capital on the
+    link's display, because it is sentence-initial (CLAUDE.md ->
+    Wikilink Format: "Sentence-initial uses leading capital"). A bullet-
+    initial display whose first character is a lowercase letter is drift
+    — a common-noun display stays lowercase mid-sentence but capitalizes
+    when it opens the bullet.
 
     The Sources callout is exempt: its displays are filename-derived source stems
     (e.g. `illustrated-transformer`), not sentence text, and must stay verbatim, so
@@ -2700,11 +2718,10 @@ def check_wikilink_display_caps(
     return findings
 
 
-def check_embed_isolated(
-    body: str, rel: str, end: int
-) -> list[dict[str, Any]]:
-    """Flag a standalone image embed not set off by a blank quoted line both
-    above and below it (CLAUDE.md -> Attachments / Source Pages).
+def check_embed_isolated(body: str, rel: str, end: int) -> list[dict[str, Any]]:
+    """
+    Flag a standalone image embed not set off by a blank quoted line
+    both above and below it (CLAUDE.md -> Attachments / Source Pages).
 
     Inside an Obsidian callout an embed butted directly against the bullet above
     or the line below lazy-continues that content and mis-renders — the embed
@@ -2722,10 +2739,7 @@ def check_embed_isolated(
         if not QUOTED_EMBED_LINE_RE.match(line):
             continue
         prev_ok = i > 0 and QUOTED_BLANK_RE.match(lines[i - 1]) is not None
-        next_ok = (
-            i + 1 < len(lines)
-            and QUOTED_BLANK_RE.match(lines[i + 1]) is not None
-        )
+        next_ok = i + 1 < len(lines) and QUOTED_BLANK_RE.match(lines[i + 1]) is not None
         if prev_ok and next_ok:
             continue
         if not prev_ok and not next_ok:
@@ -2756,7 +2770,10 @@ def check_embed_isolated(
 
 
 def check_index_drift(wiki_root: Path) -> list[dict[str, Any]]:
-    """Compare index.md entries to actual files in sources/entities/concepts/syntheses."""
+    """
+    Compare index.md entries to actual files in
+    sources/entities/concepts/syntheses.
+    """
     findings: list[dict[str, Any]] = []
     index_path = wiki_root / 'index.md'
     if not index_path.exists():
@@ -2780,17 +2797,11 @@ def check_index_drift(wiki_root: Path) -> list[dict[str, Any]]:
 
     for section, (folder, next_section) in sections.items():
         # Files actually present.
-        present = (
-            sorted(p.stem for p in folder.glob('*.md'))
-            if folder.exists()
-            else []
-        )
+        present = sorted(p.stem for p in folder.glob('*.md')) if folder.exists() else []
         # Index-listed stems for this section.
         start_marker = f'## {section}'
         end_marker = next_section
-        m_start = re.search(
-            rf'^{re.escape(start_marker)}\s*$', text, re.MULTILINE
-        )
+        m_start = re.search(rf'^{re.escape(start_marker)}\s*$', text, re.MULTILINE)
         if not m_start:
             continue
         body_start = m_start.end()
@@ -2808,9 +2819,7 @@ def check_index_drift(wiki_root: Path) -> list[dict[str, Any]]:
         else:
             section_body = text[body_start:]
         # Index wikilinks are path-qualified; normalize each to its stem.
-        listed = sorted(
-            {_link_stem(raw=x) for x in wikilink_re.findall(section_body)}
-        )
+        listed = sorted({_link_stem(raw=x) for x in wikilink_re.findall(section_body)})
         rel_folder = str(folder.relative_to(wiki_root.parent))
 
         in_files_not_index = sorted(set(present) - set(listed))
@@ -2837,14 +2846,15 @@ def check_index_drift(wiki_root: Path) -> list[dict[str, Any]]:
                         f'{section}: index.md lists `{stem}.md` but no matching '
                         f'file exists.'
                     ),
-                    fix_hint=f'Remove the entry from index.md or restore the file.',
+                    fix_hint='Remove the entry from index.md or restore the file.',
                 )
             )
     return findings
 
 
 def check_attachments(wiki_root: Path) -> list[dict[str, Any]]:
-    """Cross-page attachment checks (CLAUDE.md Attachments section).
+    """
+    Cross-page attachment checks (CLAUDE.md Attachments section).
 
     1. Embedded image basenames resolve to a file under `1-wiki/attachments/`.
     2. Each source page's `attachments:` frontmatter entry resolves.
@@ -2866,13 +2876,11 @@ def check_attachments(wiki_root: Path) -> list[dict[str, Any]]:
     # hence info-level.
     for basename, paths in by_basename.items():
         if len(paths) > 1:
-            locations = sorted(
-                str(p.relative_to(wiki_root.parent)) for p in paths
-            )
+            locations = sorted(str(p.relative_to(wiki_root.parent)) for p in paths)
             findings.append(
                 finding(
                     check='attachment_duplicate_basename',
-                    file=f'1-wiki/attachments/',
+                    file='1-wiki/attachments/',
                     message=(
                         f'Basename `{basename}` is reused across {len(paths)} '
                         f'attachment folders: {locations}. Path-qualified embeds '
@@ -2927,8 +2935,7 @@ def check_attachments(wiki_root: Path) -> list[dict[str, Any]]:
                 sorted(
                     p.name
                     for p in stem_dir.iterdir()
-                    if p.is_file()
-                    and p.suffix.lower().lstrip('.') in IMAGE_EXTS
+                    if p.is_file() and p.suffix.lower().lstrip('.') in IMAGE_EXTS
                 )
                 if stem_dir.exists()
                 else []
@@ -2989,7 +2996,9 @@ WIKILINK_PAGE_RE = re.compile(r'(?<!!)\[\[([^\]|]+?)(?:\|[^\]]+)?\]\]')
 
 
 def check_orphan_pages(wiki_root: Path) -> list[dict[str, Any]]:
-    """Flag wiki pages not reachable from `index.md` via wikilinks (D 9.12).
+    """
+    Flag wiki pages not reachable from `index.md` via wikilinks (D
+    9.12).
 
     Walks the wikilink graph starting from `index.md`. Pages in
     `sources/`, `concepts/`, `entities/`, or `syntheses/` that the
@@ -3058,9 +3067,9 @@ def check_orphan_pages(wiki_root: Path) -> list[dict[str, Any]]:
                 check='orphan_page',
                 file=rel,
                 message=(
-                    f'Page is not reachable from `1-wiki/index.md` via wikilinks. '
-                    f'Likely never wired into the wiki, or its only inbound links '
-                    f'were removed.'
+                    'Page is not reachable from `1-wiki/index.md` via wikilinks. '
+                    'Likely never wired into the wiki, or its only inbound links '
+                    'were removed.'
                 ),
                 fix_hint=(
                     'Link the page from a relevant concept, entity, synthesis, or '
@@ -3072,8 +3081,11 @@ def check_orphan_pages(wiki_root: Path) -> list[dict[str, Any]]:
 
 
 def _extract_callout_body(body: str, slug: str) -> str | None:
-    """Return the text between the `> [!{slug}]` header and the next callout
-    header (or end of body). None if the callout isn't present.
+    """
+    Return the text between the `> [!{slug}]` header and the next
+    callout header (or end of body).
+
+    None if the callout isn't present.
     """
     headers = list(CALLOUT_RE.finditer(body))
     for i, m in enumerate(headers):
@@ -3086,11 +3098,12 @@ def _extract_callout_body(body: str, slug: str) -> str | None:
 
 
 def _extract_wikilinks(text: str) -> list[str]:
-    """Extract wikilink target stems from text (not image embeds).
+    """
+    Extract wikilink target stems from text (not image embeds).
 
-    Targets are path-qualified (`[[1-wiki/concepts/foo.md|foo]]`); each is
-    normalized to its bare stem so callers compare by page identity. Empty
-    stems (malformed links) are dropped.
+    Targets are path-qualified (`[[1-wiki/concepts/foo.md|foo]]`); each
+    is normalized to its bare stem so callers compare by page identity.
+    Empty stems (malformed links) are dropped.
     """
     out = []
     for m in WIKILINK_PAGE_RE.finditer(text):
@@ -3101,7 +3114,9 @@ def _extract_wikilinks(text: str) -> list[str]:
 
 
 def check_sources_callout_sync(wiki_root: Path) -> list[dict[str, Any]]:
-    """Sources callout wikilinks must match `sources:` frontmatter (D X.3a).
+    """
+    Sources callout wikilinks must match `sources:` frontmatter (D
+    X.3a).
 
     A page can drift between `sources: [[a]]` in frontmatter and a body
     `> [!sources]` callout listing `[[b]]` — the support trail and the
@@ -3124,9 +3139,7 @@ def check_sources_callout_sync(wiki_root: Path) -> list[dict[str, Any]]:
                 continue  # Missing-section check handles absence.
             frontmatter_sources = set()
             for entry in (
-                fm.get('sources', [])
-                if isinstance(fm.get('sources'), list)
-                else []
+                fm.get('sources', []) if isinstance(fm.get('sources'), list) else []
             ):
                 if isinstance(entry, str):
                     m = WIKILINK_BASENAME_RE.match(entry.strip())
@@ -3140,13 +3153,9 @@ def check_sources_callout_sync(wiki_root: Path) -> list[dict[str, Any]]:
             rel = str(page.relative_to(repo_root))
             parts = []
             if missing_in_body:
-                parts.append(
-                    f'in frontmatter but not in callout: {missing_in_body}'
-                )
+                parts.append(f'in frontmatter but not in callout: {missing_in_body}')
             if extra_in_body:
-                parts.append(
-                    f'in callout but not in frontmatter: {extra_in_body}'
-                )
+                parts.append(f'in callout but not in frontmatter: {extra_in_body}')
             findings.append(
                 finding(
                     check='sources_callout_desync',
@@ -3166,7 +3175,9 @@ def check_sources_callout_sync(wiki_root: Path) -> list[dict[str, Any]]:
 
 
 def check_source_link_resolution(wiki_root: Path) -> list[dict[str, Any]]:
-    """Every `sources:` frontmatter entry resolves to an existing source page.
+    """
+    Every `sources:` frontmatter entry resolves to an existing source
+    page.
 
     Source-support links must never dangle: a concept/entity/synthesis page
     cannot cite a source page that does not exist on disk (unlike concept or
@@ -3219,7 +3230,8 @@ def check_source_link_resolution(wiki_root: Path) -> list[dict[str, Any]]:
 def check_concept_source_bidirectional(
     wiki_root: Path,
 ) -> list[dict[str, Any]]:
-    """Source ↔ concept/entity/synthesis bidirectional support (D X.3b).
+    """
+    Source ↔ concept/entity/synthesis bidirectional support (D X.3b).
 
     For every wikilink in a source page's `concepts-entities` callout, the
     linked page must list the source in `sources:`. And for every source
@@ -3245,12 +3257,8 @@ def check_concept_source_bidirectional(
             text = page.read_text(encoding='utf-8')
             _, end = parse_frontmatter(text=text)
             body = '\n'.join(text.split('\n')[end + 1 :])
-            ce_body = _extract_callout_body(
-                body=body, slug='concepts-entities'
-            )
-            declared = (
-                set(_extract_wikilinks(text=ce_body)) if ce_body else set()
-            )
+            ce_body = _extract_callout_body(body=body, slug='concepts-entities')
+            declared = set(_extract_wikilinks(text=ce_body)) if ce_body else set()
             source_declares[page.stem] = declared
 
     # Build: page-stem -> (page path, set of sources in frontmatter).
@@ -3266,9 +3274,7 @@ def check_concept_source_bidirectional(
                 continue
             srcs = set()
             for entry in (
-                fm.get('sources', [])
-                if isinstance(fm.get('sources'), list)
-                else []
+                fm.get('sources', []) if isinstance(fm.get('sources'), list) else []
             ):
                 if isinstance(entry, str):
                     m = WIKILINK_BASENAME_RE.match(entry.strip())
@@ -3346,11 +3352,12 @@ def check_concept_source_bidirectional(
 
 
 def check_needs_update_reason(wiki_root: Path) -> list[dict[str, Any]]:
-    """`needs-update` pages must provide a reason (D 5.5c).
+    """
+    `needs-update` pages must provide a reason (D 5.5c).
 
-    CLAUDE.md says a needs-update page needs either a real Contradictions or
-    Tensions entry, OR a `needs_update_reason:` frontmatter field. Lint
-    enforces that here.
+    CLAUDE.md says a needs-update page needs either a real
+    Contradictions or Tensions entry, OR a `needs_update_reason:`
+    frontmatter field. Lint enforces that here.
     """
     findings: list[dict[str, Any]] = []
     repo_root = wiki_root.parent
@@ -3411,8 +3418,9 @@ def check_needs_update_reason(wiki_root: Path) -> list[dict[str, Any]]:
 
 
 def check_alias_collisions(wiki_root: Path) -> list[dict[str, Any]]:
-    """Flag duplicate aliases and aliases that shadow another page's filename
-    (D 9.13).
+    """
+    Flag duplicate aliases and aliases that shadow another page's
+    filename (D 9.13).
 
     Obsidian uses `aliases:` for search and `[[wikilink]]` autocomplete.
     Uniqueness across the vault is required for unambiguous resolution.
@@ -3479,16 +3487,11 @@ def check_alias_collisions(wiki_root: Path) -> list[dict[str, Any]]:
                 owner_page = candidate
                 break
         for page in pages:
-            if (
-                owner_page is not None
-                and page.resolve() == owner_page.resolve()
-            ):
+            if owner_page is not None and page.resolve() == owner_page.resolve():
                 continue  # Page can alias its own filename harmlessly.
             rel = str(page.relative_to(repo_root))
             owner_rel = (
-                str(owner_page.relative_to(repo_root))
-                if owner_page
-                else '(unknown)'
+                str(owner_page.relative_to(repo_root)) if owner_page else '(unknown)'
             )
             findings.append(
                 finding(
@@ -3509,7 +3512,9 @@ def check_alias_collisions(wiki_root: Path) -> list[dict[str, Any]]:
 
 
 def check_raw_integrity(wiki_root: Path) -> list[dict[str, Any]]:
-    """Critical checks for raw-vs-wiki integrity (D 8.17, lint checks 3 & 4).
+    """
+    Critical checks for raw-vs-wiki integrity (D 8.17, lint checks 3 &
+    4).
 
     Check 3: every source page's `file:` frontmatter must resolve to a file
     that actually exists under `0-raw/`. A source page pointing at a deleted
@@ -3561,9 +3566,7 @@ def check_raw_integrity(wiki_root: Path) -> list[dict[str, Any]]:
             # Page Filenames / Raw Sources — the two share a basename). A
             # chapter/section split is allowed: `<raw-stem>-chNN` / `-<section>`.
             raw_stem = Path(basename).stem
-            if page.stem != raw_stem and not page.stem.startswith(
-                raw_stem + '-'
-            ):
+            if page.stem != raw_stem and not page.stem.startswith(raw_stem + '-'):
                 findings.append(
                     finding(
                         check='source_stem_mismatch',
@@ -3625,7 +3628,8 @@ def check_raw_integrity(wiki_root: Path) -> list[dict[str, Any]]:
 
 
 def check_recursive_citations(wiki_root: Path) -> list[dict[str, Any]]:
-    """Flag concept/entity/synthesis pages that cite only other wiki pages
+    """
+    Flag concept/entity/synthesis pages that cite only other wiki pages
     instead of source pages (D 3.9 / D X.3).
 
     The "wiki cites itself as truth" failure (BP §13) shows up structurally
@@ -3663,28 +3667,19 @@ def check_recursive_citations(wiki_root: Path) -> list[dict[str, Any]]:
             fm, end = parse_frontmatter(text=text)
             if fm is None:
                 continue
-            sources = (
-                fm.get('sources')
-                if isinstance(fm.get('sources'), list)
-                else []
-            )
+            sources = fm.get('sources') if isinstance(fm.get('sources'), list) else []
             if sources:
                 continue  # Has at least one source; not a recursion case.
             body = '\n'.join(text.split('\n')[end + 1 :])
             wikilinks = [
-                _link_stem(raw=m.group(1))
-                for m in WIKILINK_PAGE_RE.finditer(body)
+                _link_stem(raw=m.group(1)) for m in WIKILINK_PAGE_RE.finditer(body)
             ]
             # Keep only links that resolve to a real wiki page (drops
             # attachment links and danglings, which aren't page stems).
-            body_page_links = [
-                link for link in wikilinks if link and link in all_stems
-            ]
+            body_page_links = [link for link in wikilinks if link and link in all_stems]
             if not body_page_links:
                 continue  # No body wikilinks at all; not a recursion case.
-            cites_source = any(
-                link in source_stems for link in body_page_links
-            )
+            cites_source = any(link in source_stems for link in body_page_links)
             if cites_source:
                 continue  # At least one wikilink hits a source page; OK.
             rel = str(page.relative_to(wiki_root.parent))
@@ -3710,7 +3705,8 @@ def check_recursive_citations(wiki_root: Path) -> list[dict[str, Any]]:
 
 
 def check_duplicate_concepts(wiki_root: Path) -> list[dict[str, Any]]:
-    """Flag pairs of concept/entity pages with very similar H1 titles.
+    """
+    Flag pairs of concept/entity pages with very similar H1 titles.
 
     Cheap mechanical signal for the duplicate-detection breakage flagged in
     deep-research-report.md — a source refresh that creates a near-twin page
@@ -3737,11 +3733,7 @@ def check_duplicate_concepts(wiki_root: Path) -> list[dict[str, Any]]:
             # producing N*(N-1)/2 false-positive duplicate-candidate
             # warnings on any vault with frontmatter comments.
             fm, end = parse_frontmatter(text=text)
-            body = (
-                '\n'.join(text.split('\n')[end + 1 :])
-                if fm is not None
-                else text
-            )
+            body = '\n'.join(text.split('\n')[end + 1 :]) if fm is not None else text
             m = re.search(r'^# (.+)$', body, re.MULTILINE)
             title = m.group(1).strip() if m else path.stem
             words = set(re.sub(r'[^a-z0-9]+', ' ', title.lower()).split())
@@ -3779,7 +3771,9 @@ def check_duplicate_concepts(wiki_root: Path) -> list[dict[str, Any]]:
 
 
 def check_reciprocal_contradictions(wiki_root: Path) -> list[dict[str, Any]]:
-    """Check missing_reciprocal_contradiction — reciprocal contradiction graph.
+    """
+    Check missing_reciprocal_contradiction — reciprocal contradiction
+    graph.
 
     If page A's Contradictions callout names `[[B]]`, page B's
     Contradictions (or Tensions, for syntheses) callout must mention A
@@ -3887,9 +3881,9 @@ def check_reciprocal_contradictions(wiki_root: Path) -> list[dict[str, Any]]:
             # Same underlying work: a page naming its own source (or a source
             # naming a page derived from it) in Contradictions cites it as
             # evidence, not as a mutual-contradiction party. No reciprocal owed.
-            if b_stem in page_sources.get(
-                a_stem, set()
-            ) or a_stem in page_sources.get(b_stem, set()):
+            if b_stem in page_sources.get(a_stem, set()) or a_stem in page_sources.get(
+                b_stem, set()
+            ):
                 continue
             if a_stem in pages[b_stem][1]:
                 continue
@@ -3928,9 +3922,7 @@ KEBAB_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
 # from crossing a `]]` boundary into the next link AND from spanning a newline
 # (a match across lines would let the auto-fix join two body lines); the
 # adjacency uses `[^\S\n]` so only non-newline whitespace beside the pipe flags.
-PIPE_SPACING_RE = re.compile(
-    r'\[\[[^\]\n]*?(?:[^\S\n]\||\|[^\S\n])[^\]\n]*?\]\]'
-)
+PIPE_SPACING_RE = re.compile(r'\[\[[^\]\n]*?(?:[^\S\n]\||\|[^\S\n])[^\]\n]*?\]\]')
 
 # A wikilink (not an image embed — negative lookbehind for `!`). Group 1 is the
 # raw target+display; the caller splits on `|` and `#`.
@@ -3938,8 +3930,11 @@ BARE_LINK_RE = re.compile(r'(?<!!)\[\[([^\]]+?)\]\]')
 
 
 def check_filename_convention(wiki_root: Path) -> list[dict[str, Any]]:
-    """Concept/entity/synthesis page filenames and attachment leaf filenames are
-    kebab-case lowercase (CLAUDE.md -> Page Filenames). Source pages are exempt:
+    """
+    Concept/entity/synthesis page filenames and attachment leaf
+    filenames are kebab-case lowercase (CLAUDE.md -> Page Filenames).
+
+    Source pages are exempt:
     their stem mirrors the raw stem, which preserves case/punctuation. The
     attachment `{stem}/` directory component is likewise exempt (it mirrors the
     source stem) — only leaf image filenames are checked. Not auto-fixable:
@@ -3986,8 +3981,7 @@ def check_filename_convention(wiki_root: Path) -> list[dict[str, Any]]:
                     check='filename_not_kebab',
                     file=str(f.relative_to(repo_root)),
                     message=(
-                        f'Attachment filename `{f.name}` has a non-kebab-case '
-                        f'stem.'
+                        f'Attachment filename `{f.name}` has a non-kebab-case stem.'
                     ),
                     fix_hint=(
                         'Rename the attachment file to kebab-case lowercase. '
@@ -4000,12 +3994,15 @@ def check_filename_convention(wiki_root: Path) -> list[dict[str, Any]]:
 
 
 def check_wikilink_pipe_spacing(wiki_root: Path) -> list[dict[str, Any]]:
-    """Wikilinks carry no whitespace around the pipe (CLAUDE.md -> Wikilink
-    Format): `[[path|display]]`, never `[[path | display]]` — a space after the
-    pipe renders as a leading space in the display name. Auto-fixable (collapse
-    the padding to a bare `|`). Inline-code spans are blanked first, so a
-    documented `[[a | b]]` example inside backticks is not flagged. Operates on
-    the whole page text (frontmatter wikilinks too).
+    """
+    Wikilinks carry no whitespace around the pipe (CLAUDE.md -> Wikilink
+    Format): `[[path|display]]`, never `[[path | display]]` — a space
+    after the pipe renders as a leading space in the display name.
+
+    Auto-fixable (collapse the padding to a bare `|`). Inline-code spans
+    are blanked first, so a documented `[[a | b]]` example inside
+    backticks is not flagged. Operates on the whole page text
+    (frontmatter wikilinks too).
     """
     findings: list[dict[str, Any]] = []
     repo_root = wiki_root.parent
@@ -4018,9 +4015,7 @@ def check_wikilink_pipe_spacing(wiki_root: Path) -> list[dict[str, Any]]:
             scan = _mask_code_spans(text=text)
             seen: set[str] = set()
             for m in PIPE_SPACING_RE.finditer(scan):
-                tok = text[
-                    m.start() : m.end()
-                ]  # offsets align (length-preserving)
+                tok = text[m.start() : m.end()]  # offsets align (length-preserving)
                 if tok in seen:
                     continue
                 seen.add(tok)
@@ -4039,7 +4034,10 @@ def check_wikilink_pipe_spacing(wiki_root: Path) -> list[dict[str, Any]]:
 
 
 def check_bare_basename_links(wiki_root: Path) -> list[dict[str, Any]]:
-    """Page wikilinks must be path-qualified (CLAUDE.md -> Wikilink Format):
+    """
+    Page wikilinks must be path-qualified (CLAUDE.md -> Wikilink
+    Format):
+
     `[[folder/path/file.md|display]]`. A target with no `/` is a bare-basename
     link. Resolution still works (`_link_stem` stays tolerant so the graph
     checks keep resolving), but the schema forbids the bare form vault-wide.
@@ -4061,9 +4059,7 @@ def check_bare_basename_links(wiki_root: Path) -> list[dict[str, Any]]:
                 target = text[m.start(1) : m.end(1)].split('|', 1)[0].strip()
                 if not target or target.startswith('#'):
                     continue  # pure-anchor self-link
-                base = target.split('#', 1)[
-                    0
-                ]  # drop anchor before the path test
+                base = target.split('#', 1)[0]  # drop anchor before the path test
                 if '/' in base or base in seen:
                     continue
                 # A real link target is a path stem (letters, digits, `._-`).
@@ -4103,8 +4099,11 @@ UNLINKED_MENTION_MIN_LEN = 5
 
 
 def _display_forms_for(stem: str, fm: dict[str, Any]) -> set[str]:
-    """Plain-prose forms a page is referred to by: its un-dashed stem plus any
-    `aliases:`. Lowercased for case-insensitive matching; forms shorter than
+    """
+    Plain-prose forms a page is referred to by: its un-dashed stem plus
+    any `aliases:`.
+
+    Lowercased for case-insensitive matching; forms shorter than
     UNLINKED_MENTION_MIN_LEN are dropped (too common to match safely).
     """
     forms = {stem.replace('-', ' ').strip().lower()}
@@ -4117,16 +4116,20 @@ def _display_forms_for(stem: str, fm: dict[str, Any]) -> set[str]:
 
 
 def check_unlinked_page_mentions(wiki_root: Path) -> list[dict[str, Any]]:
-    """Flag an existing page's title/alias appearing as plain text in another
-    page's body where it should be a wikilink (CLAUDE.md -> Wikilink Format:
-    "Link every genuine reference to a page that exists"). Emits one finding per
-    (page, target) with the unlinked-occurrence count; audit/ingest apply the
-    judgement of which occurrences are genuine references vs generic wording.
-    Code spans, existing `[[wikilinks]]`, and double-quoted spans are masked
-    (the quote exception); a page's own stem/aliases are excluded so it is not
-    asked to link to itself. An occurrence audit has confirmed generic is
-    suppressed via UNLINKED_MENTION_IGNORE, the check's verified-ignore list —
-    scoped to the page and anchored to the phrase, so it re-flags if reworded.
+    """
+    Flag an existing page's title/alias appearing as plain text in
+    another page's body where it should be a wikilink (CLAUDE.md ->
+    Wikilink Format:
+
+    "Link every genuine reference to a page that exists"). Emits one
+    finding per (page, target) with the unlinked-occurrence count;
+    audit/ingest apply the judgement of which occurrences are genuine
+    references vs generic wording. Code spans, existing `[[wikilinks]]`,
+    and double-quoted spans are masked (the quote exception); a page's
+    own stem/aliases are excluded so it is not asked to link to itself.
+    An occurrence audit has confirmed generic is suppressed via
+    UNLINKED_MENTION_IGNORE, the check's verified-ignore list — scoped
+    to the page and anchored to the phrase, so it re-flags if reworded.
     """
     findings: list[dict[str, Any]] = []
     repo_root = wiki_root.parent
@@ -4166,18 +4169,14 @@ def check_unlinked_page_mentions(wiki_root: Path) -> list[dict[str, Any]]:
 
     # Longest-first so a multi-word form wins over a contained shorter one
     # ("centralized topology" before "topology"); re.finditer is non-overlapping.
-    alt = '|'.join(
-        re.escape(f) for f in sorted(form_to_stem, key=len, reverse=True)
-    )
+    alt = '|'.join(re.escape(f) for f in sorted(form_to_stem, key=len, reverse=True))
     # `(?!\.\w)` guards a `.`-then-alphanumeric continuation (a version/decimal
     # suffix): a form like `gpt-3` must not match inside `GPT-3.5` / `GPT-3.5-Turbo`
     # (the `.` is neither a word char nor a hyphen, so `(?![\w-])` alone treats it
     # as a boundary and over-matches). A `.` followed by space or end-of-line is a
     # real sentence period ("the model is GPT-3.") and still matches as a genuine
     # reference.
-    mention_re = re.compile(
-        r'(?<![\w-])(' + alt + r')(?![\w-])(?!\.\w)', re.IGNORECASE
-    )
+    mention_re = re.compile(r'(?<![\w-])(' + alt + r')(?![\w-])(?!\.\w)', re.IGNORECASE)
 
     # Scan every page type, source pages included. The CLAUDE.md rule ("link
     # every genuine reference to a page that exists, on every occurrence") applies
@@ -4196,18 +4195,14 @@ def check_unlinked_page_mentions(wiki_root: Path) -> list[dict[str, Any]]:
             text = page.read_text(encoding='utf-8')
             _, end = parse_frontmatter(text=text)
             body = '\n'.join(text.split('\n')[end + 1 :])
-            scan = _mask_noscan_spans(
-                text=body
-            )  # code + [[...]] spans blanked
+            scan = _mask_noscan_spans(text=body)  # code + [[...]] spans blanked
             scan = re.sub(r'"[^"\n]*"', lambda m: ' ' * len(m.group(0)), scan)
             # Blank the H1 title line: a markdown heading is never wikilinked, and
             # on a source page the H1 is the paper title, which routinely contains
             # another page's name (a system or concept the paper is about) — not a
             # linkable prose reference. (Callout sections use `> [!type]`, not `#`,
             # so this only removes the one title line.)
-            scan = re.sub(
-                r'(?m)^#[ ].*$', lambda m: ' ' * len(m.group(0)), scan
-            )
+            scan = re.sub(r'(?m)^#[ ].*$', lambda m: ' ' * len(m.group(0)), scan)
             self_forms = own_forms.get(page.stem, set())
             rel = str(page.relative_to(repo_root))
 
@@ -4227,9 +4222,7 @@ def check_unlinked_page_mentions(wiki_root: Path) -> list[dict[str, Any]]:
                 for idx in idxs:
                     spans.extend(
                         (pm.start(), pm.end(), idx)
-                        for pm in UNLINKED_MENTION_IGNORE[idx][
-                            'pattern'
-                        ].finditer(scan)
+                        for pm in UNLINKED_MENTION_IGNORE[idx]['pattern'].finditer(scan)
                     )
 
             counts: dict[str, int] = {}
@@ -4284,7 +4277,8 @@ def _stale_mention_ignore_findings(
     page_paths: dict[str, Path],
     repo_root: Path,
 ) -> list[dict[str, Any]]:
-    """Report every verified-ignore entry that suppressed nothing this run.
+    """
+    Report every verified-ignore entry that suppressed nothing this run.
 
     A stale entry is INERT, not dangerous — the phrase anchor means it can only
     fail to match, never wrongly suppress (check_unlinked_page_mentions) — so this
@@ -4345,13 +4339,13 @@ CHRONO_LOG_RE = re.compile(r'^## \[(\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))?\]')
 CHRONO_HOT_RE = re.compile(r'^- \[(\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))?\]')
 
 
-def _chronology_findings(
-    rel: str, entries: list[tuple]
-) -> list[dict[str, Any]]:
-    """Shared check for one reverse-chronological section: every entry carries a
-    `[YYYY-MM-DD HH:MM]` time, and the timed entries run newest-first (CLAUDE.md →
-    Hot, Index, And Log). `entries` is a list of (date, time_or_None, label) in
-    file order.
+def _chronology_findings(rel: str, entries: list[tuple]) -> list[dict[str, Any]]:
+    """
+    Shared check for one reverse-chronological section: every entry
+    carries a `[YYYY-MM-DD HH:MM]` time, and the timed entries run
+    newest-first (CLAUDE.md → Hot, Index, And Log).
+
+    `entries` is a list of (date, time_or_None, label) in file order.
     """
     findings: list[dict[str, Any]] = []
     if not entries:
@@ -4379,9 +4373,7 @@ def _chronology_findings(
             )
         )
     timed = [(d, t) for d, t, _ in entries if t is not None]
-    if timed and timed != sorted(
-        timed, key=lambda x: (x[0], x[1]), reverse=True
-    ):
+    if timed and timed != sorted(timed, key=lambda x: (x[0], x[1]), reverse=True):
         findings.append(
             finding(
                 check='chronology_out_of_order',
@@ -4401,9 +4393,12 @@ def _chronology_findings(
 
 
 def check_chronology(wiki_root: Path) -> list[dict[str, Any]]:
-    """log.md (every entry) and hot.md Recent activity must be timed and ordered
-    newest-first (CLAUDE.md → Hot, Index, And Log). The time disambiguates order
-    when work from separately-merged branches interleaves in one file.
+    """
+    log.md (every entry) and hot.md Recent activity must be timed and
+    ordered newest-first (CLAUDE.md → Hot, Index, And Log).
+
+    The time disambiguates order when work from separately-merged
+    branches interleaves in one file.
     """
     findings: list[dict[str, Any]] = []
     log = wiki_root / 'log.md'
@@ -4441,12 +4436,15 @@ def check_chronology(wiki_root: Path) -> list[dict[str, Any]]:
 
 
 def check_pagination_registration(wiki_root: Path) -> list[dict[str, Any]]:
-    """A raw cited somewhere with a `#page=N` deep-link but absent from the
-    pagination map. The citation still lints — the locator-completeness checks
-    fall back to the `app.`-anchor heuristic, and locator_page_mismatch simply
-    cannot run on the raw — so this is an INFO nudge, not a blocker: register the
-    raw so its `p. M` locators can be verified. One finding per unregistered raw,
-    reported against the raw path.
+    """
+    A raw cited somewhere with a `#page=N` deep-link but absent from the
+    pagination map.
+
+    The citation still lints — the locator-completeness checks fall back
+    to the `app.`-anchor heuristic, and locator_page_mismatch simply
+    cannot run on the raw — so this is an INFO nudge, not a blocker:
+    register the raw so its `p. M` locators can be verified. One finding
+    per unregistered raw, reported against the raw path.
     """
     findings: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -4540,8 +4538,7 @@ def main() -> int:
     return (
         1
         if any(
-            f['severity'] == 'error'
-            and f['check_id'] not in STANDING_NONBLOCKING
+            f['severity'] == 'error' and f['check_id'] not in STANDING_NONBLOCKING
             for f in findings
         )
         else 0

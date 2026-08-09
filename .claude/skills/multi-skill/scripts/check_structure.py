@@ -71,7 +71,8 @@ RESERVED_NAME_WORDS = ('anthropic', 'claude')
 def load_skill_md(
     skill_md_path: Path,
 ) -> tuple[dict[str, Any] | None, int, list[str]]:
-    """Read SKILL.md and return (frontmatter_dict_or_None, end_line, body).
+    """
+    Read SKILL.md and return (frontmatter_dict_or_None, end_line, body).
 
     body_lines is a list of lines AFTER the closing '---' of frontmatter
     (1-indexed line numbers in SKILL.md correspond to
@@ -118,7 +119,8 @@ def load_skill_md(
 
 
 def _naive_yaml(text: str) -> dict[str, Any]:
-    """Tiny `key: value` parser for environments without PyYAML.
+    """
+    Tiny `key: value` parser for environments without PyYAML.
 
     Only used as a fallback. Handles plain scalars and quoted strings;
     folded/literal multi-line scalars and nested mappings degrade to
@@ -148,7 +150,9 @@ def check_frontmatter(
     fm: dict[str, Any] | None,
     skill_md_rel: str,
 ) -> list[dict[str, Any]]:
-    """Validate the YAML frontmatter against the documented schema."""
+    """
+    Validate the YAML frontmatter against the documented schema.
+    """
     findings: list[dict[str, Any]] = []
     if fm is None:
         findings.append(
@@ -244,9 +248,7 @@ def check_frontmatter(
                 'check_id': 'description_missing',
                 'file': skill_md_rel,
                 'line': None,
-                'message': (
-                    "Frontmatter is missing the required 'description' field."
-                ),
+                'message': ("Frontmatter is missing the required 'description' field."),
                 'fix_hint': (
                     "Add a non-empty 'description' that says what the skill "
                     'does AND when to use it.'
@@ -321,7 +323,8 @@ def check_body_length(
     frontmatter_end_line: int,
     skill_md_rel: str,
 ) -> list[dict[str, Any]]:
-    """Flag SKILL.md bodies that exceed the length budget.
+    """
+    Flag SKILL.md bodies that exceed the length budget.
 
     Two measures because this repo writes each paragraph as one physical
     line (no hard wrap): the physical-line count under-counts a dense body,
@@ -364,8 +367,7 @@ def check_body_length(
             'file': skill_md_rel,
             'line': frontmatter_end_line + n_lines,
             'message': (
-                f'SKILL.md body is {"; ".join(parts)}; a dense body eats '
-                f'context.{tail}'
+                f'SKILL.md body is {"; ".join(parts)}; a dense body eats context.{tail}'
             ),
             'fix_hint': (
                 'Move detail into separate files under references/ '
@@ -483,7 +485,9 @@ PROC_SUBST_RE = re.compile(r'<\(')
 
 
 def strip_inline_code(line: str) -> str:
-    """Remove inline-code spans before prose checks."""
+    """
+    Remove inline-code spans before prose checks.
+    """
     return re.sub(r'`[^`]*`', '', line)
 
 
@@ -492,7 +496,9 @@ def check_html_tags(
     line_offset: int,
     file_rel: str,
 ) -> list[dict[str, Any]]:
-    """Flag raw HTML tags outside fenced code blocks."""
+    """
+    Flag raw HTML tags outside fenced code blocks.
+    """
     findings: list[dict[str, Any]] = []
     in_code_fence = False
     for i, line in enumerate(markdown_lines):
@@ -549,7 +555,8 @@ def check_paths(
     frontmatter_end_line: int,
     skill_md_rel: str,
 ) -> list[dict[str, Any]]:
-    """Flag Windows-style backslash paths in the SKILL.md body.
+    """
+    Flag Windows-style backslash paths in the SKILL.md body.
 
     Lines inside fenced code blocks are skipped: a backslash path in a
     PowerShell / cmd example is legitimate, not a portability defect. The
@@ -585,8 +592,10 @@ def check_reference_depth_and_toc(
     skill_dir: Path,
     body_text: str,
 ) -> list[dict[str, Any]]:
-    """For each reference file linked from SKILL.md, check it's one level
-    deep AND has a table of contents if longer than the threshold."""
+    """
+    For each reference file linked from SKILL.md, check it's one level
+    deep AND has a table of contents if longer than the threshold.
+    """
     findings: list[dict[str, Any]] = []
 
     # Collect references linked directly from SKILL.md.
@@ -643,9 +652,7 @@ def check_reference_depth_and_toc(
         # file are problematic.
         for m in MD_LINK_RE.finditer(content):
             target = m.group(1).split('#', 1)[0]
-            if not target or target.startswith(
-                ('http://', 'https://', 'mailto:')
-            ):
+            if not target or target.startswith(('http://', 'https://', 'mailto:')):
                 continue
             if target.endswith('.md'):
                 findings.append(
@@ -721,7 +728,9 @@ _SKILL_REF_TEMPLATE_CHARS = set('{}<>*$…')
 
 
 def _looks_like_skill_ref(token: str) -> bool:
-    """True if `token` is a concrete skill-infra path worth resolving."""
+    """
+    True if `token` is a concrete skill-infra path worth resolving.
+    """
     if not (token.endswith('.md') or token.endswith('.py')):
         return False
     if '/' not in token:
@@ -740,12 +749,14 @@ def _looks_like_skill_ref(token: str) -> bool:
 
 
 def _is_bare_skill_ref(token: str, repo_root: Path) -> bool:
-    """True if `token` is a bare `<skill>/<file>.md|.py` reference.
+    """
+    True if `token` is a bare `<skill>/<file>.md|.py` reference.
 
     The abbreviated citation form drops the `references/`/`scripts/`
-    segment, so `_looks_like_skill_ref` misses it. Disk-gate on the leading
-    segment naming a real skill directory, so only a genuine skill
-    reference (not an arbitrary two-segment path in prose) is a candidate.
+    segment, so `_looks_like_skill_ref` misses it. Disk-gate on the
+    leading segment naming a real skill directory, so only a genuine
+    skill reference (not an arbitrary two-segment path in prose) is a
+    candidate.
     """
     if not (token.endswith('.md') or token.endswith('.py')):
         return False
@@ -760,8 +771,9 @@ def _is_bare_skill_ref(token: str, repo_root: Path) -> bool:
 
 
 def _skill_ref_resolves(token: str, skill_dir: Path, repo_root: Path) -> bool:
-    """True if `token` resolves under the repo root, .claude/skills/,
-    or the skill dir.
+    """
+    True if `token` resolves under the repo root, .claude/skills/, or
+    the skill dir.
     """
     bases = (repo_root, repo_root / '.claude' / 'skills', skill_dir)
     return any((base / token).exists() for base in bases)
@@ -830,9 +842,11 @@ def check_inline_code_refs(
 
 
 def find_repo_root(skill_dir: Path) -> Path | None:
-    """Walk up from the skill dir to the repo root.
+    """
+    Walk up from the skill dir to the repo root.
 
-    The repo root is the ancestor holding both `.claude/` and `CLAUDE.md`.
+    The repo root is the ancestor holding both `.claude/` and
+    `CLAUDE.md`.
     """
     for anc in [skill_dir, *skill_dir.parents]:
         if (anc / '.claude').is_dir() and (anc / 'CLAUDE.md').exists():
@@ -848,8 +862,7 @@ def main() -> int:
         args = [a for a in args if a != '--single-file']
     if len(args) != 1:
         print(
-            'Usage: python check_structure.py '
-            '<skill-dir-or-SKILL.md> [--single-file]',
+            'Usage: python check_structure.py <skill-dir-or-SKILL.md> [--single-file]',
             file=sys.stderr,
         )
         return 2
@@ -922,9 +935,7 @@ def main() -> int:
                     ref_lines = ref.read_text(encoding='utf-8').splitlines()
                 except (OSError, UnicodeDecodeError):
                     continue
-                scan_files.append(
-                    (ref.relative_to(skill_dir).as_posix(), ref_lines, 0)
-                )
+                scan_files.append((ref.relative_to(skill_dir).as_posix(), ref_lines, 0))
             findings += check_inline_code_refs(
                 skill_dir=skill_dir,
                 repo_root=repo_root,

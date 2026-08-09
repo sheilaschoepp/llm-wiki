@@ -1,30 +1,35 @@
 #!/usr/bin/env python3
-"""Deterministic auto-fix for the `chronology_missing_time` (recoverable case)
-and `chronology_out_of_order` lint checks.
+"""
+Deterministic auto-fix for the `chronology_missing_time` (recoverable
+case) and `chronology_out_of_order` lint checks.
 
-Re-sorts the two reverse-chronological files — `1-wiki/log.md` (every `## [date
-time] …` entry, with its body) and `1-wiki/hot.md`'s Recent activity bullets —
-into descending (date, time) order, newest first (CLAUDE.md → Hot, Index, And
-Log). The sort key is the `[YYYY-MM-DD HH:MM]` header only; entry bodies move
-with their header and no prose is changed, so the edit is determinate. The sort
-is stable: entries sharing a (date, time) keep their original relative order.
+Re-sorts the two reverse-chronological files — `1-wiki/log.md` (every
+`## [date time] …` entry, with its body) and `1-wiki/hot.md`'s Recent
+activity bullets — into descending (date, time) order, newest first
+(CLAUDE.md → Hot, Index, And Log). The sort key is the `[YYYY-MM-DD
+HH:MM]` header only; entry bodies move with their header and no prose is
+changed, so the edit is determinate. The sort is stable: entries sharing
+a (date, time) keep their original relative order.
 
-Before sorting, recovers a missing `HH:MM` for any untimed entry from the entry's
-own linked report filename (`2-outputs/…-YYYY-MM-DD-HHMM-…`) when that is
-determinate — exactly one such link whose date matches the entry's date. This
-transcribes a time already present in a linked artifact (the date cross-check
-guards it); it never invents a time and never consults git (commit time is an
-unreliable sort key). An untimed entry with no recoverable link still surfaces as
-the `chronology_missing_time` finding: the file is skipped untouched (sorting on
-an unknown key would misplace it) and that time must be added by hand first.
+Before sorting, recovers a missing `HH:MM` for any untimed entry from
+the entry's own linked report filename (`2-outputs/…-YYYY-MM-DD-HHMM-…`)
+when that is determinate — exactly one such link whose date matches the
+entry's date. This transcribes a time already present in a linked
+artifact (the date cross-check guards it); it never invents a time and
+never consults git (commit time is an unreliable sort key). An untimed
+entry with no recoverable link still surfaces as the
+`chronology_missing_time` finding: the file is skipped untouched
+(sorting on an unknown key would misplace it) and that time must be
+added by hand first.
 
-Idempotent: an already-sorted, fully-timed file is rewritten byte-identically.
+Idempotent: an already-sorted, fully-timed file is rewritten byte-
+identically.
 
-    python3 .claude/skills/lint/scripts/sort_chronology.py [wiki-path]
+python3 .claude/skills/lint/scripts/sort_chronology.py [wiki-path]
 
-`wiki-path` defaults to `1-wiki`. Exit code 0 on success (filled and/or sorted, or
-already sorted), 1 if a file was skipped for an unrecoverable missing time, 2 on a
-usage/path error.
+`wiki-path` defaults to `1-wiki`. Exit code 0 on success (filled and/or
+sorted, or already sorted), 1 if a file was skipped for an unrecoverable
+missing time, 2 on a usage/path error.
 """
 
 from __future__ import annotations
@@ -40,17 +45,20 @@ HOT_ENTRY_RE = re.compile(r'^- \[(\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))?\]')
 # (e.g. query-2026-06-23-1045-…). A missing `[date]` time is recoverable from it
 # — transcribed, not invented — when the link is determinate. (The check side,
 # `check_chronology` in check_wiki.py, points its fix_hint here.)
-REPORT_TIME_RE = re.compile(
-    r'2-outputs/[^\s\]|)]*-(\d{4}-\d{2}-\d{2})-(\d{2})(\d{2})'
-)
+REPORT_TIME_RE = re.compile(r'2-outputs/[^\s\]|)]*-(\d{4}-\d{2}-\d{2})-(\d{2})(\d{2})')
 
 
 def recover_time(entry_text: str, entry_date: str) -> str | None:
-    """Recover an untimed entry's `HH:MM` from a linked report filename, or None if
-    not determinate. Only a `2-outputs/…-YYYY-MM-DD-HHMM-…` link whose date equals
-    `entry_date` counts, and exactly one distinct time must be found — zero,
-    conflicting, or only date-mismatched links stay manual (None). Never invents a
-    time and never consults git (commit time is an unreliable sort key)."""
+    """
+    Recover an untimed entry's `HH:MM` from a linked report filename, or
+    None if not determinate.
+
+    Only a `2-outputs/…-YYYY-MM-DD-HHMM-…` link whose date equals
+    `entry_date` counts, and exactly one distinct time must be found —
+    zero, conflicting, or only date-mismatched links stay manual (None).
+    Never invents a time and never consults git (commit time is an
+    unreliable sort key).
+    """
     times = set()
     for m in REPORT_TIME_RE.finditer(entry_text):
         date, hh, mm = m.group(1), m.group(2), m.group(3)
@@ -60,13 +68,14 @@ def recover_time(entry_text: str, entry_date: str) -> str | None:
 
 
 def sort_log(path: Path) -> str:
-    """Return the sorted text of log.md, or raise ValueError if an entry is
-    untimed. Preamble (everything before the first dated header) is preserved.
+    """
+    Return the sorted text of log.md, or raise ValueError if an entry is
+    untimed.
+
+    Preamble (everything before the first dated header) is preserved.
     """
     lines = path.read_text(encoding='utf-8').split('\n')
-    first = next(
-        (i for i, l in enumerate(lines) if LOG_HEADER_RE.match(l)), None
-    )
+    first = next((i for i, l in enumerate(lines) if LOG_HEADER_RE.match(l)), None)
     if first is None:
         return path.read_text(encoding='utf-8')  # nothing to sort
     preamble = lines[:first]
@@ -95,17 +104,11 @@ def sort_log(path: Path) -> str:
     # left untouched and the time must be added by hand first.
     for e in entries:
         if e[1] is None:
-            t = recover_time(
-                entry_text='\n'.join([e[2]] + e[3]), entry_date=e[0]
-            )
+            t = recover_time(entry_text='\n'.join([e[2]] + e[3]), entry_date=e[0])
             if t is None:
-                raise ValueError(
-                    f'untimed entry not auto-recoverable: {e[2][:60]}'
-                )
+                raise ValueError(f'untimed entry not auto-recoverable: {e[2][:60]}')
             e[1] = t
-            e[2] = re.sub(
-                r'^(## \[\d{4}-\d{2}-\d{2})\]', rf'\1 {t}]', e[2], count=1
-            )
+            e[2] = re.sub(r'^(## \[\d{4}-\d{2}-\d{2})\]', rf'\1 {t}]', e[2], count=1)
 
     # Stable sort: equal (date, time) keep original order even under reverse.
     entries.sort(key=lambda e: (e[0], e[1]), reverse=True)
@@ -119,8 +122,11 @@ def sort_log(path: Path) -> str:
 
 
 def sort_hot(path: Path) -> str:
-    """Return the text of hot.md with the Recent activity entries sorted newest-first,
-    or raise ValueError if an entry is untimed. Mirrors sort_log so no content is
+    """
+    Return the text of hot.md with the Recent activity entries sorted
+    newest-first, or raise ValueError if an entry is untimed.
+
+    Mirrors sort_log so no content is
     dropped: a non-entry line before the first dated bullet (a placeholder, a parked
     note) stays as a preamble, and lines following a bullet (a sub-bullet, a wrapped
     continuation) move with it as its body. Every other section is preserved verbatim.
@@ -133,18 +139,12 @@ def sort_hot(path: Path) -> str:
     except StopIteration:
         return path.read_text(encoding='utf-8')
     end = next(
-        (
-            i
-            for i in range(start + 1, len(lines))
-            if lines[i].startswith('## ')
-        ),
+        (i for i in range(start + 1, len(lines)) if lines[i].startswith('## ')),
         len(lines),
     )
     block = lines[start + 1 : end]
 
-    first = next(
-        (i for i, l in enumerate(block) if HOT_ENTRY_RE.match(l)), None
-    )
+    first = next((i for i, l in enumerate(block) if HOT_ENTRY_RE.match(l)), None)
     if first is None:
         return path.read_text(
             encoding='utf-8'
@@ -175,17 +175,13 @@ def sort_hot(path: Path) -> str:
     # (determinate only); an entry with no recoverable link stays a manual finding.
     for e in entries:
         if e[1] is None:
-            t = recover_time(
-                entry_text='\n'.join([e[2]] + e[3]), entry_date=e[0]
-            )
+            t = recover_time(entry_text='\n'.join([e[2]] + e[3]), entry_date=e[0])
             if t is None:
                 raise ValueError(
                     f'untimed Recent-activity entry not auto-recoverable: {e[2][:60]}'
                 )
             e[1] = t
-            e[2] = re.sub(
-                r'^(- \[\d{4}-\d{2}-\d{2})\]', rf'\1 {t}]', e[2], count=1
-            )
+            e[2] = re.sub(r'^(- \[\d{4}-\d{2}-\d{2})\]', rf'\1 {t}]', e[2], count=1)
 
     # Stable sort: equal (date, time) keep original order even under reverse.
     entries.sort(key=lambda e: (e[0], e[1]), reverse=True)

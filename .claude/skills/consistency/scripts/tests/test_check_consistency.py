@@ -1,12 +1,15 @@
-"""Regression tests for check_consistency.py.
+"""
+Regression tests for check_consistency.py.
 
-Pins the bug classes two review panels rediscovered (crash on missing wiki
-subfolder, fence false positives, nondeterministic output, parser
-misattribution) plus the script's own wiring invariants. Run from anywhere:
+Pins the bug classes two review panels rediscovered (crash on missing
+wiki subfolder, fence false positives, nondeterministic output, parser
+misattribution) plus the script's own wiring invariants. Run from
+anywhere:
 
-    python3 -m unittest discover -s .claude/skills/consistency/scripts/tests
+python3 -m unittest discover -s .claude/skills/consistency/scripts/tests
 
-The module is loaded by path so the tests do not depend on cwd or packaging.
+The module is loaded by path so the tests do not depend on cwd or
+packaging.
 """
 
 from __future__ import annotations
@@ -22,9 +25,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 HERE = Path(__file__).resolve()
-SCRIPT = (
-    HERE.parents[1] / 'check_consistency.py'
-)  # scripts/check_consistency.py
+SCRIPT = HERE.parents[1] / 'check_consistency.py'  # scripts/check_consistency.py
 REPO = HERE.parents[5]  # repo root
 
 spec = importlib.util.spec_from_file_location('check_consistency', SCRIPT)
@@ -48,7 +49,10 @@ def _addr(local: str, domain: str) -> str:
 
 
 class TestCheckConsistency(unittest.TestCase):
-    """Regression + wiring tests for check_consistency.py (one cohesive suite per script)."""
+    """
+    Regression + wiring tests for check_consistency.py (one cohesive
+    suite per script).
+    """
 
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
@@ -130,15 +134,12 @@ class TestCheckConsistency(unittest.TestCase):
     # the ├──/└── branches the parser reads, so the root's name is irrelevant.
 
     def _tree_repo(self, root_label: str) -> Path:
-        """A minimal repo whose CLAUDE.md tree is rooted at `root_label`."""
+        """
+        A minimal repo whose CLAUDE.md tree is rooted at `root_label`.
+        """
         (self.tmp / '0-raw').mkdir()
         (self.tmp / 'CLAUDE.md').write_text(
-            '# Schema\n\n'
-            '```text\n'
-            f'{root_label}\n'
-            '├── CLAUDE.md\n'
-            '└── 0-raw/\n'
-            '```\n',
+            f'# Schema\n\n```text\n{root_label}\n├── CLAUDE.md\n└── 0-raw/\n```\n',
             encoding='utf-8',
         )
         (self.tmp / 'MEMORY.md').write_text('m\n')
@@ -176,12 +177,8 @@ class TestCheckConsistency(unittest.TestCase):
             '```python\nx = ".claude/nope/fake.py"\n```\n\n'
             '`0-raw/real-fake.md` outside a fence.\n'
         )
-        msgs = [
-            f['message'] for f in cc.check_referenced_paths_exist(self.tmp)
-        ]
-        assert any(
-            '0-raw/real-fake.md' in m for m in msgs
-        )  # out-of-fence flagged
+        msgs = [f['message'] for f in cc.check_referenced_paths_exist(self.tmp)]
+        assert any('0-raw/real-fake.md' in m for m in msgs)  # out-of-fence flagged
         assert not any('fake.py' in m for m in msgs)  # in-fence suppressed
 
     # --- regression: section-list parser misattribution ---
@@ -223,26 +220,18 @@ class TestCheckConsistency(unittest.TestCase):
         # vault's own -- e.g. pagination-map.md sections are keyed on the vault's
         # raw stems, every one a corpus bibkey. Requiring placeholder bibkeys
         # there is incoherent; same rationale as the `-memory.md` journals.
-        leaked = _synthetic_bibkey(
-            author='Corpus', year='2097', title='GammaEF'
-        )
+        leaked = _synthetic_bibkey(author='Corpus', year='2097', title='GammaEF')
         lint = self.tmp / '.claude' / 'skills' / 'lint'
         lint.mkdir(parents=True)
         (lint / 'SKILL.md').write_text('A lint skill.\n')
         for name in cc.AGENT_DATA_FILES:
-            (lint / name).write_text(
-                f'## 0-raw/papers/{leaked}.pdf\n- 1 = 1\n'
-            )
-        flagged = {
-            f['file'] for f in cc.check_domain_literature_leakage(self.tmp)
-        }
+            (lint / name).write_text(f'## 0-raw/papers/{leaked}.pdf\n- 1 = 1\n')
+        flagged = {f['file'] for f in cc.check_domain_literature_leakage(self.tmp)}
         for name in cc.AGENT_DATA_FILES:
             assert f'.claude/skills/lint/{name}' not in flagged, name
         # ...but an ordinary file in the SAME folder is still scanned.
         (lint / 'references.md').write_text(f'See `{leaked}`.\n')
-        flagged = {
-            f['file'] for f in cc.check_domain_literature_leakage(self.tmp)
-        }
+        flagged = {f['file'] for f in cc.check_domain_literature_leakage(self.tmp)}
         assert '.claude/skills/lint/references.md' in flagged
 
     def test_agent_data_files_constant_matches_disk(self) -> None:
@@ -253,23 +242,15 @@ class TestCheckConsistency(unittest.TestCase):
         # skills that read check_wiki.py), not lint/.
         data_dir = REPO / '.claude' / 'skills' / 'multi-skill'
         for name in cc.AGENT_DATA_FILES:
-            assert (data_dir / name).exists(), (
-                f'{name} declared exempt but not on disk'
-            )
+            assert (data_dir / name).exists(), f'{name} declared exempt but not on disk'
 
     def test_domain_literature_leakage_flags_and_exempts(self) -> None:
         placeholder = next(
             iter(cc.PLACEHOLDER_BIBKEYS)
         )  # allowlisted, fetched at runtime
-        leaked_a = _synthetic_bibkey(
-            author='Corpus', year='2099', title='AlphaAB'
-        )
-        leaked_b = _synthetic_bibkey(
-            author='Corpus', year='2098', title='BetaCD'
-        )
-        exempt_mem = _synthetic_bibkey(
-            author='Corpus', year='2096', title='DeltaGH'
-        )
+        leaked_a = _synthetic_bibkey(author='Corpus', year='2099', title='AlphaAB')
+        leaked_b = _synthetic_bibkey(author='Corpus', year='2098', title='BetaCD')
+        exempt_mem = _synthetic_bibkey(author='Corpus', year='2096', title='DeltaGH')
         # CLAUDE.md: a placeholder (ok) plus a leaked corpus citation (flag).
         (self.tmp / 'CLAUDE.md').write_text(
             f'Example source `{placeholder}` is fine.\n'
@@ -306,24 +287,18 @@ class TestCheckConsistency(unittest.TestCase):
         skill = skills / 'dummy'
         (skill / 'scripts').mkdir(parents=True)
         # A backticked, referenced script -> not orphan.
-        (skill / 'SKILL.md').write_text(
-            'Run `scripts/run.py` to do the thing.\n'
-        )
+        (skill / 'SKILL.md').write_text('Run `scripts/run.py` to do the thing.\n')
         (skill / 'scripts' / 'run.py').write_text('print("hi")\n')
         # Transient pytest cache under scripts/ -> must be skipped, not flagged.
         cache = skill / 'scripts' / '.pytest_cache' / 'v' / 'cache'
         cache.mkdir(parents=True)
-        (skill / 'scripts' / '.pytest_cache' / 'CACHEDIR.TAG').write_text(
-            'x\n'
-        )
+        (skill / 'scripts' / '.pytest_cache' / 'CACHEDIR.TAG').write_text('x\n')
         (cache / 'lastfailed').write_text('{}\n')
         # A genuinely unreferenced script -> still flagged.
         (skill / 'scripts' / 'orphan.py').write_text('print("orphan")\n')
 
         files = {f['file'] for f in cc.check_orphan_skill_scripts(self.tmp)}
-        assert (
-            '.claude/skills/dummy/scripts/orphan.py' in files
-        )  # real orphan flagged
+        assert '.claude/skills/dummy/scripts/orphan.py' in files  # real orphan flagged
         assert not any('.pytest_cache' in f for f in files)  # cache skipped
         assert (
             '.claude/skills/dummy/scripts/run.py' not in files
@@ -345,9 +320,7 @@ class TestCheckConsistency(unittest.TestCase):
     def test_catalogue_detects_count_drift(self) -> None:
         import re
 
-        src = (
-            REPO / '.claude/skills/consistency/references/checks.md'
-        ).read_text()
+        src = (REPO / '.claude/skills/consistency/references/checks.md').read_text()
         broken = re.sub(r'\d+ checks across', '99 checks across', src, count=1)
         assert broken != src  # the substitution actually landed
         dest = self.tmp / '.claude/skills/consistency/references'

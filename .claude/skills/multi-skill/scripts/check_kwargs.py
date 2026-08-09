@@ -215,7 +215,8 @@ ALLOW_LIST = ALLOW_LIST_BUILTINS | ALLOW_LIST_EXCEPTIONS | ALLOW_LIST_OTHER
 
 
 def call_has_positional_args(call: ast.Call) -> bool:
-    """Return True if the call passes at least one positional argument.
+    """
+    Return True if the call passes at least one positional argument.
 
     `*args` unpacking counts as positional (the unpacked values arrive
     positionally at the callee). `**kwargs` unpacking is fine.
@@ -224,7 +225,8 @@ def call_has_positional_args(call: ast.Call) -> bool:
 
 
 def call_target_name(call: ast.Call) -> str | None:
-    """Return the bare-name function being called, or None.
+    """
+    Return the bare-name function being called, or None.
 
     Returns None for attribute calls (obj.method()), subscript calls
     (foo[0]()), and lambda calls — all of which fall outside the
@@ -237,7 +239,8 @@ def call_target_name(call: ast.Call) -> str | None:
 
 
 def find_positional_calls(file_path: Path) -> list[dict]:
-    """Walk one .py file and return findings for positional calls.
+    """
+    Walk one .py file and return findings for positional calls.
 
     A finding is emitted when the call target is a bare name not in
     ALLOW_LIST and the call has one or more positional args.
@@ -312,21 +315,18 @@ def find_positional_calls(file_path: Path) -> list[dict]:
 
 
 def resolve_target_files(target: Path) -> list[Path]:
-    """Return the list of .py files to scan for a given input path.
+    """
+    Return the list of .py files to scan for a given input path.
 
-    A skill directory yields every scripts/*.py.
-    A scripts/ directory yields every *.py inside it.
-    A single .py file yields just that file.
+    A skill directory yields every scripts/*.py. A scripts/ directory
+    yields every *.py inside it. A single .py file yields just that
+    file.
     """
     if target.is_dir():
-        scripts_dir = (
-            target if target.name == 'scripts' else target / 'scripts'
-        )
+        scripts_dir = target if target.name == 'scripts' else target / 'scripts'
         if not scripts_dir.is_dir():
             return []
-        return sorted(
-            path for path in scripts_dir.glob('*.py') if path.is_file()
-        )
+        return sorted(path for path in scripts_dir.glob('*.py') if path.is_file())
     if target.suffix == '.py' and target.is_file():
         return [target]
     return []
@@ -337,7 +337,8 @@ def annotate_findings_with_relative_path(
     file_path: Path,
     skill_root: Path,
 ) -> None:
-    """Rewrite each finding's 'file' field to be relative to skill_root.
+    """
+    Rewrite each finding's 'file' field to be relative to skill_root.
 
     A script under scripts/ becomes 'scripts/<name>.py'.
     """

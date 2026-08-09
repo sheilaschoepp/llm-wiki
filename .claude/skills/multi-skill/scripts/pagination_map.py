@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Propose a pagination-map section for a raw PDF: what printed page number each
-physical page shows, read from the page footer.
+"""
+Propose a pagination-map section for a raw PDF: what printed page number
+each physical page shows, read from the page footer.
 
 The pagination map (`.claude/skills/multi-skill/pagination-map.md`) records a fact the
 locator checks depend on — what each physical page PRINTS — that is not
@@ -46,8 +47,10 @@ _STRIP = ' \t.,:;-–—[]()'
 
 
 def raw_key(pdf: Path) -> str:
-    """The path as it appears in a `#page=N` deep-link (`0-raw/...`): the tail
-    from the first `0-raw` component, else the path as given."""
+    """
+    The path as it appears in a `#page=N` deep-link (`0-raw/...`): the
+    tail from the first `0-raw` component, else the path as given.
+    """
     parts = pdf.parts
     if '0-raw' in parts:
         return '/'.join(parts[parts.index('0-raw') :])
@@ -61,8 +64,12 @@ def footer_text(page: 'fitz.Page') -> str:
 
 
 def propose_printed(footer: str) -> str:
-    """The most plausible printed page number in a footer, or `none`. Prefers a
-    footer line that is a bare arabic number, then a bare roman numeral."""
+    """
+    The most plausible printed page number in a footer, or `none`.
+
+    Prefers a footer line that is a bare arabic number, then a bare
+    roman numeral.
+    """
     arabic: list[str] = []
     roman: list[str] = []
     for line in footer.splitlines():

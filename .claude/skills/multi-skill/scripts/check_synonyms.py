@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-check_synonyms.py — flag inconsistent-terminology candidates in SKILL.md.
+check_synonyms.py — flag inconsistent-terminology candidates in
+SKILL.md.
 
 Why a separate script? "Inconsistent terminology" is a known blind spot for
 judgement-only review: when a body uses 'image', 'photo', and 'picture'
@@ -69,18 +70,18 @@ MIN_OCCURRENCES = 2
 # 'route' the verb vs a filesystem 'path') get re-reasoned each pass. This
 # data file records the groups a run confirmed distinct for a given skill so
 # later runs auto-suppress them, mirroring lint's verified-ignore data files.
-SYNONYM_IGNORE_FILE = (
-    Path(__file__).resolve().parent.parent / 'synonym-ignore.md'
-)
+SYNONYM_IGNORE_FILE = Path(__file__).resolve().parent.parent / 'synonym-ignore.md'
 
 
 def load_synonym_ignore(skill_name: str) -> list[frozenset[str]]:
-    """Return the confirmed-distinct term groups recorded for `skill_name`.
+    """
+    Return the confirmed-distinct term groups recorded for `skill_name`.
 
     The data file is a Markdown doc with a `## <skill-name>` section per
-    skill; each bullet lists slash-separated terms confirmed distinct (an
-    optional ' — rationale' tail is ignored). A finding is suppressed when
-    its present terms are a subset of any listed group for that skill.
+    skill; each bullet lists slash-separated terms confirmed distinct
+    (an optional ' — rationale' tail is ignored). A finding is
+    suppressed when its present terms are a subset of any listed group
+    for that skill.
     """
     try:
         text = SYNONYM_IGNORE_FILE.read_text(encoding='utf-8')
@@ -107,7 +108,8 @@ def load_synonym_ignore(skill_name: str) -> list[frozenset[str]]:
 
 
 def count_term(body_lower: str, term: str) -> int:
-    """Count occurrences of `term` allowing simple inflections.
+    """
+    Count occurrences of `term` allowing simple inflections.
 
     e.g. 'image' matches 'image', 'images', "image's", "images'".
     """
@@ -119,10 +121,12 @@ def find_synonym_clashes(
     body: str,
     ignore_groups: list[frozenset[str]] | None = None,
 ) -> list[dict]:
-    """Return a list of finding dicts for groups where 2+ terms appear.
+    """
+    Return a list of finding dicts for groups where 2+ terms appear.
 
-    A group whose present terms are a subset of a confirmed-distinct entry
-    in `ignore_groups` (from the per-skill allow-list) is suppressed.
+    A group whose present terms are a subset of a confirmed-distinct
+    entry in `ignore_groups` (from the per-skill allow-list) is
+    suppressed.
     """
     ignore_groups = ignore_groups or []
     body_lower = body.lower()
@@ -163,7 +167,9 @@ def find_synonym_clashes(
 
 
 def load_body(path: Path) -> str:
-    """Strip YAML frontmatter and return the body text."""
+    """
+    Strip YAML frontmatter and return the body text.
+    """
     text = path.read_text(encoding='utf-8')
     lines = text.splitlines()
     if not lines or lines[0].strip() != '---':

@@ -57,7 +57,8 @@ H2_RE = re.compile(r'^##\s+(.+?)\s*$')
 
 
 def is_title_case(heading: str) -> bool:
-    """Return True if `heading` follows the title-case convention.
+    """
+    Return True if `heading` follows the title-case convention.
 
     Rules
     -----
@@ -87,7 +88,8 @@ def is_title_case(heading: str) -> bool:
 
 
 def find_h2_case_issues(file_path: Path) -> list[dict]:
-    """Walk one markdown file and return findings for sentence-case H2s.
+    """
+    Walk one markdown file and return findings for sentence-case H2s.
 
     H2s inside fenced code blocks are ignored — they are markdown
     examples, not real section headers.
@@ -119,10 +121,10 @@ def find_h2_case_issues(file_path: Path) -> list[dict]:
                     f'project convention is title case.'
                 ),
                 'fix_hint': (
-                    f'Rewrite as title case (capitalize the first letter '
-                    f'of every word except short articles, prepositions, '
-                    f'and conjunctions). See '
-                    f'.claude/skills/multi-skill/references/skill-authoring-checklist.md `h2_heading_case`.'
+                    'Rewrite as title case (capitalize the first letter '
+                    'of every word except short articles, prepositions, '
+                    'and conjunctions). See '
+                    '.claude/skills/multi-skill/references/skill-authoring-checklist.md `h2_heading_case`.'
                 ),
             }
         )
@@ -130,7 +132,8 @@ def find_h2_case_issues(file_path: Path) -> list[dict]:
 
 
 def resolve_target_files(target: Path) -> list[Path]:
-    """Return the list of .md files to scan for a given input path.
+    """
+    Return the list of .md files to scan for a given input path.
 
     A directory yields SKILL.md plus every references/*.md sibling.
     A single SKILL.md file yields only that file (matches the
@@ -155,7 +158,8 @@ def annotate_findings_with_relative_path(
     file_path: Path,
     skill_root: Path,
 ) -> list[dict]:
-    """Rewrite each finding's 'file' field to be relative to skill_root.
+    """
+    Rewrite each finding's 'file' field to be relative to skill_root.
 
     SKILL.md stays as 'SKILL.md'; reference files become
     'references/<name>.md' so the output matches the path style used

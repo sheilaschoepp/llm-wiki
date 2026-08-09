@@ -1,5 +1,6 @@
-"""Tests for cited_figure_check.py — the standalone cross-source mis-location
-backstop.
+"""
+Tests for cited_figure_check.py — the standalone cross-source mis-
+location backstop.
 
 Covers the pure parsing/matching helpers (mask_spans, extract_figures,
 extract_deeplinks, figure_present) and check_page driven by a fake page-text
@@ -21,9 +22,7 @@ import unittest
 from pathlib import Path
 
 HERE = Path(__file__).resolve()
-SCRIPT = (
-    HERE.parents[1] / 'cited_figure_check.py'
-)  # scripts/cited_figure_check.py
+SCRIPT = HERE.parents[1] / 'cited_figure_check.py'  # scripts/cited_figure_check.py
 REPO = HERE.parents[5]  # repo root
 
 spec = importlib.util.spec_from_file_location('cited_figure_check', SCRIPT)
@@ -37,7 +36,10 @@ DEEPLINK_B = '[[0-raw/papers/SrcB.pdf#page=2|sec. 1, p. 2]]'
 
 
 class FakeCache:
-    """Stand-in for RawTextCache: returns preset text per (raw_rel, page_n)."""
+    """
+    Stand-in for RawTextCache: returns preset text per (raw_rel,
+    page_n).
+    """
 
     def __init__(self, pages: dict[tuple[str, int], str | None]) -> None:
         self._pages = pages
@@ -55,12 +57,8 @@ class TestMaskSpans(unittest.TestCase):
         self.assertEqual(
             len(masked), len(line), msg='mask must preserve column offsets'
         )
-        self.assertNotIn(
-            'page=4', masked, msg='wikilink internals must be blanked'
-        )
-        self.assertIn(
-            '37.2%', masked, msg='prose outside the wikilink must survive'
-        )
+        self.assertNotIn('page=4', masked, msg='wikilink internals must be blanked')
+        self.assertIn('37.2%', masked, msg='prose outside the wikilink must survive')
 
     def test_blanks_inline_code(self) -> None:
         masked = cfc.mask_spans(line='holds `3.14` in code')
@@ -88,9 +86,7 @@ class TestExtractFigures(unittest.TestCase):
 
     def test_keeps_sentence_final_decimal(self) -> None:
         # A trailing period must not defeat the version-string guard.
-        self.assertEqual(
-            cfc.extract_figures(line='the gain was 37.2.'), ['37.2']
-        )
+        self.assertEqual(cfc.extract_figures(line='the gain was 37.2.'), ['37.2'])
 
     def test_ignores_locator_number_inside_deeplink(self) -> None:
         # The only decimals here (`3.1`, `4`) live inside the masked deep-link.
@@ -120,9 +116,7 @@ class TestExtractDeeplinks(unittest.TestCase):
 
 class TestFigurePresent(unittest.TestCase):
     def test_present_exact(self) -> None:
-        self.assertTrue(
-            cfc.figure_present(token='37.2%', page_text='is 37.2%.')
-        )
+        self.assertTrue(cfc.figure_present(token='37.2%', page_text='is 37.2%.'))
 
     def test_present_via_decimal_core_of_percentage(self) -> None:
         self.assertTrue(
@@ -146,14 +140,10 @@ class TestCheckPage(unittest.TestCase):
         page.write_text(body, encoding='utf-8')
         return page
 
-    def _run(
-        self, body: str, pages: dict[tuple[str, int], str | None]
-    ) -> list[dict]:
+    def _run(self, body: str, pages: dict[tuple[str, int], str | None]) -> list[dict]:
         page = self._write(body)
         repo_root = page.parents[2]
-        return cfc.check_page(
-            path=page, repo_root=repo_root, cache=FakeCache(pages)
-        )
+        return cfc.check_page(path=page, repo_root=repo_root, cache=FakeCache(pages))
 
     def test_figure_on_cited_page_no_finding(self) -> None:
         body = f'> - gap of 37.2% ({DEEPLINK})\n'

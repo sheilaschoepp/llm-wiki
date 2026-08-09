@@ -1,4 +1,5 @@
-"""Regression tests for check_synonyms.py.
+"""
+Regression tests for check_synonyms.py.
 
 Pins the per-skill allow-list behaviour a two-council review scrutinized:
 subset-match suppression (a recorded confirmed-distinct group suppresses a

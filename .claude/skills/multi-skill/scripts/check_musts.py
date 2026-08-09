@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-check_musts.py — flag candidate heavy-handed imperatives in SKILL.md body.
+check_musts.py — flag candidate heavy-handed imperatives in SKILL.md
+body.
 
 Why a separate script? "ALWAYS X / NEVER X / MUST X" without an explanation
 of *why* is a known antipattern: today's models follow rules better when
@@ -34,9 +35,7 @@ from pathlib import Path
 # Imperative tokens we look for. Word boundaries on both sides;
 # case-sensitive so we only match the all-caps form (we don't want to
 # flag "must" in normal prose).
-IMPERATIVE_RE = re.compile(
-    r"\b(?:ALWAYS|NEVER|MUST(?:\s+NOT)?|DO\s+NOT|DON'T)\b"
-)
+IMPERATIVE_RE = re.compile(r"\b(?:ALWAYS|NEVER|MUST(?:\s+NOT)?|DO\s+NOT|DON'T)\b")
 
 # Words/phrases that signal an explanation is nearby. Case-insensitive.
 # The em-dash and parenthetical are good signals because authors often
@@ -64,29 +63,30 @@ EXPLANATION_RE = re.compile('|'.join(EXPLANATION_CUES), re.IGNORECASE)
 
 
 def strip_inline_code(text: str) -> str:
-    """Blank out inline-code spans, preserving length and newlines.
+    """
+    Blank out inline-code spans, preserving length and newlines.
 
     A backticked token such as `NEVER` documents the imperative
     literally rather than issuing it, so it must not be matched as a
     prose imperative (mirrors check_structure.py's prose handling).
-    Blanking to equal-length spaces — and keeping newlines — leaves every
-    later character offset and line count unchanged, so the imperative's
-    reported line stays correct.
+    Blanking to equal-length spaces — and keeping newlines — leaves
+    every later character offset and line count unchanged, so the
+    imperative's reported line stays correct.
     """
 
     def _blank(match: re.Match) -> str:
-        return ''.join(
-            '\n' if char == '\n' else ' ' for char in match.group(0)
-        )
+        return ''.join('\n' if char == '\n' else ' ' for char in match.group(0))
 
     return re.sub(r'`[^`]*`', _blank, text)
 
 
 def load_body_with_offsets(skill_md: Path) -> tuple[str, int]:
-    """Return (body_text, body_start_line) where body_start_line is the
+    """
+    Return (body_text, body_start_line) where body_start_line is the
     1-indexed line in the original file at which the body begins (i.e.
     the line right after the closing `---` of frontmatter, or 1 if
-    there's no frontmatter)."""
+    there's no frontmatter).
+    """
     text = skill_md.read_text(encoding='utf-8')
     lines = text.splitlines()
     if not lines or lines[0].strip() != '---':
@@ -102,11 +102,12 @@ def split_paragraphs(
     body: str,
     body_start_line: int,
 ) -> list[tuple[int, str]]:
-    """Split body into paragraphs separated by blank lines.
+    """
+    Split body into paragraphs separated by blank lines.
 
     Returns list of (start_line_in_file, paragraph_text). Paragraph
-    boundaries are at blank lines OR at fenced code-block boundaries
-    (we don't want to treat code as prose).
+    boundaries are at blank lines OR at fenced code-block boundaries (we
+    don't want to treat code as prose).
     """
     paragraphs = []
     current_lines: list[str] = []
