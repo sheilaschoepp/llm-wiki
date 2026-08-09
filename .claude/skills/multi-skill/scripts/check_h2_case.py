@@ -3,10 +3,11 @@
 check_h2_case.py — flag sentence-case H2 headings in SKILL.md and refs.
 
 Why a separate script? The H2 title-case rule
-(.claude/skills/multi-skill/references/skill-authoring-checklist.md `h2_heading_case`) is meant to apply to SKILL.md
-AND every references/*.md sibling. As a judgement check, it depended on
-the agent remembering to scan every reference file every pass — and the
-agent kept forgetting, fixing SKILL.md while leaving sentence-case H2s in
+(.claude/skills/multi-skill/references/skill-authoring-checklist.md
+`h2_heading_case`) is meant to apply to SKILL.md AND every
+references/*.md sibling. As a judgement check, it depended on the agent
+remembering to scan every reference file every pass — and the agent kept
+forgetting, fixing SKILL.md while leaving sentence-case H2s in
 references/. Promoting the check to a deterministic script makes
 coverage mechanical: every file the script walks is checked.
 
@@ -202,12 +203,12 @@ def main() -> int:
             file_findings = find_h2_case_issues(file_path=file_path)
         except (OSError, UnicodeDecodeError):
             if file_path.name == 'SKILL.md':
-                # An unreadable PRIMARY SKILL.md is a hard failure
-                # (exit 2), matching check_synonyms / check_musts — never
-                # a silent clean [] that would let the lint loop falsely
-                # converge (the exact anti-pattern the SKILL.md self-lint
-                # caveat warns about). Only an unreadable reference
-                # sibling is skipped.
+                # An unreadable PRIMARY SKILL.md is a hard failure (exit
+                # 2), matching check_synonyms / check_musts — never a
+                # silent clean [] that would let the lint loop falsely
+                # converge (the exact anti-pattern the SKILL.md
+                # self-lint caveat warns about). Only an unreadable
+                # reference sibling is skipped.
                 print(f'Error: cannot read {file_path}', file=sys.stderr)
                 return 2
             continue

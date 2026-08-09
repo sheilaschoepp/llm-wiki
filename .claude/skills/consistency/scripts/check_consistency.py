@@ -8,8 +8,9 @@ Usage:
     check_consistency.py <project-root> --packet schema-language
     check_consistency.py --list-checks
 
-Replaces the bash + grep one-liners that previously sat inline in SKILL.md.
-Output: JSON list of findings, printed to stdout. Each finding has:
+Replaces the bash + grep one-liners that previously sat inline in
+SKILL.md. Output: JSON list of findings, printed to stdout. Each finding
+has:
     - check_id: the descriptive snake_case identifier of the check (e.g.
       referenced_paths_exist), matching CHECK_MANIFEST and --list-checks
     - file: relative path
@@ -17,8 +18,9 @@ Output: JSON list of findings, printed to stdout. Each finding has:
     - message: one-sentence description
     - fix_hint: concrete fix
 
-The script is read-only — it surfaces findings; SKILL.md's procedure decides
-whether to apply fixes mechanically or surface for user approval.
+The script is read-only — it surfaces findings; SKILL.md's procedure
+decides whether to apply fixes mechanically or surface for user
+approval.
 
 Tracked patterns and constants are pulled out so future schema changes
 update one place. Keeps SKILL.md prose focused on procedure, not regex.
@@ -34,12 +36,13 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-# Patterns the schema has retired. Lines matching these in any tracked file
-# are stale.
+# Patterns the schema has retired. Lines matching these in any tracked
+# file are stale.
 REMOVED_FEATURE_PATTERNS = ['working_copy', 'working copy']
 
 # Stale old-schema wording. These phrases usually indicate the previous
-# citation-heavy template or retired callout names survived a schema rewrite.
+# citation-heavy template or retired callout names survived a schema
+# rewrite.
 STALE_SCHEMA_PHRASES = [
     'literature note',
     'literature notes',
@@ -68,17 +71,18 @@ STALE_SCHEMA_PHRASES = [
     'full `([[Source]]',
 ]
 
-# Working-skill-count prose patterns (working_skill_count_prose). Catches both "the eleven" /
-# "eleven skills" / "eleven operation skills" forms across the wiki.
+# Working-skill-count prose patterns (working_skill_count_prose).
+# Catches both "the eleven" / "eleven skills" / "eleven operation
+# skills" forms across the wiki.
 SKILL_COUNT_PROSE = re.compile(
     r'\b(ten|eleven|twelve)\s+(operation\s+)?skills?\b|'
     r'\bthe\s+(ten|eleven|twelve)\b',
     re.IGNORECASE,
 )
 
-# Meta-skills excluded from the working-skill count (CLAUDE.md Operations
-# section: consistency, skill-linter, skill-llm-council, checkup, and cleanup
-# are project-scoped meta-skills).
+# Meta-skills excluded from the working-skill count (CLAUDE.md
+# Operations section: consistency, skill-linter, skill-llm-council,
+# checkup, and cleanup are project-scoped meta-skills).
 META_SKILL_NAMES = {
     'consistency',
     'skill-linter',
@@ -146,9 +150,10 @@ EXPECTED_SECTIONS = {
     ],
 }
 
-# referenced_paths_exist: backticked path-like strings whose targets should exist on disk.
-# Only match candidates that start with a known top-level prefix or are one of
-# a small set of repo-root files. Placeholder/template paths are skipped.
+# referenced_paths_exist: backticked path-like strings whose targets
+# should exist on disk. Only match candidates that start with a known
+# top-level prefix or are one of a small set of repo-root files.
+# Placeholder/template paths are skipped.
 PATH_PREFIXES = (
     '0-raw/',
     '1-wiki/',
@@ -172,8 +177,8 @@ PLACEHOLDER_TOKENS = (
 )
 PATH_IN_BACKTICKS = re.compile(r'`([^`\n]+?)`')
 # Markdown link target: [text](path). The path group excludes spaces and
-# closing parens so we don't capture across links or stop early on '(' inside
-# a path. URL targets are filtered later by PATH_PREFIXES.
+# closing parens so we don't capture across links or stop early on '('
+# inside a path. URL targets are filtered later by PATH_PREFIXES.
 MARKDOWN_LINK_RE = re.compile(r'\[[^\]]*\]\(([^)\s]+)\)')
 BASH_FENCE_LANGS = {'bash', 'sh', 'shell', 'zsh', 'console'}
 
@@ -183,10 +188,10 @@ REQUIRED_CALLOUTS = sorted(
     {slug for slugs in EXPECTED_SECTIONS.values() for slug in slugs}
 )
 
-# AI-writing tells (ai_writing_tells). Mechanical/regex-friendly tells only — semantic
-# tells (puffing tone, broader-context reflex, etc.) belong in audit. Source
-# list: a-archive/style/ai-writing-tells.md. Each entry: (label, severity,
-# pattern, fix_hint).
+# AI-writing tells (ai_writing_tells). Mechanical/regex-friendly tells
+# only — semantic tells (puffing tone, broader-context reflex, etc.)
+# belong in audit. Source list: a-archive/style/ai-writing-tells.md.
+# Each entry: (label, severity, pattern, fix_hint).
 AI_TELL_PATTERNS: list[tuple[str, str, re.Pattern[str], str]] = [
     (
         'high-density AI vocabulary',
@@ -449,15 +454,16 @@ CHECK_MANIFEST = [
 ]
 
 MEMORY_FILE_ENTRY_CAP = 10
-# MEMORY.md is the consolidation tier (graduation destination), so it sits at a
-# higher cap than the append-only journals and graduates only outward to CLAUDE.md.
+# MEMORY.md is the consolidation tier (graduation destination), so it
+# sits at a higher cap than the append-only journals and graduates only
+# outward to CLAUDE.md.
 MEMORY_MD_ENTRY_CAP = 15
 
 # Display-truncation lengths (characters) for finding message snippets.
 MESSAGE_SNIPPET_LEN = 120
 MATCH_SNIPPET_LEN = 80
-# Shortest URL path segment treated as a personal handle; below this a segment
-# (a TLD, a short word) is too generic to identify a person.
+# Shortest URL path segment treated as a personal handle; below this a
+# segment (a TLD, a short word) is too generic to identify a person.
 URL_TOKEN_MIN_LEN = 4
 
 PACKET_CHECKS: dict[str, list[str]] = {}
@@ -517,7 +523,8 @@ def search_files(
     return hits
 
 
-# retired_feature_mentions: removed-feature mentions outside the explicit retirement note.
+# retired_feature_mentions: removed-feature mentions outside the
+# explicit retirement note.
 def check_retired_feature_mentions(root: Path) -> list[dict[str, Any]]:
     findings = []
     hits = search_files(
@@ -540,7 +547,8 @@ def check_retired_feature_mentions(root: Path) -> list[dict[str, Any]]:
     return findings
 
 
-# working_skill_count_prose: skill-count prose vs actual working-skill folder count.
+# working_skill_count_prose: skill-count prose vs actual working-skill
+# folder count.
 def check_working_skill_count_prose(root: Path) -> list[dict[str, Any]]:
     findings = []
     skills_dir = root / '.claude/skills'
@@ -556,8 +564,8 @@ def check_working_skill_count_prose(root: Path) -> list[dict[str, Any]]:
     )
     expected_word = {10: 'ten', 11: 'eleven', 12: 'twelve'}.get(actual, str(actual))
 
-    # Walk files directly — search_files is substring-only and this check
-    # needs the SKILL_COUNT_PROSE regex.
+    # Walk files directly — search_files is substring-only and this
+    # check needs the SKILL_COUNT_PROSE regex.
     for rel in ['CLAUDE.md', 'README.md']:
         full = root / rel
         if full.exists():
@@ -621,9 +629,10 @@ def check_old_schema_wording(root: Path) -> list[dict[str, Any]]:
                 continue
             for line_no, content in enumerate(lines, start=1):
                 lowered = content.lower()
-                # Strip inline-code spans: a stale phrase inside backticks is a
-                # quoted token or example (e.g. the `the source notes` example in
-                # lint's vague_source_referent entry), not old-schema prose.
+                # Strip inline-code spans: a stale phrase inside
+                # backticks is a quoted token or example (e.g. the `the
+                # source notes` example in lint's vague_source_referent
+                # entry), not old-schema prose.
                 probe = re.sub(r'`[^`]*`', '', lowered)
                 if any(p in probe for p in STALE_SCHEMA_PHRASES):
                     findings.append(
@@ -752,10 +761,11 @@ def check_index_vs_files_drift(root: Path) -> list[dict[str, Any]]:
         ('Syntheses', root / '1-wiki/syntheses', None),
     ]
     for name, folder, end_marker in sections:
-        # Guard folder.exists() OUTSIDE the comprehension: folder.iterdir() in
-        # the for-clause runs before any if-clause, so an in-comprehension
-        # existence check does not protect the iterdir() call and a missing
-        # wiki subfolder would raise FileNotFoundError mid-battery.
+        # Guard folder.exists() OUTSIDE the comprehension:
+        # folder.iterdir() in the for-clause runs before any if-clause,
+        # so an in-comprehension existence check does not protect the
+        # iterdir() call and a missing wiki subfolder would raise
+        # FileNotFoundError mid-battery.
         present = (
             sorted(p.stem for p in folder.iterdir() if p.suffix == '.md')
             if folder.exists()
@@ -778,8 +788,9 @@ def check_index_vs_files_drift(root: Path) -> list[dict[str, Any]]:
             )
         else:
             section_body = text[body_start:]
-        # Wikilinks are path-qualified (`[[1-wiki/sources/foo.md|foo]]`);
-        # normalize each target to its bare stem before comparing to files.
+        # Wikilinks are path-qualified
+        # (`[[1-wiki/sources/foo.md|foo]]`); normalize each target to
+        # its bare stem before comparing to files.
         listed = sorted(
             {Path(x.strip()).stem for x in WIKILINK_RE.findall(section_body)}
         )
@@ -831,8 +842,8 @@ def check_gitkeep_coverage(root: Path) -> list[dict[str, Any]]:
     return findings
 
 
-# attachments_folder_coverage: `1-wiki/attachments/` is present and every stem subfolder
-# corresponds to an existing source page.
+# attachments_folder_coverage: `1-wiki/attachments/` is present and
+# every stem subfolder corresponds to an existing source page.
 def check_attachments_folder_coverage(root: Path) -> list[dict[str, Any]]:
     findings = []
     attachments = root / '1-wiki/attachments'
@@ -900,9 +911,10 @@ def check_referenced_paths_exist(root: Path) -> list[dict[str, Any]]:
     findings = []
     seen: set[tuple[str, str]] = set()
     # Scope: operational files where a missing referenced path is a real
-    # bug. CLAUDE.md and MEMORY.md contain illustrative example paths (e.g.
-    # `0-raw/papers/Vaswani2017AttentionIA.pdf`) that aren't expected to exist;
-    # scanning them produces false positives, so they are out of scope.
+    # bug. CLAUDE.md and MEMORY.md contain illustrative example paths
+    # (e.g. `0-raw/papers/Vaswani2017AttentionIA.pdf`) that aren't
+    # expected to exist; scanning them produces false positives, so they
+    # are out of scope.
     paths_to_scan = ['README.md', '.claude/skills/']
     exclude_paths = [
         'consistency/SKILL.md',
@@ -933,16 +945,18 @@ def check_referenced_paths_exist(root: Path) -> list[dict[str, Any]]:
                     fence_info = stripped[3:].strip().lower()
                     if not in_fence:
                         in_fence = True
-                        # Only known shell langs get bash-token scanning.
+                        # Only known shell langs get bash-token
+                        # scanning.
                         in_bash_block = fence_info in BASH_FENCE_LANGS
                     else:
                         in_fence = False
                         in_bash_block = False
                     continue
-                # Backtick/markdown-link scanning is suppressed inside ANY
-                # fence (```python, ```yaml, ```text, ...), not just bash —
-                # a backticked path inside a non-bash fence is an example,
-                # not a live reference. Mirrors filename_references_resolve.
+                # Backtick/markdown-link scanning is suppressed inside
+                # ANY fence (```python, ```yaml, ```text, ...), not just
+                # bash — a backticked path inside a non-bash fence is an
+                # example, not a live reference. Mirrors
+                # filename_references_resolve.
                 if in_fence and not in_bash_block:
                     continue
                 candidates: list[str] = []
@@ -952,9 +966,10 @@ def check_referenced_paths_exist(root: Path) -> list[dict[str, Any]]:
                     for m in MARKDOWN_LINK_RE.finditer(line):
                         candidates.append(m.group(1))
                 if in_bash_block:
-                    # Whitespace/quote/equals-separated tokens; PATH_PREFIXES
-                    # filter keeps this from flagging system binaries or
-                    # `cd` targets that aren't repo paths.
+                    # Whitespace/quote/equals-separated tokens;
+                    # PATH_PREFIXES filter keeps this from flagging
+                    # system binaries or `cd` targets that aren't repo
+                    # paths.
                     for tok in re.split(r"[\s'\"=]+", line):
                         if tok:
                             candidates.append(tok)
@@ -991,9 +1006,9 @@ def check_referenced_paths_exist(root: Path) -> list[dict[str, Any]]:
     return findings
 
 
-# orphan_skill_scripts: scripts under .claude/skills/*/scripts/ should be referenced by
-# at least one SKILL.md. Unreferenced scripts are usually leftovers from
-# rewrites or rename operations.
+# orphan_skill_scripts: scripts under .claude/skills/*/scripts/ should
+# be referenced by at least one SKILL.md. Unreferenced scripts are
+# usually leftovers from rewrites or rename operations.
 def _extract_skill_path_refs(text: str) -> list[str]:
     refs: list[str] = []
     in_fence = False
@@ -1009,8 +1024,8 @@ def _extract_skill_path_refs(text: str) -> list[str]:
                 in_fence = False
                 in_bash = False
             continue
-        # Skip backtick/link scanning inside any non-bash fence; bash fences
-        # still get token extraction below.
+        # Skip backtick/link scanning inside any non-bash fence; bash
+        # fences still get token extraction below.
         if in_fence and not in_bash:
             continue
         if not in_fence:
@@ -1055,10 +1070,11 @@ def check_orphan_skill_scripts(root: Path) -> list[dict[str, Any]]:
         for f in sorted(scripts.rglob('*')):
             if not f.is_file():
                 continue
-            # Skip transient cache/dot directories under scripts/ (__pycache__,
-            # .pytest_cache, .mypy_cache, .ruff_cache, …) — these are generated,
-            # gitignored, and not skill scripts. Check components relative to
-            # scripts/ so the leading `.claude` path segment is not matched.
+            # Skip transient cache/dot directories under scripts/
+            # (__pycache__, .pytest_cache, .mypy_cache, .ruff_cache, …)
+            # — these are generated, gitignored, and not skill scripts.
+            # Check components relative to scripts/ so the leading
+            # `.claude` path segment is not matched.
             dir_parts = f.relative_to(scripts).parts[:-1]
             if any(p == '__pycache__' or p.startswith('.') for p in dir_parts):
                 continue
@@ -1081,15 +1097,16 @@ def check_orphan_skill_scripts(root: Path) -> list[dict[str, Any]]:
 
 
 # personal_info_leakage: personal information leakage outside about/.
-# Conservative regexes — emails and clearly-formatted phone numbers — to keep
-# false-positive noise low. Skips immutable raw sources, generated outputs,
-# the archive folder, and the user's own about-me page.
-# The final label must be alphabetic (a real TLD is letters), so metric
+# Conservative regexes — emails and clearly-formatted phone numbers — to
+# keep false-positive noise low. Skips immutable raw sources, generated
+# outputs, the archive folder, and the user's own about-me page. The
+# final label must be alphabetic (a real TLD is letters), so metric
 # notation like `mAP@0.5` or `recall@0.95` is not read as an email.
 EMAIL_RE = re.compile(r'\b[\w.+-]+@[\w-]+(?:\.[\w-]+)*\.[A-Za-z]{2,}\b')
 PHONE_RE = re.compile(r'\(\d{3}\)\s*\d{3}[-.\s]\d{4}|\b\d{3}[-.]\d{3}[-.]\d{4}\b')
 # Automated addresses that are never personal information — e.g. the
-# Co-Authored-By commit-trailer email. Any 'noreply' local-part is skipped.
+# Co-Authored-By commit-trailer email. Any 'noreply' local-part is
+# skipped.
 EMAIL_ALLOWLIST_LOCALPARTS = {'noreply'}
 
 
@@ -1146,9 +1163,9 @@ def check_personal_info_leakage(root: Path) -> list[dict[str, Any]]:
             continue
         if '__pycache__' in rel_parts:
             continue
-        # Files with no extension (e.g. .gitkeep is technically named with a
-        # leading dot but has empty suffix here) — skip unless they're known
-        # text. Skip suffix not in text_exts.
+        # Files with no extension (e.g. .gitkeep is technically named
+        # with a leading dot but has empty suffix here) — skip unless
+        # they're known text. Skip suffix not in text_exts.
         if f.suffix and f.suffix not in text_exts:
             continue
         if f.name == '.gitkeep':
@@ -1197,10 +1214,11 @@ def check_personal_info_leakage(root: Path) -> list[dict[str, Any]]:
     return findings
 
 
-# identity_term_leakage: identity terms (the user's name, supervisors, lab, institution,
-# personal URL handles) should appear only in about-me/about-me.md. Terms
-# are auto-extracted from the Identity section of about-me/about-me.md so
-# the check stays in sync as that file evolves.
+# identity_term_leakage: identity terms (the user's name, supervisors,
+# lab, institution, personal URL handles) should appear only in
+# about-me/about-me.md. Terms are auto-extracted from the Identity
+# section of about-me/about-me.md so the check stays in sync as that
+# file evolves.
 URL_RE = re.compile(r'https?://[^\s)\]]+')
 GENERIC_URL_TOKENS = {
     'www',
@@ -1249,9 +1267,10 @@ def _extract_personal_url_tokens(text: str) -> set[str]:
 
 
 def _load_identity_terms(root: Path) -> tuple[set[str], set[str]]:
-    # The canonical file is named about-me.md inside a-archive/about-me/.
-    # Older layouts (a-archive/about/, about-me/, about/) are kept as
-    # fallbacks so the check still locates the file if the layout shifts.
+    # The canonical file is named about-me.md inside
+    # a-archive/about-me/. Older layouts (a-archive/about/, about-me/,
+    # about/) are kept as fallbacks so the check still locates the file
+    # if the layout shifts.
     candidates = [
         root / 'a-archive' / 'about-me' / 'about-me.md',
         root / 'a-archive' / 'about' / 'about-me.md',
@@ -1279,7 +1298,8 @@ def _load_identity_terms(root: Path) -> tuple[set[str], set[str]]:
     for fm in field_re.finditer(section):
         field = fm.group(1)
         value = fm.group(2)
-        # Capture parenthesized acronyms (e.g., a parenthesized lab name).
+        # Capture parenthesized acronyms (e.g., a parenthesized lab
+        # name).
         for paren in re.findall(r'\(([^)]+)\)', value):
             paren = paren.strip()
             if any(ch.isupper() for ch in paren) and ' ' in paren:
@@ -1304,12 +1324,13 @@ def _load_identity_terms(root: Path) -> tuple[set[str], set[str]]:
 def check_identity_term_leakage(root: Path) -> list[dict[str, Any]]:
     terms, handles = _load_identity_terms(root=root)
     if not terms and not handles:
-        # Fail loud rather than pass vacuously: an empty term set means the
-        # identity source (a-archive/about-me/about-me.md and its ## Identity
-        # section) is missing, unreadable, or unparseable, so this highest-
-        # stakes personal-info scan would otherwise report clean while
-        # scanning for nothing. Surface it as an advisory (a SKILL.md Step 7.3
-        # non-blocking finding) so an inactive scan cannot masquerade as clean.
+        # Fail loud rather than pass vacuously: an empty term set means
+        # the identity source (a-archive/about-me/about-me.md and its ##
+        # Identity section) is missing, unreadable, or unparseable, so
+        # this highest- stakes personal-info scan would otherwise report
+        # clean while scanning for nothing. Surface it as an advisory (a
+        # SKILL.md Step 7.3 non-blocking finding) so an inactive scan
+        # cannot masquerade as clean.
         return [
             finding(
                 check_id='identity_term_leakage',
@@ -1405,40 +1426,43 @@ def check_identity_term_leakage(root: Path) -> list[dict[str, Any]]:
     return findings
 
 
-# domain_literature_leakage: the generic infrastructure (CLAUDE.md + the skills,
-# including their scripts) should illustrate the schema only with neutral
-# placeholder papers. Any other bibkey-pattern citation is presumed to be the
-# vault's own research-corpus literature, which leaks domain specifics into
-# reusable infra. The structural exemptions are the *-memory.md journals
-# (append-only correction logs that legitimately cite real papers from past
-# work) and the agent-writable curated DATA files named in AGENT_DATA_FILES --
-# data, not skill logic (the checks load them at runtime), whose content is by
-# construction the vault's own (a suppression list of the vault's page paths, a
-# per-raw pagination map keyed on the vault's raw stems -- each carrying a corpus
-# bibkey in its filename), exactly like the memory journals; requiring
-# placeholder bibkeys there is incoherent and sanctioning each entry would never
-# converge. A domain-specific skill that genuinely needs to cite the research
-# literature is NOT special-cased here: keeping this check free of any one
-# vault's skill names is what makes it portable. Such a skill's citations are
-# recorded as sanctioned exceptions in consistency-memory.md, and the agent
-# leaves them alone. Scripts and their tests are scanned like everything else, so
-# a test that needs a non-placeholder bibkey composes it at runtime rather than
-# writing a literal token into its source. Domain *terms* and *claims* are
-# deliberately left to the judgment-drift packet: a regex over them would flag
-# legitimate skill descriptions and generic tooling vocabulary, so a reader has
-# to make that call.
+# domain_literature_leakage: the generic infrastructure (CLAUDE.md + the
+# skills, including their scripts) should illustrate the schema only
+# with neutral placeholder papers. Any other bibkey-pattern citation is
+# presumed to be the vault's own research-corpus literature, which leaks
+# domain specifics into reusable infra. The structural exemptions are
+# the *-memory.md journals (append-only correction logs that
+# legitimately cite real papers from past work) and the agent-writable
+# curated DATA files named in AGENT_DATA_FILES -- data, not skill logic
+# (the checks load them at runtime), whose content is by construction
+# the vault's own (a suppression list of the vault's page paths, a
+# per-raw pagination map keyed on the vault's raw stems -- each carrying
+# a corpus bibkey in its filename), exactly like the memory journals;
+# requiring placeholder bibkeys there is incoherent and sanctioning each
+# entry would never converge. A domain-specific skill that genuinely
+# needs to cite the research literature is NOT special-cased here:
+# keeping this check free of any one vault's skill names is what makes
+# it portable. Such a skill's citations are recorded as sanctioned
+# exceptions in consistency-memory.md, and the agent leaves them alone.
+# Scripts and their tests are scanned like everything else, so a test
+# that needs a non-placeholder bibkey composes it at runtime rather than
+# writing a literal token into its source. Domain *terms* and *claims*
+# are deliberately left to the judgment-drift packet: a regex over them
+# would flag legitimate skill descriptions and generic tooling
+# vocabulary, so a reader has to make that call.
 PLACEHOLDER_BIBKEYS = {
     'Vaswani2017AttentionIA',  # Transformers / Attention Is All You Need
     'Kingma2015AdamAM',  # Adam optimizer
     'Devlin2019BERTPO',  # BERT
 }
 BIBKEY_RE = re.compile(r'\b[A-Z][A-Za-z]+\d{4}[A-Z][A-Za-z]+\b')
-# The agent-writable curated DATA files under a skill folder (CLAUDE.md -> Stay
-# In Your Lane). These are data, not skill logic: the checks load them at
-# runtime, and their content is by construction this vault's own -- page paths,
-# per-raw pagination maps -- so a corpus bibkey in them is content, not leakage.
-# Same rationale as the `-memory.md` journals. Keep in step with CLAUDE.md when a
-# data file is added or renamed.
+# The agent-writable curated DATA files under a skill folder (CLAUDE.md
+# -> Stay In Your Lane). These are data, not skill logic: the checks
+# load them at runtime, and their content is by construction this
+# vault's own -- page paths, per-raw pagination maps -- so a corpus
+# bibkey in them is content, not leakage. Same rationale as the
+# `-memory.md` journals. Keep in step with CLAUDE.md when a data file is
+# added or renamed.
 AGENT_DATA_FILES = frozenset(
     {
         'hyphenation-lists.md',  # hyphenated_open_compound_noun (lint)
@@ -1472,15 +1496,18 @@ def check_domain_literature_leakage(root: Path) -> list[dict[str, Any]]:
         for path in sorted(skills.rglob('*')):
             if not path.is_file() or path.suffix not in text_exts:
                 continue
-            # Exempt append-only memory journals (they cite real past papers).
+            # Exempt append-only memory journals (they cite real past
+            # papers).
             if path.name.endswith('-memory.md'):
                 continue
-            # Exempt the agent-writable curated DATA files (data, not logic):
-            # their content is by construction this vault's own -- page paths,
-            # per-raw pagination maps -- exactly like the memory journals above.
+            # Exempt the agent-writable curated DATA files (data, not
+            # logic): their content is by construction this vault's own
+            # -- page paths, per-raw pagination maps -- exactly like the
+            # memory journals above.
             if path.name in AGENT_DATA_FILES:
                 continue
-            # Exempt the standalone skills (wiki-orthogonal, not corpus leakage).
+            # Exempt the standalone skills (wiki-orthogonal, not corpus
+            # leakage).
             if _under_standalone_skill(path=path, root=root):
                 continue
             targets.append(path)
@@ -1517,7 +1544,8 @@ def check_domain_literature_leakage(root: Path) -> list[dict[str, Any]]:
     return findings
 
 
-# ai_writing_tells: AI-writing tells (mechanical patterns) in project docs.
+# ai_writing_tells: AI-writing tells (mechanical patterns) in project
+# docs.
 def check_ai_writing_tells(root: Path) -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
     target_files: list[Path] = []
@@ -1531,13 +1559,14 @@ def check_ai_writing_tells(root: Path) -> list[dict[str, Any]]:
             continue
         for path in full.rglob('*.md'):
             target_files.append(path)
-    # ai-writing-tells.md enumerates the banned vocabulary; the consistency,
-    # lint, audit, and skill-linter skills document the tell/check patterns they
-    # scan for. Both would always self-flag. Skip ai-writing-tells.md and the
-    # whole of those four skill folders — not just each SKILL.md, since the
-    # patterns are also documented in their references/ (e.g. audit's Step 4
-    # check catalogue, which was moved out of SKILL.md into a reference). This
-    # mirrors old_schema_wording self-skipping the entire consistency/ folder.
+    # ai-writing-tells.md enumerates the banned vocabulary; the
+    # consistency, lint, audit, and skill-linter skills document the
+    # tell/check patterns they scan for. Both would always self-flag.
+    # Skip ai-writing-tells.md and the whole of those four skill folders
+    # — not just each SKILL.md, since the patterns are also documented
+    # in their references/ (e.g. audit's Step 4 check catalogue, which
+    # was moved out of SKILL.md into a reference). This mirrors
+    # old_schema_wording self-skipping the entire consistency/ folder.
     self_referential = {root / 'a-archive/style/ai-writing-tells.md'}
     doc_skill_dirs = tuple(
         f'.claude/skills/{name}/'
@@ -1568,23 +1597,25 @@ def check_ai_writing_tells(root: Path) -> list[dict[str, Any]]:
     return findings
 
 
-# file_naming_consistency: file naming consistency. The wiki uses kebab-case lowercase for
-# all generated files; 2-outputs/ subfolders use {kind}-YYYY-MM-DD-HHMM(...)
-# form; skill folders use kebab-case. Raw sources are user-curated and exempt.
+# file_naming_consistency: file naming consistency. The wiki uses
+# kebab-case lowercase for all generated files; 2-outputs/ subfolders
+# use {kind}-YYYY-MM-DD-HHMM(...) form; skill folders use kebab-case.
+# Raw sources are user-curated and exempt.
 KEBAB_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
 DATED_OUTPUT_RE = re.compile(
     r'^(?P<kind>[a-z][a-z-]*)-\d{4}-\d{2}-\d{2}(?:-\d{4})?(?:-[a-z0-9-]+)?$'
 )
-# Output kinds whose files follow the dated naming convention. Every wiki-workflow
-# skill that writes a dated 2-outputs/ report is listed here, including `forget`,
-# `supersede`, and `synthesis` — each writes an operation report alongside its
-# durable artifacts (the quarantine/preserve preservation copies, now nested under
-# forget/ and supersede/, or the
-# synthesis page itself). output_kinds_match_disk asserts this set stays equal to
-# the on-disk 2-outputs/ subfolders (minus the archive folders and the
-# STANDALONE_SKILL_NAMES output folders), so a new output kind cannot silently
-# fall out of naming coverage. Standalone skills are exempt: their output files
-# are not bound by the dated-naming registry.
+# Output kinds whose files follow the dated naming convention. Every
+# wiki-workflow skill that writes a dated 2-outputs/ report is listed
+# here, including `forget`, `supersede`, and `synthesis` — each writes
+# an operation report alongside its durable artifacts (the
+# quarantine/preserve preservation copies, now nested under forget/ and
+# supersede/, or the synthesis page itself). output_kinds_match_disk
+# asserts this set stays equal to the on-disk 2-outputs/ subfolders
+# (minus the archive folders and the STANDALONE_SKILL_NAMES output
+# folders), so a new output kind cannot silently fall out of naming
+# coverage. Standalone skills are exempt: their output files are not
+# bound by the dated-naming registry.
 OUTPUT_KIND_DIRS = {
     'query',
     'ingest',
@@ -1601,17 +1632,19 @@ OUTPUT_KIND_DIRS = {
     'supersede',
     'synthesis',
 }
-# Preservation subfolders that keep original filenames and are not output kinds.
-# They now nest under their owning skill's folder — 2-outputs/forget/quarantine/
-# and 2-outputs/supersede/preserve/ — so they are no longer immediate children of
-# 2-outputs/ and never appear in output_kinds_match_disk's on-disk scan. The set
-# is kept (by basename) as a guard so a preservation folder mistakenly created at
+# Preservation subfolders that keep original filenames and are not
+# output kinds. They now nest under their owning skill's folder —
+# 2-outputs/forget/quarantine/ and 2-outputs/supersede/preserve/ — so
+# they are no longer immediate children of 2-outputs/ and never appear
+# in output_kinds_match_disk's on-disk scan. The set is kept (by
+# basename) as a guard so a preservation folder mistakenly created at
 # the top level is still exempted from the output-kind catalogue.
 OUTPUT_ARCHIVE_DIRS = {'quarantine', 'preserve'}
-# User-owned 2-outputs/ folders with no owning skill and free-form (non-dated)
-# filenames — exempt from the output-kind catalogue and the CLAUDE.md directory
-# tree, the same way STANDALONE_SKILL_NAMES output folders are. Empty by
-# default; add a folder name here to exempt a hand-authored output folder.
+# User-owned 2-outputs/ folders with no owning skill and free-form
+# (non-dated) filenames — exempt from the output-kind catalogue and the
+# CLAUDE.md directory tree, the same way STANDALONE_SKILL_NAMES output
+# folders are. Empty by default; add a folder name here to exempt a
+# hand-authored output folder.
 OUTPUT_EXEMPT_DIRS: set[str] = set()
 
 
@@ -1659,10 +1692,10 @@ def check_file_naming_consistency(root: Path) -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
     raw_stems = _collect_raw_stems(root=root)
 
-    # Wiki pages: source/concept/entity/synthesis must be kebab-case .md.
-    # Source pages are exempted when their stem matches a raw file stem
-    # (the schema requires source-page filenames to match the raw source
-    # stem exactly, preserving case).
+    # Wiki pages: source/concept/entity/synthesis must be kebab-case
+    # .md. Source pages are exempted when their stem matches a raw file
+    # stem (the schema requires source-page filenames to match the raw
+    # source stem exactly, preserving case).
     for sub in ('sources', 'concepts', 'entities', 'syntheses'):
         folder = root / '1-wiki' / sub
         if not folder.exists():
@@ -1677,11 +1710,11 @@ def check_file_naming_consistency(root: Path) -> list[dict[str, Any]]:
                 context=f'1-wiki/{sub}',
             )
 
-    # Wiki attachments: each `1-wiki/attachments/{stem}/` subfolder must be
-    # kebab-case OR match a raw source stem (the schema uses the
+    # Wiki attachments: each `1-wiki/attachments/{stem}/` subfolder must
+    # be kebab-case OR match a raw source stem (the schema uses the
     # source-page stem for attachment folders, so paper bibkeys like
-    # `Vaswani2017AttentionIA` are valid). Files inside the folder must still be
-    # kebab-case.
+    # `Vaswani2017AttentionIA` are valid). Files inside the folder must
+    # still be kebab-case.
     attachments_root = root / '1-wiki/attachments'
     if attachments_root.exists():
         for sub in attachments_root.iterdir():
@@ -1709,11 +1742,13 @@ def check_file_naming_consistency(root: Path) -> list[dict[str, Any]]:
     # Outputs: each `2-outputs/{kind}/` subfolder uses
     # `{kind}-YYYY-MM-DD-HHMM(-extra)?.md`. The suffix after the date is
     # normally lowercase kebab-case, but outputs that reference a source
-    # by its raw stem (e.g., `ingest-2026-05-20-1430-Vaswani2017AttentionIA.md`)
-    # preserve the raw case. The preservation subfolders (forget/quarantine/,
-    # supersede/preserve/) are never reached — this globs '*.md' non-recursively
-    # under each immediate kind folder — so their archived files, which keep
-    # their original names, are exempt from this naming check.
+    # by its raw stem (e.g.,
+    # `ingest-2026-05-20-1430-Vaswani2017AttentionIA.md`) preserve the
+    # raw case. The preservation subfolders (forget/quarantine/,
+    # supersede/preserve/) are never reached — this globs '*.md'
+    # non-recursively under each immediate kind folder — so their
+    # archived files, which keep their original names, are exempt from
+    # this naming check.
     outputs_root = root / '2-outputs'
     if outputs_root.exists():
         for sub in outputs_root.iterdir():
@@ -1759,14 +1794,15 @@ def check_file_naming_consistency(root: Path) -> list[dict[str, Any]]:
     return findings
 
 
-# filename_references_resolve: backticked bare filenames in repo prose must resolve to a real
-# file somewhere in the repo. Catches stale claims, references to deleted
-# files, typos, and illustrative examples that name fake files. Filenames
-# containing placeholder tokens (YYYY, {, <, *, etc.) are skipped — those
-# are intentionally pattern-form. Code fences are skipped. Path-shaped
-# references (with `/`) are left to referenced_paths_exist. To keep an illustrative
-# example, write it with placeholder tokens (e.g., `<bibkey>.pdf`) rather
-# than naming a fake file.
+# filename_references_resolve: backticked bare filenames in repo prose
+# must resolve to a real file somewhere in the repo. Catches stale
+# claims, references to deleted files, typos, and illustrative examples
+# that name fake files. Filenames containing placeholder tokens (YYYY,
+# {, <, *, etc.) are skipped — those are intentionally pattern-form.
+# Code fences are skipped. Path-shaped references (with `/`) are left to
+# referenced_paths_exist. To keep an illustrative example, write it with
+# placeholder tokens (e.g., `<bibkey>.pdf`) rather than naming a fake
+# file.
 FILENAME_IN_BACKTICKS_RE = re.compile(
     r'`([a-z0-9][\w.-]*\.(?:md|py|sh|json|yaml|yml|css|txt|pdf))`',
     re.IGNORECASE,
@@ -1813,13 +1849,15 @@ def check_filename_references_resolve(root: Path) -> list[dict[str, Any]]:
             continue
         for path in full.rglob('*.md'):
             target_files.append(path)
-    # a-archive/reference/ holds external reference material (design catalogs,
-    # smart-notes summaries) that legitimately quotes filenames from other
-    # systems. Those filenames aren't expected to exist in this repo; scanning
-    # them produces noise. Project documents (a-archive/style, a-archive/about-me)
-    # stay in scope. Standalone skills (STANDALONE_SKILL_NAMES) are also excluded
-    # — they may ship placeholder/example filenames that intentionally don't
-    # resolve, the same way the leakage and catalogue checks skip their folders.
+    # a-archive/reference/ holds external reference material (design
+    # catalogs, smart-notes summaries) that legitimately quotes
+    # filenames from other systems. Those filenames aren't expected to
+    # exist in this repo; scanning them produces noise. Project
+    # documents (a-archive/style, a-archive/about-me) stay in scope.
+    # Standalone skills (STANDALONE_SKILL_NAMES) are also excluded —
+    # they may ship placeholder/example filenames that intentionally
+    # don't resolve, the same way the leakage and catalogue checks skip
+    # their folders.
     target_files = [
         p
         for p in target_files
@@ -1870,20 +1908,22 @@ def check_memory_file_graduation_prompt(root: Path) -> list[dict[str, Any]]:
     """
     Memory file graduation prompt.
 
-    Counts H2-level entries in `MEMORY.md`, `.claude/skills/multi-skill/multi-skill-memory.md`,
-    and each `.claude/skills/<skill>/<skill>-memory.md`. Files past their soft
-    cap (10 for the append-only journals, 15 for the `MEMORY.md` consolidation
-    tier) are marked as graduation candidates for the per-entry memory audit to
-    read. `MEMORY.md`'s `## Index` table of contents is not counted. Memory
-    files are read at every operation (`MEMORY.md` every session), so long ones
-    become a token tax. This counter only flags by count; it does not read
-    entry content.
+    Counts H2-level entries in `MEMORY.md`,
+    `.claude/skills/multi-skill/multi-skill-memory.md`, and each
+    `.claude/skills/<skill>/<skill>-memory.md`. Files past their soft
+    cap (10 for the append-only journals, 15 for the `MEMORY.md`
+    consolidation tier) are marked as graduation candidates for the
+    per-entry memory audit to read. `MEMORY.md`'s `## Index` table of
+    contents is not counted. Memory files are read at every operation
+    (`MEMORY.md` every session), so long ones become a token tax. This
+    counter only flags by count; it does not read entry content.
     """
     findings: list[dict[str, Any]] = []
 
-    # Each entry: (path, cap, graduation-target text). The append-only journals
-    # drain into MEMORY.md or CLAUDE.md; MEMORY.md is itself the consolidation
-    # tier, so it only graduates outward to CLAUDE.md and sits at a higher cap.
+    # Each entry: (path, cap, graduation-target text). The append-only
+    # journals drain into MEMORY.md or CLAUDE.md; MEMORY.md is itself
+    # the consolidation tier, so it only graduates outward to CLAUDE.md
+    # and sits at a higher cap.
     journal_target = 'MEMORY.md (behavioural) or CLAUDE.md (schema)'
     memory_md_target = 'CLAUDE.md (schema or Behavioural defaults)'
 
@@ -1908,8 +1948,8 @@ def check_memory_file_graduation_prompt(root: Path) -> list[dict[str, Any]]:
             lines = path.read_text(encoding='utf-8').splitlines()
         except (UnicodeDecodeError, OSError):
             continue
-        # Count H2 entries; MEMORY.md's "## Index" is a table of contents, not an
-        # entry, so it is not counted toward the cap.
+        # Count H2 entries; MEMORY.md's "## Index" is a table of
+        # contents, not an entry, so it is not counted toward the cap.
         entries = sum(
             1 for line in lines if line.startswith('## ') and line.strip() != '## Index'
         )
@@ -1995,8 +2035,9 @@ def expected_tree_paths(root: Path) -> set[str]:
         for child in parent_dir.iterdir():
             if not child.is_dir() or child.name.startswith('.'):
                 continue
-            # Standalone skills' 2-outputs/ folders are kept out of the tree;
-            # so are any user-owned free-form folders in OUTPUT_EXEMPT_DIRS.
+            # Standalone skills' 2-outputs/ folders are kept out of the
+            # tree; so are any user-owned free-form folders in
+            # OUTPUT_EXEMPT_DIRS.
             if parent == '2-outputs' and (
                 child.name in STANDALONE_SKILL_NAMES or child.name in OUTPUT_EXEMPT_DIRS
             ):
@@ -2025,13 +2066,14 @@ def check_dir_tree_drift(root: Path) -> list[dict[str, Any]]:
     text = claude.read_text(encoding='utf-8')
 
     # Find the first text-fenced block that IS the repo tree. Identified
-    # structurally, by the branch characters TREE_LINE_RE parses, never by the
-    # root directory's name: this project ships as a template into repos whose
-    # root is named something else, and a name-matched probe would find no tree
-    # there and report the entire documented structure as missing. Matching on
-    # the parser's own regex also guarantees the block it finds is parseable.
-    # The root line itself carries no branch prefix, so parse_directory_tree
-    # skips it and the name never reaches the comparison.
+    # structurally, by the branch characters TREE_LINE_RE parses, never
+    # by the root directory's name: this project ships as a template
+    # into repos whose root is named something else, and a name-matched
+    # probe would find no tree there and report the entire documented
+    # structure as missing. Matching on the parser's own regex also
+    # guarantees the block it finds is parseable. The root line itself
+    # carries no branch prefix, so parse_directory_tree skips it and the
+    # name never reaches the comparison.
     tree_text: str | None = None
     for match in re.finditer(r'```text\n(.*?)```', text, re.DOTALL):
         block = match.group(1)
@@ -2091,7 +2133,8 @@ UNBACKTICKED_PATH_RE = re.compile(
 )
 
 
-# unbackticked_paths_resolve: unbackticked schema-prefix paths in CLAUDE.md resolve.
+# unbackticked_paths_resolve: unbackticked schema-prefix paths in
+# CLAUDE.md resolve.
 def check_unbackticked_paths_resolve(root: Path) -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
     claude = root / 'CLAUDE.md'
@@ -2107,7 +2150,8 @@ def check_unbackticked_paths_resolve(root: Path) -> list[dict[str, Any]]:
             continue
         if in_fence:
             continue
-        # Strip backticked inline spans (those are filename_references_resolve's territory).
+        # Strip backticked inline spans (those are
+        # filename_references_resolve's territory).
         stripped = re.sub(r'`[^`]*`', '', line)
         for m in UNBACKTICKED_PATH_RE.finditer(stripped):
             token = m.group(1).rstrip('/.,;:)')
@@ -2140,7 +2184,8 @@ NEXT_H2_RE = re.compile(r'^## ', re.MULTILINE)
 SKILL_BULLET_RE = re.compile(r'^- `([a-z0-9][a-z0-9-]*)`\s+-')
 
 
-# operations_list_matches_skills: CLAUDE.md Operations list matches skill folders on disk.
+# operations_list_matches_skills: CLAUDE.md Operations list matches
+# skill folders on disk.
 def check_operations_list_matches_skills(root: Path) -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
     claude = root / 'CLAUDE.md'
@@ -2179,8 +2224,9 @@ def check_operations_list_matches_skills(root: Path) -> list[dict[str, Any]]:
         if p.is_dir() and not p.name.startswith('.') and (p / 'SKILL.md').exists()
     }
 
-    # Standalone skills are deliberately out of the Operations catalogue, so
-    # neither requiring nor flagging them either way: drop them from both sides.
+    # Standalone skills are deliberately out of the Operations
+    # catalogue, so neither requiring nor flagging them either way: drop
+    # them from both sides.
     listed -= STANDALONE_SKILL_NAMES
     on_disk -= STANDALONE_SKILL_NAMES
 
@@ -2210,15 +2256,16 @@ def check_operations_list_matches_skills(root: Path) -> list[dict[str, Any]]:
     return findings
 
 
-# retired_skill_references: routing to a skill that was merged or renamed away.
-# `ingest-deep` and `reingest` were folded into `ingest` (deep mode and
-# existing-source mode). The Operations list and folders were updated, but
-# routing references can survive in skill bodies. `ingest-deep` has no
-# legitimate prose form, so any occurrence is drift; `reingest` survives as
-# mode vocabulary unbackticked ("a reingest appends"), so only its routing form
-# — backticked or slash-prefixed — is drift. Add a name here when a skill
-# retires or merges; the keys are the dead names, the values control how
-# strictly each is matched ('any' = literal anywhere, 'routing' = backtick or
+# retired_skill_references: routing to a skill that was merged or
+# renamed away. `ingest-deep` and `reingest` were folded into `ingest`
+# (deep mode and existing-source mode). The Operations list and folders
+# were updated, but routing references can survive in skill bodies.
+# `ingest-deep` has no legitimate prose form, so any occurrence is
+# drift; `reingest` survives as mode vocabulary unbackticked ("a
+# reingest appends"), so only its routing form — backticked or
+# slash-prefixed — is drift. Add a name here when a skill retires or
+# merges; the keys are the dead names, the values control how strictly
+# each is matched ('any' = literal anywhere, 'routing' = backtick or
 # slash only).
 RETIRED_SKILL_NAMES = {
     'ingest-deep': 'any',
@@ -2234,8 +2281,8 @@ def _retired_routing_exempt(rel: str, line: str) -> bool:
     Lines where naming a retired skill is legitimate, not drift.
     """
     slashed = '/' + rel.replace('\\', '/')
-    # The ingest skill owns the mode names (log-verb template); the consistency
-    # skill documents this very check.
+    # The ingest skill owns the mode names (log-verb template); the
+    # consistency skill documents this very check.
     if '/skills/ingest/' in slashed or '/skills/consistency/' in slashed:
         return True
     if rel.endswith('-memory.md'):
@@ -2268,9 +2315,10 @@ def check_retired_skill_references(root: Path) -> list[dict[str, Any]]:
 
     for f in scan:
         rel = str(f.relative_to(root))
-        # The consistency skill documents these retired names and enumeration
-        # patterns by necessity; self-skip its folder so the check never flags
-        # its own definition (mirrors ai_writing_tells self-skipping).
+        # The consistency skill documents these retired names and
+        # enumeration patterns by necessity; self-skip its folder so the
+        # check never flags its own definition (mirrors ai_writing_tells
+        # self-skipping).
         if '/skills/consistency/' in '/' + rel.replace('\\', '/'):
             continue
         try:
@@ -2300,7 +2348,8 @@ def check_retired_skill_references(root: Path) -> list[dict[str, Any]]:
                         'existing-source mode for `reingest`).',
                     )
                 )
-            # Required-skills enumeration must resolve to current folders.
+            # Required-skills enumeration must resolve to current
+            # folders.
             if current_skills and SKILLS_ENUMERATION_RE.search(line):
                 for tok in BACKTICKED_SKILL_TOKEN_RE.findall(line):
                     if tok in current_skills or tok in RETIRED_SKILL_NAMES:
@@ -2319,24 +2368,25 @@ def check_retired_skill_references(root: Path) -> list[dict[str, Any]]:
     return findings
 
 
-# section_lists_match_schema: EXPECTED_SECTIONS is a hardcoded copy of the
-# callout lists CLAUDE.md documents under "### Required Callout Sections".
-# body_section_order validates wiki pages against that copy, not CLAUDE.md, so
-# without this check a CLAUDE.md section-list edit (the exact change consistency
-# runs for) silently leaves the script enforcing the old schema.
+# section_lists_match_schema: EXPECTED_SECTIONS is a hardcoded copy of
+# the callout lists CLAUDE.md documents under "### Required Callout
+# Sections". body_section_order validates wiki pages against that copy,
+# not CLAUDE.md, so without this check a CLAUDE.md section-list edit
+# (the exact change consistency runs for) silently leaves the script
+# enforcing the old schema.
 CLAUDE_SECTION_LABELS = {
     'source pages': 'source',
     'concept/entity pages': 'concept',
     'synthesis pages': 'synthesis',
 }
-# Capture the raw backticked token after the list number, not a pre-filtered
-# slug shape: a malformed slug (uppercase/digit/underscore) must still appear
-# in the parsed list so the mismatch message names the real offender instead of
-# silently dropping the line.
+# Capture the raw backticked token after the list number, not a
+# pre-filtered slug shape: a malformed slug (uppercase/digit/underscore)
+# must still appear in the parsed list so the mismatch message names the
+# real offender instead of silently dropping the line.
 SECTION_LIST_ITEM_RE = re.compile(r'^\s*\d+\.\s+`([^`]+)`')
-# A label/heading line: ends in ':' or is a Markdown heading or bold run. These
-# reset the current page-type so a list under an unrecognized heading is not
-# misattributed to the last recognized one.
+# A label/heading line: ends in ':' or is a Markdown heading or bold
+# run. These reset the current page-type so a list under an unrecognized
+# heading is not misattributed to the last recognized one.
 SECTION_PAGE_LABEL_RE = re.compile(r'^[a-z][a-z/ ]* pages?$')
 
 
@@ -2413,8 +2463,9 @@ def check_section_lists_match_schema(root: Path) -> list[dict[str, Any]]:
             )
         )
         return findings
-    # A documented page type the script does not validate is a latent gap: a new
-    # page type is exactly the section-template edit this check exists to catch.
+    # A documented page type the script does not validate is a latent
+    # gap: a new page type is exactly the section-template edit this
+    # check exists to catch.
     for label in unrecognized:
         findings.append(
             finding(
@@ -2426,8 +2477,9 @@ def check_section_lists_match_schema(root: Path) -> list[dict[str, Any]]:
                 'and the comparison loop in check_consistency.py, or remove the list.',
             )
         )
-    # CLAUDE.md documents one shared "concept/entity" list; EXPECTED_SECTIONS
-    # stores 'concept' and 'entity' identically, so compare against 'concept'.
+    # CLAUDE.md documents one shared "concept/entity" list;
+    # EXPECTED_SECTIONS stores 'concept' and 'entity' identically, so
+    # compare against 'concept'.
     for kind in ('source', 'concept', 'synthesis'):
         documented = parsed.get(kind)
         expected = EXPECTED_SECTIONS[kind]
@@ -2457,10 +2509,11 @@ def check_section_lists_match_schema(root: Path) -> list[dict[str, Any]]:
     return findings
 
 
-# output_kinds_match_disk: OUTPUT_KIND_DIRS (the dated-naming kinds) must equal
-# the on-disk 2-outputs/ subfolders (preservation subfolders nest under a kind
-# folder, so they are not immediate children here), so a newly added
-# output kind cannot silently escape file_naming_consistency.
+# output_kinds_match_disk: OUTPUT_KIND_DIRS (the dated-naming kinds)
+# must equal the on-disk 2-outputs/ subfolders (preservation subfolders
+# nest under a kind folder, so they are not immediate children here), so
+# a newly added output kind cannot silently escape
+# file_naming_consistency.
 def check_output_kinds_match_disk(root: Path) -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
     outputs = root / '2-outputs'
@@ -2488,11 +2541,12 @@ def check_output_kinds_match_disk(root: Path) -> list[dict[str, Any]]:
                 'supersede/preserve.',
             )
         )
-    # Stale direction: only a real drift when the kind's skill still exists but
-    # its output folder vanished. Output folders are created lazily by their
-    # skill, so on a fresh vault a never-run kind has no folder yet — flagging
-    # that would be noise, not drift. Every current kind is named after its
-    # owning skill (query/ingest/…), so skill presence is the proxy.
+    # Stale direction: only a real drift when the kind's skill still
+    # exists but its output folder vanished. Output folders are created
+    # lazily by their skill, so on a fresh vault a never-run kind has no
+    # folder yet — flagging that would be noise, not drift. Every
+    # current kind is named after its owning skill (query/ingest/…), so
+    # skill presence is the proxy.
     skills_dir = root / '.claude/skills'
     for stale in sorted(OUTPUT_KIND_DIRS - on_disk):
         if not (skills_dir / stale).is_dir():
@@ -2510,11 +2564,12 @@ def check_output_kinds_match_disk(root: Path) -> list[dict[str, Any]]:
     return findings
 
 
-# catalogue_matches_manifest: references/checks.md restates the per-check
-# catalogue (packet groupings and per-packet counts). Moving the catalogue out
-# of SKILL.md created a doc copy nothing else guards, so this check parses it and
-# asserts equality with CHECK_MANIFEST / PACKET_CHECKS — the same drift class
-# section_lists_match_schema guards for CLAUDE.md's section lists.
+# catalogue_matches_manifest: references/checks.md restates the
+# per-check catalogue (packet groupings and per-packet counts). Moving
+# the catalogue out of SKILL.md created a doc copy nothing else guards,
+# so this check parses it and asserts equality with CHECK_MANIFEST /
+# PACKET_CHECKS — the same drift class section_lists_match_schema guards
+# for CLAUDE.md's section lists.
 CATALOGUE_PACKET_HEADER_RE = re.compile(r'^## Packet:\s*([a-z][a-z-]*)\s*$')
 CATALOGUE_CHECK_BULLET_RE = re.compile(r'^- `([a-z_]+)`')
 CATALOGUE_TOTAL_RE = re.compile(r'(\d+)\s+checks\s+across')
@@ -2537,8 +2592,8 @@ def check_catalogue_matches_manifest(root: Path) -> list[dict[str, Any]]:
     text = cat.read_text(encoding='utf-8')
     actual_packets = {p: set(ids) for p, ids in PACKET_CHECKS.items()}
 
-    # Parse packet -> set(check_ids) from '## Packet: X' sections and '- `id`'
-    # bullets beneath each.
+    # Parse packet -> set(check_ids) from '## Packet: X' sections and '-
+    # `id`' bullets beneath each.
     doc_packets: dict[str, set[str]] = {}
     current: str | None = None
     for line in text.splitlines():
@@ -2565,7 +2620,8 @@ def check_catalogue_matches_manifest(root: Path) -> list[dict[str, Any]]:
                 )
             )
 
-    # Stated counts: total ('N checks across') and per-packet ('name (n)').
+    # Stated counts: total ('N checks across') and per-packet ('name
+    # (n)').
     tm = CATALOGUE_TOTAL_RE.search(text)
     if tm and int(tm.group(1)) != len(CHECK_MANIFEST):
         findings.append(
@@ -2599,15 +2655,17 @@ def check_shared_reference_integrity(root: Path) -> list[dict[str, Any]]:
     single copy.
 
     For each `.claude/skills/multi-skill/references/*.md`:
-      (a) it is cited by >= 2 distinct skills — that location is for cross-skill
-          material; a reference used by one skill belongs in that skill's own
-          `references/`;
-      (b) no skill folder holds a same-named `references/<file>` (a duplicate copy
+      (a) it is cited by >= 2 distinct skills — that location is for
+      cross-skill
+          material; a reference used by one skill belongs in that
+          skill's own `references/`;
+      (b) no skill folder holds a same-named `references/<file>` (a
+      duplicate copy
           that would drift from the shared canonical one).
 
-    Motivating case: `verification.md`, run by `ingest` (Step 8) and `query` (its
-    page-authoring path). Findings are root-level proposals — the files are
-    soft-read-only, so the user (not the script) acts.
+    Motivating case: `verification.md`, run by `ingest` (Step 8) and
+    `query` (its page-authoring path). Findings are root-level proposals
+    — the files are soft-read-only, so the user (not the script) acts.
     """
     findings: list[dict[str, Any]] = []
     skills_dir = root / '.claude/skills'
@@ -2624,8 +2682,9 @@ def check_shared_reference_integrity(root: Path) -> list[dict[str, Any]]:
         if p.is_dir() and p.name != 'multi-skill' and not p.name.startswith('.')
     ]
 
-    # Per-skill concatenated text (md + py) for citation scanning, and a map of
-    # basename -> skill folders that hold their own references/<basename>.
+    # Per-skill concatenated text (md + py) for citation scanning, and a
+    # map of basename -> skill folders that hold their own
+    # references/<basename>.
     skill_text: dict[str, str] = {}
     own_ref_copies: dict[str, list[str]] = {}
     for sd in skill_dirs:
@@ -2714,8 +2773,8 @@ CHECK_FUNCTIONS = {
 
 
 def parse_check_ids(raw: str) -> list[str]:
-    # Dedupe while preserving order so a copy-paste-repeated id does not run a
-    # check twice and double its findings.
+    # Dedupe while preserving order so a copy-paste-repeated id does not
+    # run a check twice and double its findings.
     return list(dict.fromkeys(part.strip() for part in raw.split(',') if part.strip()))
 
 
@@ -2776,10 +2835,11 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    # Guard the script's own wiring before doing any work: a function added
-    # without its manifest/packet entry (or vice versa) would otherwise drift
-    # silently. Emit the problem on stdout (as an (internal) finding the agent
-    # can read) and stderr, and exit 2 (did not complete).
+    # Guard the script's own wiring before doing any work: a function
+    # added without its manifest/packet entry (or vice versa) would
+    # otherwise drift silently. Emit the problem on stdout (as an
+    # (internal) finding the agent can read) and stderr, and exit 2 (did
+    # not complete).
     wiring = _assert_manifest_consistency()
     if wiring:
         print(
@@ -2818,11 +2878,12 @@ def main() -> int:
         selected = PACKET_CHECKS[args.packet]
     elif args.checks:
         selected = parse_check_ids(raw=args.checks)
-        # A comma- or whitespace-only --checks parses to no ids. Without this
-        # guard the loop would run zero checks and exit 0 — a vacuous "clean"
-        # the audit gate (exit 0 => clean) would trust. Fail loud like the other
-        # invocation errors (exit 2, empty stdout). An empty-string --checks is
-        # falsy and never reaches here, so it correctly runs all checks.
+        # A comma- or whitespace-only --checks parses to no ids. Without
+        # this guard the loop would run zero checks and exit 0 — a
+        # vacuous "clean" the audit gate (exit 0 => clean) would trust.
+        # Fail loud like the other invocation errors (exit 2, empty
+        # stdout). An empty-string --checks is falsy and never reaches
+        # here, so it correctly runs all checks.
         if not selected:
             parser.error('--checks resolved to an empty selection')
     unknown = sorted(set(selected) - set(CHECK_FUNCTIONS))
@@ -2848,9 +2909,10 @@ def main() -> int:
                 )
             )
 
-    # Sort findings once so output order is reproducible across platforms and
-    # filesystems (most checks iterate glob/iterdir, which is not order-stable).
-    # A stable order is what makes a golden-output regression test possible.
+    # Sort findings once so output order is reproducible across
+    # platforms and filesystems (most checks iterate glob/iterdir, which
+    # is not order-stable). A stable order is what makes a golden-output
+    # regression test possible.
     all_findings.sort(
         key=lambda f: (
             f.get('check_id') or '',

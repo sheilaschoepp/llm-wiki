@@ -186,7 +186,8 @@ ALLOW_LIST_EXCEPTIONS = frozenset(
 # allowed.
 ALLOW_LIST_OTHER = frozenset(
     {
-        # pathlib — Path('some/path') is the documented constructor form.
+        # pathlib — Path('some/path') is the documented constructor
+        # form.
         'Path',
         'PurePath',
         'PurePosixPath',

@@ -17,16 +17,16 @@ Usage:
 
 Flags:
     --single-file    Lint only the SKILL.md file; do not traverse references/.
-                     Use this when the user explicitly pointed at a single file
-                     rather than a skill directory.
+                     Use this when the user explicitly pointed at a
+                     single file rather than a skill directory.
 
 Exit codes:
     0 = ran successfully (findings may be present in JSON)
     2 = bad invocation / path not found / no SKILL.md
 
-The script intentionally does NOT make judgement calls about content quality —
-that's done by the LLM in a separate pass. This script only flags issues
-that can be checked mechanically with high confidence.
+The script intentionally does NOT make judgement calls about content
+quality — that's done by the LLM in a separate pass. This script only
+flags issues that can be checked mechanically with high confidence.
 """
 
 from __future__ import annotations
@@ -41,14 +41,15 @@ from typing import Any
 # SKILL.md body length budget; longer bodies eat context and signal that
 # detail should move into references/.
 SKILL_MD_MAX_LINES = 500
-# Word-count budget, the primary length signal. The guide's stated rule is
-# "SKILL.md body under 500 lines" (skill-authoring-best-practices.md ->
-# Token budgets), and its real concern is token/context cost — "every token
-# competes with conversation history". This repo writes each paragraph as one
-# physical line (no hard wrap), so the physical-line count under-measures that
-# cost (a 200-line SKILL.md can carry 11k words). The word budget approximates
-# the guide's 500 *normally-wrapped* lines (~13 words/line) — the repo-specific
-# proxy for the token concern the line rule stands in for. Flag when either
+# Word-count budget, the primary length signal. The guide's stated rule
+# is "SKILL.md body under 500 lines" (skill-authoring-best-practices.md
+# -> Token budgets), and its real concern is token/context cost — "every
+# token competes with conversation history". This repo writes each
+# paragraph as one physical line (no hard wrap), so the physical-line
+# count under-measures that cost (a 200-line SKILL.md can carry 11k
+# words). The word budget approximates the guide's 500
+# *normally-wrapped* lines (~13 words/line) — the repo-specific proxy
+# for the token concern the line rule stands in for. Flag when either
 # measure is exceeded.
 SKILL_MD_MAX_WORDS = 6500
 # Reference files longer than this should have a table of contents so a
@@ -78,9 +79,10 @@ def load_skill_md(
     (1-indexed line numbers in SKILL.md correspond to
     (frontmatter_end_line + i + 1) for body_lines[i]).
     """
-    # Guard the read like the reference-file read below: a non-UTF-8 / binary
-    # SKILL.md should surface as a frontmatter_missing finding (fm=None), not
-    # crash the scanner with an uncaught UnicodeDecodeError and block the loop.
+    # Guard the read like the reference-file read below: a non-UTF-8 /
+    # binary SKILL.md should surface as a frontmatter_missing finding
+    # (fm=None), not crash the scanner with an uncaught
+    # UnicodeDecodeError and block the loop.
     try:
         lines = skill_md_path.read_text(encoding='utf-8').splitlines()
     except (OSError, UnicodeDecodeError):
@@ -327,14 +329,15 @@ def check_body_length(
     Flag SKILL.md bodies that exceed the length budget.
 
     Two measures because this repo writes each paragraph as one physical
-    line (no hard wrap): the physical-line count under-counts a dense body,
-    so a word count is the primary signal and the line count is a backstop
+    line (no hard wrap): the physical-line count under-counts a dense
+    body, so a word count is the primary signal and the line count is a
+    backstop
     for a genuinely many-lined file. Flag when either budget is exceeded.
 
-    The word count deliberately includes fenced code and tables, unlike the
-    prose-hunting sibling checks: the budget is a token-cost proxy, and code
-    and tables cost context tokens on load just as prose does, so stripping
-    them would under-count the real load.
+    The word count deliberately includes fenced code and tables, unlike
+    the prose-hunting sibling checks: the budget is a token-cost proxy,
+    and code and tables cost context tokens on load just as prose does,
+    so stripping them would under-count the real load.
     """
     n_lines = len(body_lines)
     n_words = sum(len(line.split()) for line in body_lines)
@@ -347,11 +350,11 @@ def check_body_length(
         parts.append(f'{n_words} words (budget {SKILL_MD_MAX_WORDS})')
     if over_lines:
         parts.append(f'{n_lines} lines (budget {SKILL_MD_MAX_LINES})')
-    # The explanatory tail depends on which budget tripped. Word count is
-    # the primary signal, and because this repo writes each paragraph as one
-    # physical line the line count alone under-measures a dense body; but on
-    # a line-only trip the word count is within budget, so do not claim the
-    # line count under-measures there.
+    # The explanatory tail depends on which budget tripped. Word count
+    # is the primary signal, and because this repo writes each paragraph
+    # as one physical line the line count alone under-measures a dense
+    # body; but on a line-only trip the word count is within budget, so
+    # do not claim the line count under-measures there.
     if over_words:
         tail = (
             ' Word count is the primary signal; because this repo writes '
@@ -476,11 +479,11 @@ HTML_TAGS = {
     'video',
 }
 
-# Bash process substitution `<(...)` outside a code fence is rejected by the
-# cowork skill-upload pipeline (it reads as a malformed HTML tag), so it is an
-# upload-breaking defect — see CLAUDE.md -> Skill Authoring. The HTML_TAG_RE
-# above never matches it (it requires a letter after `<`), so it needs its own
-# pattern.
+# Bash process substitution `<(...)` outside a code fence is rejected by
+# the cowork skill-upload pipeline (it reads as a malformed HTML tag),
+# so it is an upload-breaking defect — see CLAUDE.md -> Skill Authoring.
+# The HTML_TAG_RE above never matches it (it requires a letter after
+# `<`), so it needs its own pattern.
 PROC_SUBST_RE = re.compile(r'<\(')
 
 
@@ -559,8 +562,9 @@ def check_paths(
     Flag Windows-style backslash paths in the SKILL.md body.
 
     Lines inside fenced code blocks are skipped: a backslash path in a
-    PowerShell / cmd example is legitimate, not a portability defect. The
-    check is otherwise intentionally light — false positives are noisy.
+    PowerShell / cmd example is legitimate, not a portability defect.
+    The check is otherwise intentionally light — false positives are
+    noisy.
     """
     findings = []
     in_code_fence = False
@@ -629,8 +633,9 @@ def check_reference_depth_and_toc(
         if not ref_path.is_relative_to(skill_dir):
             # A reference resolving outside the skill folder (e.g. a
             # shared ../multi-skill/references/ file) is legitimate and
-            # not this skill's own reference to depth/TOC-check; skip it.
-            # This also avoids a relative_to() crash on the line below.
+            # not this skill's own reference to depth/TOC-check; skip
+            # it. This also avoids a relative_to() crash on the line
+            # below.
             continue
         direct_refs.append(ref_path)
 
@@ -710,18 +715,20 @@ def check_reference_depth_and_toc(
     return findings
 
 
-# Inline-code path references. `check_reference_depth_and_toc` above only sees
-# Markdown-hyperlink references `[text](path)`; these skills cite references
-# and scripts as inline-code paths (`.claude/skills/forget/references/foo.md`,
-# the abbreviated `forget/references/foo.md`, or the skill-relative
-# `references/foo.md`), which that check misses. This scan verifies those
-# skill-infrastructure paths resolve on disk. It also catches the bare
-# abbreviated form that drops the `references/`/`scripts/` segment (a broken
-# `forget/removal-mechanics.md` for `forget/references/removal-mechanics.md`),
-# disk-gated on the leading segment naming a real skill dir (see
-# `_is_bare_skill_ref`), which is the gap that let such a path ship before.
-# Scoped to `.md`/`.py` skill files; wiki/raw/output/archive paths are excluded
-# because they carry legitimate template examples that need not exist on disk.
+# Inline-code path references. `check_reference_depth_and_toc` above
+# only sees Markdown-hyperlink references `[text](path)`; these skills
+# cite references and scripts as inline-code paths
+# (`.claude/skills/forget/references/foo.md`, the abbreviated
+# `forget/references/foo.md`, or the skill-relative
+# `references/foo.md`), which that check misses. This scan verifies
+# those skill-infrastructure paths resolve on disk. It also catches the
+# bare abbreviated form that drops the `references/`/`scripts/` segment
+# (a broken `forget/removal-mechanics.md` for
+# `forget/references/removal-mechanics.md`), disk-gated on the leading
+# segment naming a real skill dir (see `_is_bare_skill_ref`), which is
+# the gap that let such a path ship before. Scoped to `.md`/`.py` skill
+# files; wiki/raw/output/archive paths are excluded because they carry
+# legitimate template examples that need not exist on disk.
 INLINE_CODE_RE = re.compile(r'`([^`]+)`')
 _SKILL_REF_EXCLUDE_PREFIXES = ('1-wiki/', '0-raw/', '2-outputs/', 'a-archive/')
 _SKILL_REF_TEMPLATE_CHARS = set('{}<>*$…')
@@ -786,11 +793,11 @@ def check_inline_code_refs(
 ) -> list[dict[str, Any]]:
     """Flag inline-code skill-infra paths (.md/.py) that resolve nowhere.
 
-    `files` is a list of (file_rel, lines, line_offset) to scan — SKILL.md
-    (body lines, offset = frontmatter end) plus each reference file (full
-    lines, offset 0). Fenced code blocks are skipped: a path inside a bash
-    example is illustrative, not a reference. One finding per distinct
-    broken token.
+    `files` is a list of (file_rel, lines, line_offset) to scan —
+    SKILL.md (body lines, offset = frontmatter end) plus each reference
+    file (full lines, offset 0). Fenced code blocks are skipped: a path
+    inside a bash example is illustrative, not a reference. One finding
+    per distinct broken token.
     """
     findings: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -805,8 +812,8 @@ def check_inline_code_refs(
             for span in INLINE_CODE_RE.findall(line):
                 for raw in span.split():
                     # Drop an anchor, leading brackets, and trailing
-                    # sentence punctuation — but NOT a leading '.', which is
-                    # part of `.claude/…` paths.
+                    # sentence punctuation — but NOT a leading '.',
+                    # which is part of `.claude/…` paths.
                     token = raw.split('#', 1)[0].lstrip('([').rstrip('.,;:)]')
                     if not (
                         _looks_like_skill_ref(token=token)
@@ -921,8 +928,8 @@ def main() -> int:
             skill_dir=skill_dir,
             body_text=body_text,
         )
-        # Inline-code path references (the syntax this repo's skills use to
-        # cite refs/scripts) — resolve them across SKILL.md and every
+        # Inline-code path references (the syntax this repo's skills use
+        # to cite refs/scripts) — resolve them across SKILL.md and every
         # reference file. Needs the repo root to resolve `.claude/…` and
         # abbreviated `<skill>/references/…` paths; skip if not found.
         repo_root = find_repo_root(skill_dir=skill_dir)

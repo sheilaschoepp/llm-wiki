@@ -35,16 +35,17 @@ spec.loader.exec_module(cc)
 
 
 def _synthetic_bibkey(author: str, year: str, title: str) -> str:
-    # Compose at call time so this source file holds no literal bibkey token —
-    # domain_literature_leakage scans test scripts too, and a literal corpus key
-    # here would (correctly) flag this very file.
+    # Compose at call time so this source file holds no literal bibkey
+    # token — domain_literature_leakage scans test scripts too, and a
+    # literal corpus key here would (correctly) flag this very file.
     return f'{author}{year}{title}'
 
 
 def _addr(local: str, domain: str) -> str:
     # Compose at call time so no literal email sits in this source —
-    # personal_info_leakage scans test scripts too and would (correctly) flag
-    # a real-looking address here, exactly as _synthetic_bibkey guards a bibkey.
+    # personal_info_leakage scans test scripts too and would (correctly)
+    # flag a real-looking address here, exactly as _synthetic_bibkey
+    # guards a bibkey.
     return f'{local}@{domain}'
 
 
@@ -69,17 +70,18 @@ class TestCheckConsistency(unittest.TestCase):
 
     # --- committed-repo smoke (runs over whatever this repo holds) ---
     #
-    # These exercise the battery against real, messy input; they deliberately do
-    # NOT assert the repo is finding-free. Findings here are ordinary content
-    # debt (a page with mixed empty-section placeholders, a tree entry not yet
-    # added), and this suite ships as a template into vaults that carry some at
-    # any moment. Cleanliness has an owner already: consistency's own `result:`
-    # field and lint's `result: clean | blocking`, the two preconditions audit
-    # gates on (CLAUDE.md -> Workflow Rules -> Audit preconditions). Restating it
-    # as a hard test failure converts a worklist the skills are built to report
-    # into a red suite nobody can green without editing prose. What a test can
-    # own is that the battery survives real input and emits well-formed
-    # findings — which is what these pin.
+    # These exercise the battery against real, messy input; they
+    # deliberately do NOT assert the repo is finding-free. Findings here
+    # are ordinary content debt (a page with mixed empty-section
+    # placeholders, a tree entry not yet added), and this suite ships as
+    # a template into vaults that carry some at any moment. Cleanliness
+    # has an owner already: consistency's own `result:` field and lint's
+    # `result: clean | blocking`, the two preconditions audit gates on
+    # (CLAUDE.md -> Workflow Rules -> Audit preconditions). Restating it
+    # as a hard test failure converts a worklist the skills are built to
+    # report into a red suite nobody can green without editing prose.
+    # What a test can own is that the battery survives real input and
+    # emits well-formed findings — which is what these pin.
 
     def test_battery_runs_on_real_repo_with_well_formed_findings(self) -> None:
         for check_id, fn in cc.CHECK_FUNCTIONS.items():
@@ -108,8 +110,9 @@ class TestCheckConsistency(unittest.TestCase):
         assert isinstance(json.loads(r1.stdout), list)
 
     def test_catalogue_matches_manifest_clean(self) -> None:
-        # Stays a hard assertion: the catalogue and the manifest are both
-        # template-owned code, so drift is a defect, not vault content.
+        # Stays a hard assertion: the catalogue and the manifest are
+        # both template-owned code, so drift is a defect, not vault
+        # content.
         assert cc.check_catalogue_matches_manifest(REPO) == []
 
     # --- regression: crash on a missing wiki subfolder ---
@@ -124,14 +127,16 @@ class TestCheckConsistency(unittest.TestCase):
         # Must return a list, not raise FileNotFoundError.
         assert isinstance(cc.check_index_vs_files_drift(self.tmp), list)
 
-    # --- regression: dir_tree_drift located the tree by the repo's name ---
+    # --- regression: dir_tree_drift located the tree by the repo's name
+    # ---
     #
-    # The tree block was found by probing each ```text fence for the literal
-    # string `llm-wiki/`. This project ships as a template into repos with other
-    # root names, where that probe finds nothing and the check reports the whole
-    # documented structure as missing — a false Critical on every run, in the one
-    # repo class that cannot fix it. The block is now identified structurally, by
-    # the ├──/└── branches the parser reads, so the root's name is irrelevant.
+    # The tree block was found by probing each ```text fence for the
+    # literal string `llm-wiki/`. This project ships as a template into
+    # repos with other root names, where that probe finds nothing and
+    # the check reports the whole documented structure as missing — a
+    # false Critical on every run, in the one repo class that cannot fix
+    # it. The block is now identified structurally, by the ├──/└──
+    # branches the parser reads, so the root's name is irrelevant.
 
     def _tree_repo(self, root_label: str) -> Path:
         """
@@ -152,15 +157,17 @@ class TestCheckConsistency(unittest.TestCase):
         assert not any('not found' in m for m in messages), messages
 
     def test_dir_tree_root_line_is_not_compared_as_a_path(self) -> None:
-        # The root line carries no branch prefix, so the parser skips it. Were it
-        # parsed, every repo would be told its tree lists a nonexistent path.
+        # The root line carries no branch prefix, so the parser skips
+        # it. Were it parsed, every repo would be told its tree lists a
+        # nonexistent path.
         root = self._tree_repo('some-other-wiki/')
         messages = [f['message'] for f in cc.check_dir_tree_drift(root)]
         assert not any('some-other-wiki' in m for m in messages), messages
 
     def test_dir_tree_missing_block_still_flagged(self) -> None:
-        # The structural probe must not become a check that never fires: a
-        # CLAUDE.md whose fence holds no branches is still a missing tree.
+        # The structural probe must not become a check that never fires:
+        # a CLAUDE.md whose fence holds no branches is still a missing
+        # tree.
         (self.tmp / 'CLAUDE.md').write_text(
             '# Schema\n\n```text\nnot a tree, just prose\n```\n'
         )
@@ -212,14 +219,16 @@ class TestCheckConsistency(unittest.TestCase):
         out = cc.check_section_lists_match_schema(self.tmp)
         assert any('source' in f['message'] for f in out)
 
-    # --- domain_literature_leakage: corpus citations in generic infra ---
+    # --- domain_literature_leakage: corpus citations in generic infra
+    # ---
 
     def test_domain_literature_leakage_exempts_agent_data_files(self) -> None:
-        # The agent-writable curated DATA files (CLAUDE.md -> Stay In Your Lane)
-        # are data, not skill logic, and their content is BY CONSTRUCTION the
-        # vault's own -- e.g. pagination-map.md sections are keyed on the vault's
-        # raw stems, every one a corpus bibkey. Requiring placeholder bibkeys
-        # there is incoherent; same rationale as the `-memory.md` journals.
+        # The agent-writable curated DATA files (CLAUDE.md -> Stay In
+        # Your Lane) are data, not skill logic, and their content is BY
+        # CONSTRUCTION the vault's own -- e.g. pagination-map.md
+        # sections are keyed on the vault's raw stems, every one a
+        # corpus bibkey. Requiring placeholder bibkeys there is
+        # incoherent; same rationale as the `-memory.md` journals.
         leaked = _synthetic_bibkey(author='Corpus', year='2097', title='GammaEF')
         lint = self.tmp / '.claude' / 'skills' / 'lint'
         lint.mkdir(parents=True)
@@ -235,11 +244,12 @@ class TestCheckConsistency(unittest.TestCase):
         assert '.claude/skills/lint/references.md' in flagged
 
     def test_agent_data_files_constant_matches_disk(self) -> None:
-        # The constant is the script's copy of a CLAUDE.md declaration; if a data
-        # file is renamed or added without updating it, the exemption silently
-        # stops applying (or applies to nothing). Pin it to what ships. The three
-        # curated data files now live in multi-skill/ (shared with the sibling
-        # skills that read check_wiki.py), not lint/.
+        # The constant is the script's copy of a CLAUDE.md declaration;
+        # if a data file is renamed or added without updating it, the
+        # exemption silently stops applying (or applies to nothing). Pin
+        # it to what ships. The three curated data files now live in
+        # multi-skill/ (shared with the sibling skills that read
+        # check_wiki.py), not lint/.
         data_dir = REPO / '.claude' / 'skills' / 'multi-skill'
         for name in cc.AGENT_DATA_FILES:
             assert (data_dir / name).exists(), f'{name} declared exempt but not on disk'
@@ -251,18 +261,21 @@ class TestCheckConsistency(unittest.TestCase):
         leaked_a = _synthetic_bibkey(author='Corpus', year='2099', title='AlphaAB')
         leaked_b = _synthetic_bibkey(author='Corpus', year='2098', title='BetaCD')
         exempt_mem = _synthetic_bibkey(author='Corpus', year='2096', title='DeltaGH')
-        # CLAUDE.md: a placeholder (ok) plus a leaked corpus citation (flag).
+        # CLAUDE.md: a placeholder (ok) plus a leaked corpus citation
+        # (flag).
         (self.tmp / 'CLAUDE.md').write_text(
             f'Example source `{placeholder}` is fine.\n'
             f'But `{leaked_a}` is corpus literature.\n'
         )
         skills = self.tmp / '.claude' / 'skills'
-        # A skill leaking a corpus citation in its script -> flagged (scripts scanned).
+        # A skill leaking a corpus citation in its script -> flagged
+        # (scripts scanned).
         normal = skills / 'dummy'
         (normal / 'scripts').mkdir(parents=True)
         (normal / 'SKILL.md').write_text('A dummy skill.\n')
         (normal / 'scripts' / 'run.py').write_text(f'KEY = "{leaked_b}"\n')
-        # A memory journal citing a real past paper -> the one structural exemption.
+        # A memory journal citing a real past paper -> the one
+        # structural exemption.
         (skills / 'multi-skill-memory.md').write_text(
             f'During the `{exempt_mem}` ingest we learned X.\n'
         )
@@ -289,7 +302,8 @@ class TestCheckConsistency(unittest.TestCase):
         # A backticked, referenced script -> not orphan.
         (skill / 'SKILL.md').write_text('Run `scripts/run.py` to do the thing.\n')
         (skill / 'scripts' / 'run.py').write_text('print("hi")\n')
-        # Transient pytest cache under scripts/ -> must be skipped, not flagged.
+        # Transient pytest cache under scripts/ -> must be skipped, not
+        # flagged.
         cache = skill / 'scripts' / '.pytest_cache' / 'v' / 'cache'
         cache.mkdir(parents=True)
         (skill / 'scripts' / '.pytest_cache' / 'CACHEDIR.TAG').write_text('x\n')
@@ -312,7 +326,8 @@ class TestCheckConsistency(unittest.TestCase):
         assert any('weirdkind' in f['message'] for f in out)
 
     def test_output_kinds_stale_direction_gated_on_skill(self) -> None:
-        # A listed kind with no folder AND no owning skill must not flag (fresh vault).
+        # A listed kind with no folder AND no owning skill must not flag
+        # (fresh vault).
         (self.tmp / '2-outputs' / 'query').mkdir(parents=True)
         out = cc.check_output_kinds_match_disk(self.tmp)
         assert not any('does not exist on disk' in f['message'] for f in out)
@@ -338,9 +353,10 @@ class TestCheckConsistency(unittest.TestCase):
             text=True,
         )
         assert r.returncode == 2
-        # The empty-stdout-on-invocation-error is the trap audit's `result:`
-        # gate depends on: a genuinely clean run prints '[]' (exit 0), so an
-        # empty stdout must never be read as clean. Pin both halves.
+        # The empty-stdout-on-invocation-error is the trap audit's
+        # `result:` gate depends on: a genuinely clean run prints '[]'
+        # (exit 0), so an empty stdout must never be read as clean. Pin
+        # both halves.
         assert r.stdout.strip() == ''
         assert r.stderr.strip() != ''
 
@@ -359,10 +375,10 @@ class TestCheckConsistency(unittest.TestCase):
             assert r.stdout.strip() == '', args
 
     def test_empty_checks_selection_exits_2(self) -> None:
-        # A comma- or whitespace-only --checks resolves to zero checks. Without
-        # the guard the battery runs nothing and exits 0 — a vacuous "clean" the
-        # audit gate would trust. It must fail loud (exit 2, empty stdout) like
-        # the other invocation errors.
+        # A comma- or whitespace-only --checks resolves to zero checks.
+        # Without the guard the battery runs nothing and exits 0 — a
+        # vacuous "clean" the audit gate would trust. It must fail loud
+        # (exit 2, empty stdout) like the other invocation errors.
         for value in (',', '   '):
             r = subprocess.run(
                 [sys.executable, str(SCRIPT), '.', '--checks', value],
@@ -374,10 +390,10 @@ class TestCheckConsistency(unittest.TestCase):
             assert r.stdout.strip() == '', value
 
     def test_crash_exits_2_with_populated_internal_finding(self) -> None:
-        # The crash-blocked path: a mid-battery crash exits 2 but prints a
-        # POPULATED array carrying a file='(internal)' finding — distinct from an
-        # invocation error's empty stdout. The gate relies on that distinction, so
-        # pin it (previously untested).
+        # The crash-blocked path: a mid-battery crash exits 2 but prints
+        # a POPULATED array carrying a file='(internal)' finding —
+        # distinct from an invocation error's empty stdout. The gate
+        # relies on that distinction, so pin it (previously untested).
         def boom(root: Path) -> list:
             raise RuntimeError('kaboom')
 
@@ -407,10 +423,11 @@ class TestCheckConsistency(unittest.TestCase):
     # --- identity-source fail-loud ---
 
     def test_identity_source_unloadable_fails_loud(self) -> None:
-        # A missing/unparseable identity source must surface an advisory, not
-        # pass vacuously — the highest-stakes personal-info scan going silent
-        # is the failure mode. (On a real vault about-me loads, so this fires
-        # only when the source is genuinely absent.)
+        # A missing/unparseable identity source must surface an
+        # advisory, not pass vacuously — the highest-stakes
+        # personal-info scan going silent is the failure mode. (On a
+        # real vault about-me loads, so this fires only when the source
+        # is genuinely absent.)
         with tempfile.TemporaryDirectory() as d:
             out = cc.check_identity_term_leakage(Path(d))
         assert len(out) == 1
@@ -420,9 +437,10 @@ class TestCheckConsistency(unittest.TestCase):
     # --- personal-info email regex: alphabetic-TLD guard ---
 
     def test_email_re_matches_real_addresses(self) -> None:
-        # Real addresses — subdomains, +tags, uppercase — still match after
-        # the alphabetic-TLD guard was added. Composed via _addr so no literal
-        # address sits in this source (personal_info_leakage scans it).
+        # Real addresses — subdomains, +tags, uppercase — still match
+        # after the alphabetic-TLD guard was added. Composed via _addr
+        # so no literal address sits in this source
+        # (personal_info_leakage scans it).
         for addr in (
             _addr('sschoepp', 'ualberta.ca'),
             _addr('user', 'example.com'),
@@ -433,8 +451,9 @@ class TestCheckConsistency(unittest.TestCase):
             assert cc.EMAIL_RE.search(addr), f'should match: {addr}'
 
     def test_email_re_rejects_numeric_tld_metric_notation(self) -> None:
-        # The guard's purpose: metric notation like acc@5.2 or mAP@0.5 has a
-        # numeric final label, so it must not be misread as an email.
+        # The guard's purpose: metric notation like acc@5.2 or mAP@0.5
+        # has a numeric final label, so it must not be misread as an
+        # email.
         for token in (
             'acc@5',
             'acc@5.2',
@@ -447,8 +466,8 @@ class TestCheckConsistency(unittest.TestCase):
             assert not cc.EMAIL_RE.search(token), f'should not match: {token}'
 
     def test_personal_info_leakage_ignores_metric_notation(self) -> None:
-        # End to end: metric notation raises no email finding, a real address
-        # still does.
+        # End to end: metric notation raises no email finding, a real
+        # address still does.
         (self.tmp / 'note.md').write_text(
             'Top-5 result mAP@0.5 and recall@0.95 improved.\n',
             encoding='utf-8',

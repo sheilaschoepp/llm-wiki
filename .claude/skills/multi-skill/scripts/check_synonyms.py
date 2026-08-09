@@ -3,19 +3,20 @@
 check_synonyms.py — flag inconsistent-terminology candidates in
 SKILL.md.
 
-Why a separate script? "Inconsistent terminology" is a known blind spot for
-judgement-only review: when a body uses 'image', 'photo', and 'picture'
-interchangeably in casual prose, the model often shrugs because they're
-near-synonyms in English. But for a skill, switching between them creates
-unnecessary friction for the reader. A deterministic scan of common synonym
-groups surfaces every candidate so the LLM only has to decide *which* ones
-genuinely refer to the same thing — not whether to look in the first place.
+Why a separate script? "Inconsistent terminology" is a known blind spot
+for judgement-only review: when a body uses 'image', 'photo', and
+'picture' interchangeably in casual prose, the model often shrugs
+because they're near-synonyms in English. But for a skill, switching
+between them creates unnecessary friction for the reader. A
+deterministic scan of common synonym groups surfaces every candidate so
+the LLM only has to decide *which* ones genuinely refer to the same
+thing — not whether to look in the first place.
 
-Output is the same JSON-finding shape as check_structure.py, but at severity
-'suggestion' and with a special check_id 'terminology_candidate'. The
-calling agent should review each candidate and decide whether to keep the
-finding (genuine inconsistency) or discard it (the terms refer to different
-things in this skill's domain).
+Output is the same JSON-finding shape as check_structure.py, but at
+severity 'suggestion' and with a special check_id
+'terminology_candidate'. The calling agent should review each candidate
+and decide whether to keep the finding (genuine inconsistency) or
+discard it (the terms refer to different things in this skill's domain).
 
 Usage:
     python check_synonyms.py <skill-dir-or-SKILL.md>
@@ -59,17 +60,18 @@ SYNONYM_GROUPS: list[list[str]] = [
     ['order', 'purchase', 'transaction'],
 ]
 
-# A single passing mention isn't enough to be inconsistent; the term must
-# appear at least twice before we treat it as part of the body's
+# A single passing mention isn't enough to be inconsistent; the term
+# must appear at least twice before we treat it as part of the body's
 # vocabulary rather than a one-off reference.
 MIN_OCCURRENCES = 2
 
 # Per-skill confirmed-distinct allow-list. A terminology_candidate is a
-# suggestion the calling agent must adjudicate every run; without a memory,
-# the same domain-distinct pairs (a log 'entry' vs a memory 'record';
-# 'route' the verb vs a filesystem 'path') get re-reasoned each pass. This
-# data file records the groups a run confirmed distinct for a given skill so
-# later runs auto-suppress them, mirroring lint's verified-ignore data files.
+# suggestion the calling agent must adjudicate every run; without a
+# memory, the same domain-distinct pairs (a log 'entry' vs a memory
+# 'record'; 'route' the verb vs a filesystem 'path') get re-reasoned
+# each pass. This data file records the groups a run confirmed distinct
+# for a given skill so later runs auto-suppress them, mirroring lint's
+# verified-ignore data files.
 SYNONYM_IGNORE_FILE = Path(__file__).resolve().parent.parent / 'synonym-ignore.md'
 
 

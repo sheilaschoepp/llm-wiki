@@ -48,20 +48,22 @@ import sys
 
 _FM_OPEN = '---\n'  # frontmatter opening delimiter
 _FM_CLOSE = '\n---\n'  # frontmatter closing delimiter
-# The claim-level "awaiting a raw fact-check" marker (literal asterisks are part
-# of the token, not Markdown emphasis). Lines carrying it are excluded from the
-# hashed body so a pending claim does not count toward the page's checked content.
-# NOTE: this pattern is duplicated as `UNVERIFIED_MARKER_RE` in check_wiki.py
-# (lint counts markers there; here we mask them). Both blank inline-code spans
-# before testing for the marker (below / `_mask_code_spans` there), so a literal
-# `*[unverified]*` MENTION inside backticks is not treated as a real marker. Keep
-# the pattern and the code-span masking identical in both, or masking (here) and
-# counting (there) silently disagree — change both together.
+# The claim-level "awaiting a raw fact-check" marker (literal asterisks
+# are part of the token, not Markdown emphasis). Lines carrying it are
+# excluded from the hashed body so a pending claim does not count toward
+# the page's checked content. NOTE: this pattern is duplicated as
+# `UNVERIFIED_MARKER_RE` in check_wiki.py (lint counts markers there;
+# here we mask them). Both blank inline-code spans before testing for
+# the marker (below / `_mask_code_spans` there), so a literal
+# `*[unverified]*` MENTION inside backticks is not treated as a real
+# marker. Keep the pattern and the code-span masking identical in both,
+# or masking (here) and counting (there) silently disagree — change both
+# together.
 _UNVERIFIED_RE = re.compile(r'\*\[unverified\]\*')
 # Blank inline-code spans (single-backtick, mirroring check_wiki.py's
-# `_mask_code_spans`) before the marker test, so a `*[unverified]*` mentioned
-# inside `code` — documentation of the marker, not a pending claim — does not drop
-# the line's real content from the hashed body.
+# `_mask_code_spans`) before the marker test, so a `*[unverified]*`
+# mentioned inside `code` — documentation of the marker, not a pending
+# claim — does not drop the line's real content from the hashed body.
 _CODE_SPAN_RE = re.compile(r'`[^`]*`')
 
 
@@ -71,23 +73,26 @@ def body_hash(path: str) -> str:
     frontmatter, with every `*[unverified]*` claim line excluded (claim-
     level verification; see module docstring).
 
-    Line endings are normalized to LF first so a CRLF file is not hashed with its
-    frontmatter as body. A page with no frontmatter is hashed whole. A page that
-    opens frontmatter (`---`) but has no clean closing `---` line is malformed:
-    rather than silently hashing the whole file (frontmatter included) and returning
-    a valid-looking hash — which would later demote a correctly-verified page on any
-    mechanical frontmatter edit — this raises ValueError so the caller fails loudly
-    instead of corrupting the verified-hash trail.
+    Line endings are normalized to LF first so a CRLF file is not hashed
+    with its frontmatter as body. A page with no frontmatter is hashed
+    whole. A page that opens frontmatter (`---`) but has no clean
+    closing `---` line is malformed: rather than silently hashing the
+    whole file (frontmatter included) and returning a valid-looking hash
+    — which would later demote a correctly-verified page on any
+    mechanical frontmatter edit — this raises ValueError so the caller
+    fails loudly instead of corrupting the verified-hash trail.
 
     Raises
     ------
     ValueError
-        The page opens a frontmatter block but has no closing `---` delimiter line.
+        The page opens a frontmatter block but has no closing `---`
+        delimiter line.
     """
     with open(path, encoding='utf-8') as fh:
         text = fh.read()
-    # CRLF->LF leaves already-LF files (the common case) byte-identical, so existing
-    # verified_hash stamps stay valid; both audit and lint call this one function.
+    # CRLF->LF leaves already-LF files (the common case) byte-identical,
+    # so existing verified_hash stamps stay valid; both audit and lint
+    # call this one function.
     text = text.replace('\r\n', '\n').replace('\r', '\n')
     if text.startswith(_FM_OPEN):
         end = text.find(_FM_CLOSE, len(_FM_OPEN))
@@ -99,10 +104,11 @@ def body_hash(path: str) -> str:
         body = text[end + len(_FM_CLOSE) :]
     else:
         body = text
-    # Exclude `*[unverified]*` claim lines from the hashed content (claim-level
-    # verification). Dropping the whole line means a pending claim can be edited
-    # freely while marked; clearing the marker re-includes it, changing the hash
-    # so audit re-stamps. A page with no markers is unchanged.
+    # Exclude `*[unverified]*` claim lines from the hashed content
+    # (claim-level verification). Dropping the whole line means a
+    # pending claim can be edited freely while marked; clearing the
+    # marker re-includes it, changing the hash so audit re-stamps. A
+    # page with no markers is unchanged.
     body = '\n'.join(
         line
         for line in body.split('\n')

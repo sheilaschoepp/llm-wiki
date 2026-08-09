@@ -3,17 +3,18 @@
 check_musts.py — flag candidate heavy-handed imperatives in SKILL.md
 body.
 
-Why a separate script? "ALWAYS X / NEVER X / MUST X" without an explanation
-of *why* is a known antipattern: today's models follow rules better when
-they understand the reason, and rules without reasons read as scolding. But
-judgement-only review misses these about 75% of the time once the lint pass
-has other findings to focus on (we measured this).
+Why a separate script? "ALWAYS X / NEVER X / MUST X" without an
+explanation of *why* is a known antipattern: today's models follow rules
+better when they understand the reason, and rules without reasons read
+as scolding. But judgement-only review misses these about 75% of the
+time once the lint pass has other findings to focus on (we measured
+this).
 
-This script scans the body for ALL-CAPS imperatives. For each one, it checks
-whether the surrounding paragraph contains an explanation cue ('because',
-'so that', 'to avoid', 'otherwise', '—', etc.). Imperatives WITHOUT such a
-cue are emitted as 'heavy_handed_must_candidate' findings for the agent to
-confirm.
+This script scans the body for ALL-CAPS imperatives. For each one, it
+checks whether the surrounding paragraph contains an explanation cue
+('because', 'so that', 'to avoid', 'otherwise', '—', etc.). Imperatives
+WITHOUT such a cue are emitted as 'heavy_handed_must_candidate' findings
+for the agent to confirm.
 
 The agent's job, on receiving these candidates: read each one in context
 and decide whether the imperative genuinely needs more reasoning or

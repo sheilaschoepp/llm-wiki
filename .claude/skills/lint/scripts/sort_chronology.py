@@ -41,10 +41,11 @@ from pathlib import Path
 LOG_HEADER_RE = re.compile(r'^## \[(\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))?\]')
 HOT_ENTRY_RE = re.compile(r'^- \[(\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))?\]')
 
-# A linked report carries the entry's time in its filename, `…-YYYY-MM-DD-HHMM-…`
-# (e.g. query-2026-06-23-1045-…). A missing `[date]` time is recoverable from it
-# — transcribed, not invented — when the link is determinate. (The check side,
-# `check_chronology` in check_wiki.py, points its fix_hint here.)
+# A linked report carries the entry's time in its filename,
+# `…-YYYY-MM-DD-HHMM-…` (e.g. query-2026-06-23-1045-…). A missing
+# `[date]` time is recoverable from it — transcribed, not invented —
+# when the link is determinate. (The check side, `check_chronology` in
+# check_wiki.py, points its fix_hint here.)
 REPORT_TIME_RE = re.compile(r'2-outputs/[^\s\]|)]*-(\d{4}-\d{2}-\d{2})-(\d{2})(\d{2})')
 
 
@@ -98,10 +99,11 @@ def sort_log(path: Path) -> str:
         while e[3] and e[3][-1].strip() == '':
             e[3].pop()
 
-    # Fill pass: recover a missing time from the entry's linked report filename
-    # (determinate only), rewriting the header in place. Raise for any entry that
-    # stays untimed — sorting on an unknown key would misplace it, so the file is
-    # left untouched and the time must be added by hand first.
+    # Fill pass: recover a missing time from the entry's linked report
+    # filename (determinate only), rewriting the header in place. Raise
+    # for any entry that stays untimed — sorting on an unknown key would
+    # misplace it, so the file is left untouched and the time must be
+    # added by hand first.
     for e in entries:
         if e[1] is None:
             t = recover_time(entry_text='\n'.join([e[2]] + e[3]), entry_date=e[0])
@@ -110,7 +112,8 @@ def sort_log(path: Path) -> str:
             e[1] = t
             e[2] = re.sub(r'^(## \[\d{4}-\d{2}-\d{2})\]', rf'\1 {t}]', e[2], count=1)
 
-    # Stable sort: equal (date, time) keep original order even under reverse.
+    # Stable sort: equal (date, time) keep original order even under
+    # reverse.
     entries.sort(key=lambda e: (e[0], e[1]), reverse=True)
 
     out = preamble + ['']
@@ -126,10 +129,11 @@ def sort_hot(path: Path) -> str:
     Return the text of hot.md with the Recent activity entries sorted
     newest-first, or raise ValueError if an entry is untimed.
 
-    Mirrors sort_log so no content is
-    dropped: a non-entry line before the first dated bullet (a placeholder, a parked
-    note) stays as a preamble, and lines following a bullet (a sub-bullet, a wrapped
-    continuation) move with it as its body. Every other section is preserved verbatim.
+    Mirrors sort_log so no content is dropped: a non-entry line before
+    the first dated bullet (a placeholder, a parked note) stays as a
+    preamble, and lines following a bullet (a sub-bullet, a wrapped
+    continuation) move with it as its body. Every other section is
+    preserved verbatim.
     """
     lines = path.read_text(encoding='utf-8').split('\n')
     try:
@@ -171,8 +175,9 @@ def sort_hot(path: Path) -> str:
         while e[3] and e[3][-1].strip() == '':
             e[3].pop()
 
-    # Fill pass: recover a missing time from the entry's linked report filename
-    # (determinate only); an entry with no recoverable link stays a manual finding.
+    # Fill pass: recover a missing time from the entry's linked report
+    # filename (determinate only); an entry with no recoverable link
+    # stays a manual finding.
     for e in entries:
         if e[1] is None:
             t = recover_time(entry_text='\n'.join([e[2]] + e[3]), entry_date=e[0])
@@ -183,7 +188,8 @@ def sort_hot(path: Path) -> str:
             e[1] = t
             e[2] = re.sub(r'^(- \[\d{4}-\d{2}-\d{2})\]', rf'\1 {t}]', e[2], count=1)
 
-    # Stable sort: equal (date, time) keep original order even under reverse.
+    # Stable sort: equal (date, time) keep original order even under
+    # reverse.
     entries.sort(key=lambda e: (e[0], e[1]), reverse=True)
 
     new_block = ['']

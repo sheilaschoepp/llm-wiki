@@ -3,15 +3,18 @@ Tests for cited_figure_check.py — the standalone cross-source mis-
 location backstop.
 
 Covers the pure parsing/matching helpers (mask_spans, extract_figures,
-extract_deeplinks, figure_present) and check_page driven by a fake page-text
-cache, so no real PDF is opened. The PDF-reading path (RawTextCache._extract) is
-integration glue over PyMuPDF and is not unit-tested here.
+extract_deeplinks, figure_present) and check_page driven by a fake
+page-text cache, so no real PDF is opened. The PDF-reading path
+(RawTextCache._extract) is integration glue over PyMuPDF and is not
+unit-tested here.
 
 Run from anywhere:
 
-    python3 -m unittest discover -s .claude/skills/multi-skill/scripts/tests
+    python3 -m unittest discover -s
+    .claude/skills/multi-skill/scripts/tests
 
-The module is loaded by path so the tests do not depend on cwd or packaging.
+The module is loaded by path so the tests do not depend on cwd or
+packaging.
 """
 
 from __future__ import annotations
@@ -89,7 +92,8 @@ class TestExtractFigures(unittest.TestCase):
         self.assertEqual(cfc.extract_figures(line='the gain was 37.2.'), ['37.2'])
 
     def test_ignores_locator_number_inside_deeplink(self) -> None:
-        # The only decimals here (`3.1`, `4`) live inside the masked deep-link.
+        # The only decimals here (`3.1`, `4`) live inside the masked
+        # deep-link.
         figs = cfc.extract_figures(line=f'a qualitative claim ({DEEPLINK})')
 
         self.assertEqual(
@@ -176,7 +180,8 @@ class TestCheckPage(unittest.TestCase):
         )
 
     def test_two_cited_pages_figure_on_neither_flags(self) -> None:
-        # The mis-location signature: a figure cited to two pages, on neither.
+        # The mis-location signature: a figure cited to two pages, on
+        # neither.
         body = f'> - contrast 37.2% ({DEEPLINK}; {DEEPLINK_B})\n'
         pages = {
             ('0-raw/papers/SrcA.pdf', 4): 'nothing here',

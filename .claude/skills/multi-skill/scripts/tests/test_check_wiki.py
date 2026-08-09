@@ -5,20 +5,22 @@ loader, source-locator completeness, the verified-anchor diff-guard,
 wikilink-display caps, and chronology), with the citation_bracket_style
 check and its auto-fix transform detailed below.
 
-citation_bracket_style flags the superseded square-bracket Form 2 citation
-(`[[[key]]; [[loc]]]`) on concept/entity/synthesis pages; CLAUDE.md ->
-Source Support And Verification mandates the round-bracket form
-(`([[key]]; [[loc]])`). The check is detection-only (the script prints
-findings; the lint skill applies fixes), so these tests pin (a) what the check
-detects and refuses to flag, and (b) that the documented auto-fix transform
-`SQUARE_CITATION_RE.sub(r'(\\1)', body)` produces the canonical form, is
-idempotent, and round-trips to a clean re-scan.
+citation_bracket_style flags the superseded square-bracket Form 2
+citation (`[[[key]]; [[loc]]]`) on concept/entity/synthesis pages;
+CLAUDE.md -> Source Support And Verification mandates the round-bracket
+form (`([[key]]; [[loc]])`). The check is detection-only (the script
+prints findings; the lint skill applies fixes), so these tests pin (a)
+what the check detects and refuses to flag, and (b) that the documented
+auto-fix transform `SQUARE_CITATION_RE.sub(r'(\\1)', body)` produces the
+canonical form, is idempotent, and round-trips to a clean re-scan.
 
 Run from anywhere:
 
-    python3 -m unittest discover -s .claude/skills/multi-skill/scripts/tests
+    python3 -m unittest discover -s
+    .claude/skills/multi-skill/scripts/tests
 
-The module is loaded by path so the tests do not depend on cwd or packaging.
+The module is loaded by path so the tests do not depend on cwd or
+packaging.
 """
 
 from __future__ import annotations
@@ -50,7 +52,8 @@ assert bh_spec and bh_spec.loader
 bh_spec.loader.exec_module(bh)
 
 
-# --- builders ----------------------------------------------------------------
+# --- builders
+# ----------------------------------------------------------------
 
 SRC = '[[1-wiki/sources/X.md|X]]'
 LOC1 = '[[0-raw/papers/X.pdf#page=1|sec. 1, p. 1]]'
@@ -261,8 +264,9 @@ HOT_DISORDER = (
     '- [2026-06-08 20:00] b | newer second (wrong)\n\n'
     '## Open threads\n\n- keep me\n'
 )
-# Untimed entries whose time is recoverable from a linked report filename
-# (`…-YYYY-MM-DD-HHMM-…`, matching date) — the determinate auto-recovery case.
+# Untimed entries whose time is recoverable from a linked report
+# filename (`…-YYYY-MM-DD-HHMM-…`, matching date) — the determinate
+# auto-recovery case.
 LOG_UNTIMED_RECOVERABLE = (
     '# Log\n\nx\n\n'
     '## [2026-06-08 18:00] audit | timed\n- a\n\n'
@@ -276,9 +280,10 @@ HOT_UNTIMED_RECOVERABLE = (
     '([[2-outputs/query/query-2026-06-07-0915-topic.md|query]])\n\n'
     '## Open threads\n\n- keep me\n'
 )
-# Non-entry lines inside Recent activity — a parked note before the first dated
-# bullet, a sub-bullet under an entry — must survive the sort (sort_hot data-loss
-# regression guard: the block must never be rebuilt from dated bullets alone).
+# Non-entry lines inside Recent activity — a parked note before the
+# first dated bullet, a sub-bullet under an entry — must survive the
+# sort (sort_hot data-loss regression guard: the block must never be
+# rebuilt from dated bullets alone).
 HOT_WITH_STRAY = (
     '---\ntype: hot\n---\n\n# Hot\n\n## Recent activity\n\n'
     'a parked note the user left here\n'
@@ -309,13 +314,15 @@ class TestCheckWiki(unittest.TestCase):
         self.addCleanup(self._tmp.cleanup)
         self.tmp = Path(self._tmp.name)
 
-    # --- wiring invariants -------------------------------------------------------
+    # --- wiring invariants
+    # -------------------------------------------------------
 
     def test_check_is_registered_as_warning(self) -> None:
         assert cw.CHECKS.get('citation_bracket_style') == 'warning'
 
     def test_finding_builder_accepts_the_new_id(self) -> None:
-        # finding() raises on an unregistered check_id; this confirms registration.
+        # finding() raises on an unregistered check_id; this confirms
+        # registration.
         f = cw.finding(check='citation_bracket_style', file='x.md', message='m')
         assert f['check_id'] == 'citation_bracket_style'
         assert f['severity'] == 'warning'
@@ -330,7 +337,8 @@ class TestCheckWiki(unittest.TestCase):
         listed = json.loads(r.stdout)
         assert listed.get('citation_bracket_style') == 'warning'
 
-    # --- detection: positive cases ----------------------------------------------
+    # --- detection: positive cases
+    # ----------------------------------------------
 
     def test_basic_square_citation_is_flagged(self) -> None:
         f = bracket_findings(f'> - claim {square(LOC1)}.')
@@ -364,14 +372,16 @@ class TestCheckWiki(unittest.TestCase):
         body = f'\n\n> - claim {square(LOC1)}.'
         f0 = bracket_findings(body, end=0)
         f10 = bracket_findings(body, end=10)
-        # the end (frontmatter close) offset shifts the reported line by its delta
+        # the end (frontmatter close) offset shifts the reported line by
+        # its delta
         assert lineno(f10[0]) - lineno(f0[0]) == 10
 
     def test_square_mid_sentence_is_flagged(self) -> None:
         f = bracket_findings(f'> - text before {square(LOC1)} text after.')
         assert len(f) == 1
 
-    # --- detection: negative cases (no false positives) -------------------------
+    # --- detection: negative cases (no false positives)
+    # -------------------------
 
     def test_round_form_not_flagged(self) -> None:
         assert bracket_findings(f'> - claim {roundc(LOC1)}.') == []
@@ -387,8 +397,8 @@ class TestCheckWiki(unittest.TestCase):
         assert bracket_findings('> - see [[1-wiki/concepts/y.md|y]] for detail.') == []
 
     def test_bare_source_link_not_flagged(self) -> None:
-        # a source link with no deep-link is a different (citation_unpaired-ish) issue,
-        # not the square-bracket form.
+        # a source link with no deep-link is a different
+        # (citation_unpaired-ish) issue, not the square-bracket form.
         assert bracket_findings(f'> - claim {SRC}.') == []
 
     def test_square_inside_inline_code_is_masked(self) -> None:
@@ -400,13 +410,15 @@ class TestCheckWiki(unittest.TestCase):
         assert bracket_findings(body) == []
 
     def test_square_inside_double_quote_is_masked(self) -> None:
-        # A `[[[…]]]`-shaped literal inside a verbatim quote is an example, not a
-        # citation; the auto-fix is on the re-stamp allowlist, so it must never
-        # rewrite (and re-stamp) a quoted span. Mirrors the code/Sources masking.
+        # A `[[[…]]]`-shaped literal inside a verbatim quote is an
+        # example, not a citation; the auto-fix is on the re-stamp
+        # allowlist, so it must never rewrite (and re-stamp) a quoted
+        # span. Mirrors the code/Sources masking.
         body = f'> - the old style read "{square(LOC1)}" before the fix.'
         assert bracket_findings(body) == []
 
-    # --- fix transform -----------------------------------------------------------
+    # --- fix transform
+    # -----------------------------------------------------------
 
     def test_fix_basic_square_to_round_exact(self) -> None:
         assert fix(square(LOC1)) == roundc(LOC1)
@@ -421,7 +433,8 @@ class TestCheckWiki(unittest.TestCase):
     def test_fix_leaves_inner_wikilinks_byte_identical(self) -> None:
         before = square(LOC1, LOC2)
         after = fix(before)
-        # every inner [[...]] wikilink survives unchanged; only the wrap changed
+        # every inner [[...]] wikilink survives unchanged; only the wrap
+        # changed
         assert SRC in after and LOC1 in after and LOC2 in after
         assert after.count('[[') == before.count('[[')
         assert after.count(']]') == before.count(']]')
@@ -444,7 +457,8 @@ class TestCheckWiki(unittest.TestCase):
         assert f'good {roundc(LOC1)}.' in fixed
         assert f'attributive {SRC} ({LOC1}) shows.' in fixed
 
-    # --- integration via check_page ---------------------------------------------
+    # --- integration via check_page
+    # ---------------------------------------------
 
     def test_check_page_flags_square_on_concept(self) -> None:
         p = _write_page(
@@ -471,8 +485,9 @@ class TestCheckWiki(unittest.TestCase):
         assert 'citation_bracket_style' not in ids
 
     def test_check_page_exempts_source_pages(self) -> None:
-        # Source pages use a different citation form and are out of scope for the
-        # concept/entity/synthesis citation checks (detect_page_kind -> 'paper').
+        # Source pages use a different citation form and are out of
+        # scope for the concept/entity/synthesis citation checks
+        # (detect_page_kind -> 'paper').
         src_fm = (
             'type: paper\ntitle: "X"\nauthors: []\nyear: 2020\n'
             'file: "[[0-raw/papers/X.pdf]]"\nattachments: []\ntags: []\n'
@@ -489,14 +504,16 @@ class TestCheckWiki(unittest.TestCase):
         ids = {f['check_id'] for f in cw.check_page(path=p, wiki_root=wiki)}
         assert 'citation_bracket_style' not in ids
 
-    # --- unlinked_page_mention scans source pages, own topic included -----------
+    # --- unlinked_page_mention scans source pages, own topic included
+    # -----------
 
     def test_unlinked_mention_scans_source_pages_including_own_topic(
         self,
     ) -> None:
-        # A source page that names a concept in prose — even its own topic — must be
-        # flagged: the concept page is a different file, so it is a genuine
-        # cross-reference to link, not a self-link (CLAUDE.md -> Wikilink Format).
+        # A source page that names a concept in prose — even its own
+        # topic — must be flagged: the concept page is a different file,
+        # so it is a genuine cross-reference to link, not a self-link
+        # (CLAUDE.md -> Wikilink Format).
         _write_page(
             self.tmp,
             'sources',
@@ -523,8 +540,9 @@ class TestCheckWiki(unittest.TestCase):
     def test_unlinked_mention_source_page_not_flagged_for_own_stem(
         self,
     ) -> None:
-        # The only exemption is a page linking to itself: a source page is never
-        # flagged for a plain-text mention of its own stem/alias.
+        # The only exemption is a page linking to itself: a source page
+        # is never flagged for a plain-text mention of its own
+        # stem/alias.
         _write_page(
             self.tmp,
             'sources',
@@ -544,8 +562,9 @@ class TestCheckWiki(unittest.TestCase):
         )
 
     def test_unlinked_mention_skips_h1_title_line(self) -> None:
-        # A concept name appearing only in the source page's H1 paper title is not a
-        # linkable reference (you never wikilink an H1) — must not be flagged.
+        # A concept name appearing only in the source page's H1 paper
+        # title is not a linkable reference (you never wikilink an H1) —
+        # must not be flagged.
         _write_page(
             self.tmp,
             'sources',
@@ -573,8 +592,8 @@ class TestCheckWiki(unittest.TestCase):
     def test_unlinked_mention_still_flags_prose_when_title_also_matches(
         self,
     ) -> None:
-        # The H1 skip removes only the title line: a genuine prose mention elsewhere
-        # is still flagged.
+        # The H1 skip removes only the title line: a genuine prose
+        # mention elsewhere is still flagged.
         _write_page(
             self.tmp,
             'sources',
@@ -604,9 +623,10 @@ class TestCheckWiki(unittest.TestCase):
     def test_unlinked_mention_skips_version_continuation_but_keeps_bare(
         self,
     ) -> None:
-        # A page-name form like the `GPT-3` alias must NOT match inside a version
-        # suffix (`GPT-3.5`): the `.`-then-alphanumeric continuation is a different
-        # model, not a reference to this page. A bare `GPT-3` mention still flags.
+        # A page-name form like the `GPT-3` alias must NOT match inside
+        # a version suffix (`GPT-3.5`): the `.`-then-alphanumeric
+        # continuation is a different model, not a reference to this
+        # page. A bare `GPT-3` mention still flags.
         gpt3_fm = (
             'type: entity\naliases:\n  - GPT-3\nsources:\n'
             '  - "[[1-wiki/sources/Houlsby2019.md|Houlsby2019]]"\n'
@@ -650,12 +670,13 @@ class TestCheckWiki(unittest.TestCase):
             for f in finds
         )
 
-    # --- unlinked_page_mention verified-ignore list ------------------------------
-    # Genuine-vs-generic is a judgement (CLAUDE.md -> Wikilink Format). audit makes
-    # it per occurrence and records a confirmed-generic one in
-    # .claude/skills/multi-skill/unlinked-mention-ignore.md so it is not re-litigated. An
-    # entry is page-scoped (never suppresses elsewhere) and phrase-anchored (a
-    # reword re-flags it — the safe fallback).
+    # --- unlinked_page_mention verified-ignore list
+    # ------------------------------ Genuine-vs-generic is a judgement
+    # (CLAUDE.md -> Wikilink Format). audit makes it per occurrence and
+    # records a confirmed-generic one in
+    # .claude/skills/multi-skill/unlinked-mention-ignore.md so it is not
+    # re-litigated. An entry is page-scoped (never suppresses elsewhere)
+    # and phrase-anchored (a reword re-flags it — the safe fallback).
 
     def _ignore(self, *entries: str) -> list[dict[str, object]]:
         f = self.tmp / 'ignore.md'
@@ -695,8 +716,9 @@ class TestCheckWiki(unittest.TestCase):
     def test_unlinked_mention_verified_ignore_leaves_other_occurrences(
         self,
     ) -> None:
-        # An entry suppresses ONE occurrence context, not the whole page: a second,
-        # genuine mention of the same target still flags.
+        # An entry suppresses ONE occurrence context, not the whole
+        # page: a second, genuine mention of the same target still
+        # flags.
         _write_page(
             self.tmp,
             'concepts',
@@ -758,8 +780,9 @@ class TestCheckWiki(unittest.TestCase):
     def test_unlinked_mention_verified_ignore_reflags_when_phrase_reworded(
         self,
     ) -> None:
-        # Self-invalidating: the page's wording changed, so the entry no longer
-        # matches and the mention flags again rather than riding on a stale judgement.
+        # Self-invalidating: the page's wording changed, so the entry no
+        # longer matches and the mention flags again rather than riding
+        # on a stale judgement.
         _write_page(
             self.tmp,
             'concepts',
@@ -801,17 +824,19 @@ class TestCheckWiki(unittest.TestCase):
     def test_unlinked_mention_ignore_loader_missing_file_is_empty_not_fatal(
         self,
     ) -> None:
-        # A missing file leaves the check fully unsuppressed — the safe direction.
+        # A missing file leaves the check fully unsuppressed — the safe
+        # direction.
         assert cw._load_unlinked_mention_ignore(self.tmp / 'nope.md') == []
 
     def test_unlinked_mention_ignore_real_data_file_loads(self) -> None:
-        # The shipped file parses and every entry it yields is well-formed.
-        # Deliberately NOT an emptiness assertion: it ships empty, but audit
-        # grows it autonomously (audit Step 7), so a vault running this suite may
-        # hold hundreds of entries — that is the file working as designed, not a
-        # defect. What must hold in an empty and a grown file alike is that the
-        # prose above `## verified-ignore` and the schematic example under it stay
-        # inert to the parser, and that no entry parses half-formed.
+        # The shipped file parses and every entry it yields is
+        # well-formed. Deliberately NOT an emptiness assertion: it ships
+        # empty, but audit grows it autonomously (audit Step 7), so a
+        # vault running this suite may hold hundreds of entries — that
+        # is the file working as designed, not a defect. What must hold
+        # in an empty and a grown file alike is that the prose above `##
+        # verified-ignore` and the schematic example under it stay inert
+        # to the parser, and that no entry parses half-formed.
         entries = cw._load_unlinked_mention_ignore()
         assert isinstance(entries, list)
         for e in entries:
@@ -820,27 +845,32 @@ class TestCheckWiki(unittest.TestCase):
             assert e['target'], e
             assert e['phrase'], e
             assert isinstance(e['line'], int) and e['line'] > 0, e
-            # The compiled pattern must match the phrase it was built from, or
-            # the entry can never suppress the occurrence it was recorded for.
+            # The compiled pattern must match the phrase it was built
+            # from, or the entry can never suppress the occurrence it
+            # was recorded for.
             assert e['pattern'].search(e['phrase']), e
-            # A `{host-slug}` field means a schematic from the docs was parsed.
+            # A `{host-slug}` field means a schematic from the docs was
+            # parsed.
             assert '{' not in e['page'] + e['target'], e
 
-    # --- stale_mention_ignore: an entry that suppresses nothing ------------------
-    # A stale entry is inert (phrase-anchored: it can only fail to match), so this
-    # is hygiene, not a correctness defect — but Warning-tier, because the tier says
-    # who acts: Warning is audit's authored worklist (audit owns the data file) and
-    # Info is explicitly not audit's to action. Without it, dead entries accumulate
-    # silently as pages are reworded, renamed, or removed.
+    # --- stale_mention_ignore: an entry that suppresses nothing
+    # ------------------ A stale entry is inert (phrase-anchored: it can
+    # only fail to match), so this is hygiene, not a correctness defect
+    # — but Warning-tier, because the tier says who acts: Warning is
+    # audit's authored worklist (audit owns the data file) and Info is
+    # explicitly not audit's to action. Without it, dead entries
+    # accumulate silently as pages are reworded, renamed, or removed.
 
     def test_stale_mention_ignore_severity_registered(self) -> None:
-        # Warning, not Info: audit owns the file, and Info findings are not audit's
-        # to action — an Info-tier stale entry would be a finding nobody may clean up.
+        # Warning, not Info: audit owns the file, and Info findings are
+        # not audit's to action — an Info-tier stale entry would be a
+        # finding nobody may clean up.
         assert cw.CHECKS.get('stale_mention_ignore') == 'warning'
 
     def test_stale_mention_ignore_flags_reworded_phrase(self) -> None:
-        # The page still mentions the target, but not inside the recorded phrase:
-        # the judgement no longer binds, so the entry is reported as dead.
+        # The page still mentions the target, but not inside the
+        # recorded phrase: the judgement no longer binds, so the entry
+        # is reported as dead.
         _write_page(
             self.tmp,
             'concepts',
@@ -909,7 +939,8 @@ class TestCheckWiki(unittest.TestCase):
     def test_stale_mention_ignore_silent_when_entry_still_suppresses(
         self,
     ) -> None:
-        # A live entry — one doing real work — is never reported as stale.
+        # A live entry — one doing real work — is never reported as
+        # stale.
         _write_page(
             self.tmp,
             'concepts',
@@ -931,7 +962,8 @@ class TestCheckWiki(unittest.TestCase):
             finds = cw.check_unlinked_page_mentions(wiki_root=self.tmp / '1-wiki')
         assert not any(f['check_id'] == 'stale_mention_ignore' for f in finds)
 
-    # --- callout block IDs (kebab-case of the callout title) ---------------------
+    # --- callout block IDs (kebab-case of the callout title)
+    # ---------------------
 
     def test_expected_block_id_identity_for_matching_types(self) -> None:
         # Most callouts: block ID == type slug.
@@ -956,31 +988,35 @@ class TestCheckWiki(unittest.TestCase):
         assert 'callout_block_id' not in ids
 
     def test_old_unexpanded_block_id_is_flagged(self) -> None:
-        # `^why` on a `[!why]` callout is now wrong; expected `^why-it-matters`.
+        # `^why` on a `[!why]` callout is now wrong; expected
+        # `^why-it-matters`.
         body = '> [!why] Why It Matters\n> - x.\n> ^why'
         finds = cw.check_callout_block_ids(body=body, rel='c.md')
         assert [f['check_id'] for f in finds] == ['callout_block_id']
         assert 'why-it-matters' in finds[0]['fix_hint']
 
-    # --- committed-wiki smoke ----------------------------------------------------
+    # --- committed-wiki smoke
+    # ----------------------------------------------------
     #
-    # These run the checks over whatever pages this vault actually holds, and
-    # deliberately do NOT assert the wiki is finding-free. They replace a set of
-    # per-check "real-repo anchors" (square citations, unisolated embeds, both
-    # hyphenation checks, log/hot chronology) that each asserted zero findings of
-    # one check across the committed pages.
+    # These run the checks over whatever pages this vault actually
+    # holds, and deliberately do NOT assert the wiki is finding-free.
+    # They replace a set of per-check "real-repo anchors" (square
+    # citations, unisolated embeds, both hyphenation checks, log/hot
+    # chronology) that each asserted zero findings of one check across
+    # the committed pages.
     #
-    # Those anchors were unsound in both directions. This project ships as a
-    # template into other vaults, so the suite runs where `1-wiki/` is a working
-    # corpus: a hyphenated compound or an untimed log entry is ordinary content
-    # debt, and lint exists to report it as a worklist — CLAUDE.md -> Workflow
-    # Rules -> Audit preconditions gates audit on lint's `result: clean |
-    # blocking`, which is where cleanliness is actually enforced and where a
-    # skill can fix it. An assertion here instead turns that worklist into a red
-    # suite that no code change can green. And in the template itself the vault
-    # ships empty, so every one of those anchors iterated zero pages and passed
-    # vacuously — enforcing content nowhere it could be met, proving nothing
-    # where it ran.
+    # Those anchors were unsound in both directions. This project ships
+    # as a template into other vaults, so the suite runs where `1-wiki/`
+    # is a working corpus: a hyphenated compound or an untimed log entry
+    # is ordinary content debt, and lint exists to report it as a
+    # worklist — CLAUDE.md -> Workflow Rules -> Audit preconditions
+    # gates audit on lint's `result: clean | blocking`, which is where
+    # cleanliness is actually enforced and where a skill can fix it. An
+    # assertion here instead turns that worklist into a red suite that
+    # no code change can green. And in the template itself the vault
+    # ships empty, so every one of those anchors iterated zero pages and
+    # passed vacuously — enforcing content nowhere it could be met,
+    # proving nothing where it ran.
     #
     # What a test can own is that the checks survive real input and emit
     # well-formed findings, which is what these two pin.
@@ -1002,8 +1038,9 @@ class TestCheckWiki(unittest.TestCase):
             for f in cw.check_page(path=page, wiki_root=WIKI)
         ]
         findings.extend(cw.check_chronology(wiki_root=WIKI))
-        # Read the vocabulary off the registry rather than restating it, so
-        # renaming a tier cannot leave this test asserting a dead word.
+        # Read the vocabulary off the registry rather than restating it,
+        # so renaming a tier cannot leave this test asserting a dead
+        # word.
         severities = {v for v in cw.CHECKS.values() if v is not None}
         for f in findings:
             assert f['check_id'] in cw.CHECKS, f
@@ -1025,14 +1062,17 @@ class TestCheckWiki(unittest.TestCase):
         assert r1.stdout == r2.stdout  # stable order, not just stable set
         assert isinstance(json.loads(r1.stdout), list)  # well-formed JSON
 
-    # --- embed isolation (embed_not_isolated) -----------------------------------
+    # --- embed isolation (embed_not_isolated)
+    # -----------------------------------
     #
-    # CLAUDE.md -> Attachments / Source Pages: an image embed inside a callout must
-    # sit in its own block — a blank quoted line (`>`) directly above AND below the
-    # embed line — or Obsidian lazy-continues it into the adjacent bullet/line and
-    # mis-renders. The check is detection-only (the script reports; the lint skill
-    # applies the insertion), so these tests pin what is flagged, what is left alone,
-    # and that the documented insertion produces a clean re-scan.
+    # CLAUDE.md -> Attachments / Source Pages: an image embed inside a
+    # callout must sit in its own block — a blank quoted line (`>`)
+    # directly above AND below the embed line — or Obsidian
+    # lazy-continues it into the adjacent bullet/line and mis-renders.
+    # The check is detection-only (the script reports; the lint skill
+    # applies the insertion), so these tests pin what is flagged, what
+    # is left alone, and that the documented insertion produces a clean
+    # re-scan.
 
     # wiring invariants
 
@@ -1092,12 +1132,14 @@ class TestCheckWiki(unittest.TestCase):
         assert embed_findings(body) == []
 
     def test_trailing_space_blank_lines_tolerated(self) -> None:
-        # The blank quoted line may carry a trailing space (`> `) as well as bare `>`.
+        # The blank quoted line may carry a trailing space (`> `) as
+        # well as bare `>`.
         body = f'> [!idea] Idea\n> - claim.\n> \n> {EMB}\n> \n> ^idea'
         assert embed_findings(body) == []
 
     def test_embed_mixed_with_prose_on_line_not_flagged(self) -> None:
-        # An embed sharing its line with other content is not a standalone embed line.
+        # An embed sharing its line with other content is not a
+        # standalone embed line.
         assert embed_findings(f'> [!idea] Idea\n> - see {EMB} here.\n> ^idea') == []
 
     # auto-fix round-trip
@@ -1141,13 +1183,15 @@ class TestCheckWiki(unittest.TestCase):
     # (The committed-wiki anchor for this check was folded into the
     # committed-wiki smoke above; see the rationale there.)
 
-    # --- hyphenated open compounds (hyphenated_open_compound) --------------------
+    # --- hyphenated open compounds (hyphenated_open_compound)
+    # --------------------
     #
-    # CLAUDE.md / field convention: established multi-word terms ("reinforcement
-    # learning", "natural language", "language model") stay open even as attributive
-    # modifiers (CMOS 7.89). A hyphenated form ("reinforcement-learning benchmark")
-    # is drift. `multi-agent` (prefixed compound) and `foundation-model` (a project
-    # convention) are deliberately NOT in the banned set; `natural-language-vs-code`
+    # CLAUDE.md / field convention: established multi-word terms
+    # ("reinforcement learning", "natural language", "language model")
+    # stay open even as attributive modifiers (CMOS 7.89). A hyphenated
+    # form ("reinforcement-learning benchmark") is drift. `multi-agent`
+    # (prefixed compound) and `foundation-model` (a project convention)
+    # are deliberately NOT in the banned set; `natural-language-vs-code`
     # is left alone by the `(?!-)` longer-token guard.
 
     # wiring invariants
@@ -1189,8 +1233,9 @@ class TestCheckWiki(unittest.TestCase):
             assert m, f'{tok} should be flagged'
 
     def test_regex_longest_match_wins(self) -> None:
-        # deep-reinforcement-learning matches as the whole token, not the
-        # reinforcement-learning suffix, so the suggested fix keeps "deep".
+        # deep-reinforcement-learning matches as the whole token, not
+        # the reinforcement-learning suffix, so the suggested fix keeps
+        # "deep".
         m = cw.HYPHENATED_OPEN_COMPOUND.search('a deep-reinforcement-learning agent')
         assert m.group(1).lower() == 'deep-reinforcement-learning'
         assert (
@@ -1226,7 +1271,8 @@ class TestCheckWiki(unittest.TestCase):
     def test_regex_longer_token_guard_spares_natural_language_vs_code(
         self,
     ) -> None:
-        # the (?!-) guard: natural-language followed by another hyphen is left alone.
+        # the (?!-) guard: natural-language followed by another hyphen
+        # is left alone.
         assert not cw.HYPHENATED_OPEN_COMPOUND.search(
             'the natural-language-vs-code split'
         )
@@ -1245,8 +1291,9 @@ class TestCheckWiki(unittest.TestCase):
         assert 'reinforcement learning' in f[0]['fix_hint']
 
     def test_check_page_flags_hyphen_on_source_page_too(self) -> None:
-        # Unlike the citation checks, this one is NOT exempt for source pages —
-        # the over-hyphenation appeared on source pages, so they are scanned.
+        # Unlike the citation checks, this one is NOT exempt for source
+        # pages — the over-hyphenation appeared on source pages, so they
+        # are scanned.
         f = hyphen_findings(
             self.tmp,
             'sources',
@@ -1258,8 +1305,9 @@ class TestCheckWiki(unittest.TestCase):
         assert 'deep learning' in f[0]['fix_hint']
 
     def test_check_page_masks_hyphen_inside_wikilink_and_code(self) -> None:
-        # A hyphenated token inside a [[wikilink]] target/display or inline `code`
-        # is masked, not flagged — only prose hyphenation is drift.
+        # A hyphenated token inside a [[wikilink]] target/display or
+        # inline `code` is masked, not flagged — only prose hyphenation
+        # is drift.
         body = (
             '> [!idea] Idea\n'
             '> - see [[1-wiki/concepts/reinforcement-learning.md|reinforcement-learning]] '
@@ -1277,11 +1325,12 @@ class TestCheckWiki(unittest.TestCase):
         )
         assert f == []
 
-    # (The committed-wiki anchors for both hyphenation checks were folded into
-    # the committed-wiki smoke above; see the rationale there. A hyphenated
-    # compound in a live vault is a de-hyphenation item on audit's worklist —
-    # CLAUDE.md -> Page Status lists both mappings as verification-neutral fixes
-    # audit applies and re-stamps — not a broken build.)
+    # (The committed-wiki anchors for both hyphenation checks were
+    # folded into the committed-wiki smoke above; see the rationale
+    # there. A hyphenated compound in a live vault is a de-hyphenation
+    # item on audit's worklist — CLAUDE.md -> Page Status lists both
+    # mappings as verification-neutral fixes audit applies and re-stamps
+    # — not a broken build.)
 
     def test_unverified_marker_regex_identical_to_body_hash(self) -> None:
         assert cw.UNVERIFIED_MARKER_RE.pattern == bh._UNVERIFIED_RE.pattern, (
@@ -1290,14 +1339,17 @@ class TestCheckWiki(unittest.TestCase):
             'claim-counting and hash-masking silently disagree.'
         )
 
-    # --- source-page locator completeness (source_locator_incomplete) ------------
+    # --- source-page locator completeness (source_locator_incomplete)
+    # ------------
     #
-    # On source pages the `#page=N` deep-link display must list the structural anchor
-    # (sec./fig./tab./eq./app./ch.) AND the page together INSIDE the link
-    # (`[[…#page=1|sec. 1, p. 1]]`); a split form (anchor outside the link) or a
-    # page-only / anchor-only display is drift. The source-page counterpart of
+    # On source pages the `#page=N` deep-link display must list the
+    # structural anchor (sec./fig./tab./eq./app./ch.) AND the page
+    # together INSIDE the link (`[[…#page=1|sec. 1, p. 1]]`); a split
+    # form (anchor outside the link) or a page-only / anchor-only
+    # display is drift. The source-page counterpart of
     # citation_locator_incomplete, and the inverse of the retired
-    # source_locator_anchor_inlined. (CLAUDE.md -> Source Support And Verification.)
+    # source_locator_anchor_inlined. (CLAUDE.md -> Source Support And
+    # Verification.)
 
     # wiring invariants
 
@@ -1318,7 +1370,8 @@ class TestCheckWiki(unittest.TestCase):
         assert r.returncode == 0
         assert json.loads(r.stdout).get('source_locator_incomplete') == 'warning'
 
-    # detection: positive cases (anchor and page NOT together inside the link)
+    # detection: positive cases (anchor and page NOT together inside the
+    # link)
 
     def test_source_locator_split_anchor_is_flagged(self) -> None:
         f = loc_findings(f'> - a claim ({LOC_SPLIT}).')
@@ -1344,9 +1397,10 @@ class TestCheckWiki(unittest.TestCase):
         assert loc_findings(f'> - a claim ({LOC_BOTH}).') == []
 
     def test_source_locator_each_anchor_kind_inside_not_flagged(self) -> None:
-        # Structural (sec./app./ch.), float (fig./tab./eq.), and theorem-environment
-        # (def./thm./lem./prop./cor./alg.) anchors are all valid (CLAUDE.md -> Source
-        # Support And Verification); a page paired with any of them is complete.
+        # Structural (sec./app./ch.), float (fig./tab./eq.), and
+        # theorem-environment (def./thm./lem./prop./cor./alg.) anchors
+        # are all valid (CLAUDE.md -> Source Support And Verification);
+        # a page paired with any of them is complete.
         for disp in (
             'sec. 4',
             'app. C',
@@ -1365,14 +1419,16 @@ class TestCheckWiki(unittest.TestCase):
             assert loc_findings(f'> - claim ({link}).') == [], disp
 
     def test_source_locator_abstract_anchor_ok(self) -> None:
-        # The front-matter `abstract` is a valid anchor (CLAUDE.md -> Source Support
-        # And Verification). Abstract-drawn content is cited `abstract, p. 1`, never
-        # relabelled `sec. 1` (on most papers sec. 1 is not on the abstract's page).
+        # The front-matter `abstract` is a valid anchor (CLAUDE.md ->
+        # Source Support And Verification). Abstract-drawn content is
+        # cited `abstract, p. 1`, never relabelled `sec. 1` (on most
+        # papers sec. 1 is not on the abstract's page).
         assert (
             loc_findings('> - a claim ([[0-raw/papers/X.pdf#page=1|abstract, p. 1]]).')
             == []
         )
-        # case-insensitive, and only as the anchor token — `p. 1` alone still fails.
+        # case-insensitive, and only as the anchor token — `p. 1` alone
+        # still fails.
         assert (
             loc_findings('> - a claim ([[0-raw/papers/X.pdf#page=1|Abstract, p. 1]]).')
             == []
@@ -1382,10 +1438,11 @@ class TestCheckWiki(unittest.TestCase):
         )
 
     def test_source_locator_unpaginated_appendix_anchor_alone_ok(self) -> None:
-        # The unpaginated-supplement exemption (CLAUDE.md -> Source Support And
-        # Verification): a published appendix often carries no printed page, so an
-        # `app.`-anchored display cites the anchor alone rather than fabricating a
-        # `p. M`. The exemption is `app.`-only and does not widen the anchor set.
+        # The unpaginated-supplement exemption (CLAUDE.md -> Source
+        # Support And Verification): a published appendix often carries
+        # no printed page, so an `app.`-anchored display cites the
+        # anchor alone rather than fabricating a `p. M`. The exemption
+        # is `app.`-only and does not widen the anchor set.
         assert (
             loc_findings(
                 '> - a claim ([[0-raw/papers/X.pdf#page=16|app. D.1, tab. 8]]).'
@@ -1395,14 +1452,16 @@ class TestCheckWiki(unittest.TestCase):
         assert (
             loc_findings('> - a claim ([[0-raw/papers/X.pdf#page=16|app. C]]).') == []
         )
-        # a paginated appendix keeps its page; the exemption does not require dropping it
+        # a paginated appendix keeps its page; the exemption does not
+        # require dropping it
         assert (
             loc_findings(
                 '> - a claim ([[0-raw/papers/X.pdf#page=16|app. C, p. 4186]]).'
             )
             == []
         )
-        # …and no other anchor kind may stand alone (theorem environments included)
+        # …and no other anchor kind may stand alone (theorem
+        # environments included)
         for disp in (
             'sec. 4',
             'ch. 2',
@@ -1424,7 +1483,8 @@ class TestCheckWiki(unittest.TestCase):
         self,
     ) -> None:
         # The concept/entity/synthesis counterpart: both checks share
-        # locator_display_complete, so the exemption cannot drift between them.
+        # locator_display_complete, so the exemption cannot drift
+        # between them.
         body = f'> - claim {SRC} ([[0-raw/papers/X.pdf#page=16|app. D.1, tab. 8]]).'
         f = cw.check_citation_form(body=body, rel='1-wiki/concepts/c.md', end=0)
         assert [
@@ -1456,8 +1516,8 @@ class TestCheckWiki(unittest.TestCase):
         assert 'source_locator_incomplete' in ids
 
     def test_check_page_does_not_flag_source_locator_on_concept(self) -> None:
-        # Concept pages run citation_locator_incomplete instead; the source-page
-        # check must not run on them.
+        # Concept pages run citation_locator_incomplete instead; the
+        # source-page check must not run on them.
         p = _write_page(
             self.tmp,
             'concepts',
@@ -1469,16 +1529,19 @@ class TestCheckWiki(unittest.TestCase):
         ids = {f['check_id'] for f in cw.check_page(path=p, wiki_root=wiki)}
         assert 'source_locator_incomplete' not in ids
 
-    # --- diff-guard: section change on a verified page (verified_anchor_unaudited) --
+    # --- diff-guard: section change on a verified page
+    # (verified_anchor_unaudited) --
     #
-    # A status:verified page must not keep `verified` after a locator's structural
-    # anchor was ADDED or CHANGED vs HEAD (a "section change" is grounds for re-
-    # verification; CLAUDE.md -> Page Status). A pure RELOCATION (same anchor + page,
-    # repositioned) and a marked `*[unverified]*` bullet are exempt. Tested on the
-    # pure core anchor_change_findings (no git working tree needed).
+    # A status:verified page must not keep `verified` after a locator's
+    # structural anchor was ADDED or CHANGED vs HEAD (a "section change"
+    # is grounds for re- verification; CLAUDE.md -> Page Status). A pure
+    # RELOCATION (same anchor + page, repositioned) and a marked
+    # `*[unverified]*` bullet are exempt. Tested on the pure core
+    # anchor_change_findings (no git working tree needed).
 
     def test_diffguard_abstract_to_sec_is_flagged(self) -> None:
-        # The exact bug: abstract-drawn content relabelled `sec. 1` on a verified page.
+        # The exact bug: abstract-drawn content relabelled `sec. 1` on a
+        # verified page.
         f = dg(
             f'> - c ([[{DG}#page=1|sec. 1, p. 1]]).',
             f'> - c ([[{DG}#page=1|abstract, p. 1]]).',
@@ -1508,8 +1571,8 @@ class TestCheckWiki(unittest.TestCase):
         )
 
     def test_diffguard_relocation_is_not_flagged(self) -> None:
-        # `sec. 3.2` existed (outside the link) at HEAD — repositioning it inside is
-        # claim-neutral, not a section change.
+        # `sec. 3.2` existed (outside the link) at HEAD — repositioning
+        # it inside is claim-neutral, not a section change.
         assert (
             dg(
                 f'> - c ([[{DG}#page=9|sec. 3.2, p. 9]]).',
@@ -1533,8 +1596,9 @@ class TestCheckWiki(unittest.TestCase):
         )
 
     def test_diffguard_promotion_from_draft_head_is_not_flagged(self) -> None:
-        # A draft->verified promotion that adds a citation anchor is the verification
-        # event, not a self-re-stamp: exempt when the page was NOT verified at HEAD.
+        # A draft->verified promotion that adds a citation anchor is the
+        # verification event, not a self-re-stamp: exempt when the page
+        # was NOT verified at HEAD.
         assert (
             dg(
                 f'> - c ([[{DG}#page=1|sec. 1, p. 1]]).',
@@ -1547,7 +1611,8 @@ class TestCheckWiki(unittest.TestCase):
     def test_diffguard_anchor_change_still_flagged_when_verified_at_head(
         self,
     ) -> None:
-        # The genuine abuse still fires: verified at HEAD, stayed verified, anchor changed.
+        # The genuine abuse still fires: verified at HEAD, stayed
+        # verified, anchor changed.
         assert (
             len(
                 dg(
@@ -1571,7 +1636,8 @@ class TestCheckWiki(unittest.TestCase):
     def test_diffguard_registered_and_exposed(self) -> None:
         assert cw.CHECKS.get('verified_anchor_unaudited') == 'error'
 
-    # --- verified_hash_mismatch (committed-state backstop, Mechanism 2) -----------
+    # --- verified_hash_mismatch (committed-state backstop, Mechanism 2)
+    # -----------
 
     def test_verified_hash_match_is_not_flagged(self) -> None:
         p = _write_page(
@@ -1637,8 +1703,9 @@ class TestCheckWiki(unittest.TestCase):
         )
 
     def test_verified_hash_masks_added_unverified_line(self) -> None:
-        # Claim-level model through the new check: a verified page whose only change
-        # since stamping is an added *[unverified]* line does not trip the hash.
+        # Claim-level model through the new check: a verified page whose
+        # only change since stamping is an added *[unverified]* line
+        # does not trip the hash.
         p = _write_page(
             self.tmp,
             'sources',
@@ -1670,11 +1737,13 @@ class TestCheckWiki(unittest.TestCase):
         assert json.loads(r.stdout).get('verified_anchor_unaudited') == 'error'
 
     def test_verified_hash_malformed_delimiter_is_flagged(self) -> None:
-        # A whitespace-padded closing `---` is accepted by parse_frontmatter
-        # (strip-based) but rejected by body_hash (exact `\n---\n`), which raises
-        # ValueError. check_verified_hash must SURFACE that as verified_hash_mismatch,
-        # not swallow it — else a `verified` page silently escapes the hash backstop
-        # (a self-concealing false green). Pins the ValueError-surfacing branch.
+        # A whitespace-padded closing `---` is accepted by
+        # parse_frontmatter (strip-based) but rejected by body_hash
+        # (exact `\n---\n`), which raises ValueError.
+        # check_verified_hash must SURFACE that as
+        # verified_hash_mismatch, not swallow it — else a `verified`
+        # page silently escapes the hash backstop (a self-concealing
+        # false green). Pins the ValueError-surfacing branch.
         d = self.tmp / '1-wiki' / 'sources'
         d.mkdir(parents=True, exist_ok=True)
         p = d / 'X.md'
@@ -1689,7 +1758,8 @@ class TestCheckWiki(unittest.TestCase):
         )
         assert len(f) == 1 and f[0]['check_id'] == 'verified_hash_mismatch'
 
-    # --- wikilink_pipe_spacing transform (re-stamp-eligible, so pinned) ----------
+    # --- wikilink_pipe_spacing transform (re-stamp-eligible, so pinned)
+    # ----------
 
     def test_pipe_spacing_detects_padded_pipe(self) -> None:
         _write_page(
@@ -1711,7 +1781,8 @@ class TestCheckWiki(unittest.TestCase):
         assert fix_pipes('[[a|b]]') == '[[a|b]]'
 
     def test_pipe_spacing_fix_leaves_table_cells(self) -> None:
-        # A `|` outside `[[...]]` (a Markdown table row) must not be touched.
+        # A `|` outside `[[...]]` (a Markdown table row) must not be
+        # touched.
         assert fix_pipes('| a | b |') == '| a | b |'
 
     def test_pipe_spacing_fix_roundtrips_to_clean(self) -> None:
@@ -1719,13 +1790,15 @@ class TestCheckWiki(unittest.TestCase):
         assert not cw.PIPE_SPACING_RE.search(fixed)
         assert fixed == 'x [[a|b]] and [[c|d]] y'
 
-    # --- bullet-initial wikilink capitalization (wikilink_display_uncapitalized) --
+    # --- bullet-initial wikilink capitalization
+    # (wikilink_display_uncapitalized) --
     #
-    # A bullet that opens with a wikilink is sentence-initial, so its display takes a
-    # leading capital (CLAUDE.md -> Wikilink Format). A common-noun display stays
-    # lowercase mid-sentence but capitalizes when it opens the bullet. The Sources
-    # callout is exempt (its displays are filename-derived source stems, kept
-    # verbatim); a display whose first char is not a lowercase letter is left alone.
+    # A bullet that opens with a wikilink is sentence-initial, so its
+    # display takes a leading capital (CLAUDE.md -> Wikilink Format). A
+    # common-noun display stays lowercase mid-sentence but capitalizes
+    # when it opens the bullet. The Sources callout is exempt (its
+    # displays are filename-derived source stems, kept verbatim); a
+    # display whose first char is not a lowercase letter is left alone.
 
     # wiring invariants
 
@@ -1778,8 +1851,8 @@ class TestCheckWiki(unittest.TestCase):
         assert caps_findings('> - [[1-wiki/concepts/g.md|5G networks]] are fast.') == []
 
     def test_caps_mid_bullet_wikilink_not_flagged(self) -> None:
-        # The leading-capital rule is sentence-initial only; a wikilink later in the
-        # bullet keeps its lowercase common-noun display.
+        # The leading-capital rule is sentence-initial only; a wikilink
+        # later in the bullet keeps its lowercase common-noun display.
         assert (
             caps_findings(
                 '> - It uses a [[1-wiki/concepts/c.md|collaboration channel]].'
@@ -1788,8 +1861,9 @@ class TestCheckWiki(unittest.TestCase):
         )
 
     def test_caps_sources_callout_exempt(self) -> None:
-        # Source-stem displays in the Sources callout are filename-derived, kept
-        # verbatim, and must not be force-capitalized.
+        # Source-stem displays in the Sources callout are
+        # filename-derived, kept verbatim, and must not be
+        # force-capitalized.
         body = (
             '> [!sources] Sources\n'
             '> - [[1-wiki/sources/illustrated-transformer.md|illustrated-transformer]]\n'
@@ -1825,25 +1899,29 @@ class TestCheckWiki(unittest.TestCase):
         ids = {f['check_id'] for f in cw.check_page(path=p, wiki_root=wiki)}
         assert 'wikilink_display_uncapitalized' in ids
 
-    # NB: no real-repo "no findings" invariant yet — several pages carry pre-existing
-    # uncapitalized bullet-initial displays (Vaswani2017AttentionIA, Kingma2015AdamAM,
-    # Devlin2019BERTPO, …). Add the standing assertion once that cleanup lands.
+    # NB: no real-repo "no findings" invariant yet — several pages carry
+    # pre-existing uncapitalized bullet-initial displays
+    # (Vaswani2017AttentionIA, Kingma2015AdamAM, Devlin2019BERTPO, …).
+    # Add the standing assertion once that cleanup lands.
 
     def test_caps_locator_deeplink_not_flagged(self) -> None:
-        # A bullet opening with a raw-file locator deep-link (`p. 5`, a page token,
-        # not a page name) is NOT subject to the leading-capital rule — the check is
-        # scoped to `1-wiki/` page targets.
+        # A bullet opening with a raw-file locator deep-link (`p. 5`, a
+        # page token, not a page name) is NOT subject to the
+        # leading-capital rule — the check is scoped to `1-wiki/` page
+        # targets.
         body = '> - [[0-raw/papers/X.pdf#page=5|p. 5]]: the gap chart.'
         assert caps_findings(body) == []
 
-    # --- chronology: log/hot are timed and newest-first ---------------------------
+    # --- chronology: log/hot are timed and newest-first
+    # ---------------------------
     #
-    # log.md (every `## [date time] …` entry) and hot.md Recent activity (each
-    # `- [date time] …` bullet) must carry a 24-hour time and run newest-first, so
-    # entries from separately-merged branches sort unambiguously (CLAUDE.md → Hot,
-    # Index, And Log). check_chronology emits chronology_missing_time (no time) and
-    # chronology_out_of_order (timed entries not descending); sort_chronology.py is
-    # the determinate auto-fix.
+    # log.md (every `## [date time] …` entry) and hot.md Recent activity
+    # (each `- [date time] …` bullet) must carry a 24-hour time and run
+    # newest-first, so entries from separately-merged branches sort
+    # unambiguously (CLAUDE.md → Hot, Index, And Log). check_chronology
+    # emits chronology_missing_time (no time) and
+    # chronology_out_of_order (timed entries not descending);
+    # sort_chronology.py is the determinate auto-fix.
 
     # wiring invariants
 
@@ -1926,8 +2004,9 @@ class TestCheckWiki(unittest.TestCase):
         assert '## Open threads\n\n- keep me' in out
 
     def test_sorter_hot_preserves_non_entry_lines(self) -> None:
-        # Regression: sort_hot must not rebuild the block from dated bullets alone
-        # (that silently dropped placeholders, parked notes, and sub-bullets).
+        # Regression: sort_hot must not rebuild the block from dated
+        # bullets alone (that silently dropped placeholders, parked
+        # notes, and sub-bullets).
         w = _wiki(self.tmp, hot=HOT_WITH_STRAY)
         out = sc.sort_hot(w / 'hot.md')
         assert 'a parked note the user left here' in out  # preamble preserved
@@ -1943,8 +2022,8 @@ class TestCheckWiki(unittest.TestCase):
         assert '## Open threads\n\n- keep me' in out  # other sections intact
 
     def test_sorter_hot_placeholder_only_preserved(self) -> None:
-        # A Recent-activity section with only a `- None yet` placeholder (no dated
-        # entry) is left untouched rather than emptied.
+        # A Recent-activity section with only a `- None yet` placeholder
+        # (no dated entry) is left untouched rather than emptied.
         hot = (
             '---\ntype: hot\n---\n\n# Hot\n\n## Recent activity\n\n'
             '- None yet\n\n## Open threads\n\n- keep me\n'
@@ -1963,19 +2042,22 @@ class TestCheckWiki(unittest.TestCase):
         )
         assert r.returncode == 1  # log skipped: no recoverable link, manual time needed
 
-    # auto-recovery of a missing time from the linked report filename (determinate)
+    # auto-recovery of a missing time from the linked report filename
+    # (determinate)
 
     def test_recover_time_single_matching_link(self) -> None:
         txt = '- Saved: [[2-outputs/query/query-2026-06-07-0915-topic.md|query]]'
         assert sc.recover_time(txt, '2026-06-07') == '09:15'
 
     def test_recover_time_date_mismatch_returns_none(self) -> None:
-        # The link's date must match the entry's date, or it is not this entry's time.
+        # The link's date must match the entry's date, or it is not this
+        # entry's time.
         txt = '- Saved: [[2-outputs/query/query-2026-06-07-0915-topic.md|query]]'
         assert sc.recover_time(txt, '2026-06-08') is None
 
     def test_recover_time_conflicting_links_returns_none(self) -> None:
-        # Two same-date links with different times → ambiguous → stays manual.
+        # Two same-date links with different times → ambiguous → stays
+        # manual.
         txt = (
             '- a [[2-outputs/query/query-2026-06-07-0915-x.md|q]] '
             'and [[2-outputs/query/query-2026-06-07-1620-y.md|q]]'
@@ -2000,16 +2082,19 @@ class TestCheckWiki(unittest.TestCase):
         assert '## Open threads\n\n- keep me' in out
 
     # (The committed-wiki anchor for chronology was folded into the
-    # committed-wiki smoke above, which runs check_chronology over the real
-    # log/hot; see the rationale there. An untimed or out-of-order entry is a
-    # finding sort_chronology.py is built to repair, not a broken build.)
+    # committed-wiki smoke above, which runs check_chronology over the
+    # real log/hot; see the rationale there. An untimed or out-of-order
+    # entry is a finding sort_chronology.py is built to repair, not a
+    # broken build.)
 
-    # --- hyphenated_open_compound_noun: bare-noun de-hyphenation, modifier-safe ----
-    # A slug-derived open compound (tool-use, belief-state) is correct OPEN as a noun
-    # but correct HYPHENATED as a modifier. The check flags ONLY the bare-noun
-    # position, never a modifier, and never a wikilink display. Two curated lists
-    # (OPEN_COMPOUND_NOUN_SUGGEST / HYPHENATED_COMPOUND_ALLOWED) drive it; these tests
-    # pin the noun-vs-modifier behaviour so the lists can grow without regressing it.
+    # --- hyphenated_open_compound_noun: bare-noun de-hyphenation,
+    # modifier-safe ---- A slug-derived open compound (tool-use,
+    # belief-state) is correct OPEN as a noun but correct HYPHENATED as
+    # a modifier. The check flags ONLY the bare-noun position, never a
+    # modifier, and never a wikilink display. Two curated lists
+    # (OPEN_COMPOUND_NOUN_SUGGEST / HYPHENATED_COMPOUND_ALLOWED) drive
+    # it; these tests pin the noun-vs-modifier behaviour so the lists
+    # can grow without regressing it.
 
     def test_open_compound_noun_flags_bare_noun_before_clause_end(
         self,
@@ -2036,8 +2121,9 @@ class TestCheckWiki(unittest.TestCase):
         assert len(f) == 1
 
     def test_open_compound_noun_does_not_flag_modifier(self) -> None:
-        # "belief-state representation" — belief-state modifies a following noun, so
-        # the hyphen is correct and must NOT be flagged (the no-overcorrection rule).
+        # "belief-state representation" — belief-state modifies a
+        # following noun, so the hyphen is correct and must NOT be
+        # flagged (the no-overcorrection rule).
         f = _noun_findings(
             self.tmp,
             '> [!idea] Idea\n> - An explicit belief-state representation helps.\n> ^idea',
@@ -2045,8 +2131,8 @@ class TestCheckWiki(unittest.TestCase):
         assert f == []
 
     def test_open_compound_noun_does_not_flag_allowed_lookalike(self) -> None:
-        # fine-tuning is on the ALLOWED keep-hyphenated list — never flagged, even as
-        # a bare noun.
+        # fine-tuning is on the ALLOWED keep-hyphenated list — never
+        # flagged, even as a bare noun.
         f = _noun_findings(
             self.tmp,
             '> [!idea] Idea\n> - The main cost is the fine-tuning.\n> ^idea',
@@ -2054,8 +2140,9 @@ class TestCheckWiki(unittest.TestCase):
         assert f == []
 
     def test_open_compound_noun_does_not_flag_wikilink_display(self) -> None:
-        # A compound inside a wikilink display is masked, so a hyphenated display is
-        # never flagged — display text stays a manual call.
+        # A compound inside a wikilink display is masked, so a
+        # hyphenated display is never flagged — display text stays a
+        # manual call.
         f = _noun_findings(
             self.tmp,
             '> [!idea] Idea\n> - See [[1-wiki/concepts/tool-use.md|tool-use]].\n> ^idea',
@@ -2076,15 +2163,17 @@ class TestCheckWiki(unittest.TestCase):
         assert listed.get('hyphenated_open_compound_noun') == 'warning'
 
     def test_open_compound_noun_lists_are_disjoint(self) -> None:
-        # A term must not sit on both lists by accident (the allowed list is also a
-        # hard never-flag guard, but disjointness keeps intent clear).
+        # A term must not sit on both lists by accident (the allowed
+        # list is also a hard never-flag guard, but disjointness keeps
+        # intent clear).
         overlap = set(cw.OPEN_COMPOUND_NOUN_SUGGEST) & cw.HYPHENATED_COMPOUND_ALLOWED
         assert overlap == set(), overlap
 
-    # --- hyphenated_open_compound_noun, direction 2: re-hyphenate an open modifier --
-    # The inverse fix — an open compound directly before a curated HEAD NOUN was
-    # overcorrected open and should be re-hyphenated. Head-noun-gated so a following
-    # verb never triggers it (the "tool use reaches" false-positive class). A
+    # --- hyphenated_open_compound_noun, direction 2: re-hyphenate an
+    # open modifier -- The inverse fix — an open compound directly
+    # before a curated HEAD NOUN was overcorrected open and should be
+    # re-hyphenated. Head-noun-gated so a following verb never triggers
+    # it (the "tool use reaches" false-positive class). A
     # verified-ignore phrase is skipped in both directions.
 
     def test_open_compound_noun_direction2_flags_open_modifier(self) -> None:
@@ -2098,8 +2187,9 @@ class TestCheckWiki(unittest.TestCase):
     def test_open_compound_noun_direction2_ignores_following_verb(
         self,
     ) -> None:
-        # "tool use reaches" — an open compound before a VERB is a noun, not a
-        # modifier; must NOT be flagged (the 27-false-positive guard).
+        # "tool use reaches" — an open compound before a VERB is a noun,
+        # not a modifier; must NOT be flagged (the 27-false-positive
+        # guard).
         f = _noun_findings(
             self.tmp,
             '> [!idea] Idea\n> - Here tool use reaches outside the model.\n> ^idea',
@@ -2107,7 +2197,8 @@ class TestCheckWiki(unittest.TestCase):
         assert f == []
 
     def test_open_compound_noun_direction2_ignores_nonhead_noun(self) -> None:
-        # A noun not on COMPOUND_MODIFIER_HEADS is never treated as a head.
+        # A noun not on COMPOUND_MODIFIER_HEADS is never treated as a
+        # head.
         f = _noun_findings(
             self.tmp,
             '> [!idea] Idea\n> - The tool use philosophy varies.\n> ^idea',
@@ -2115,7 +2206,8 @@ class TestCheckWiki(unittest.TestCase):
         assert f == []
 
     def test_open_compound_noun_verified_ignore_suppresses_both(self) -> None:
-        # A phrase on the verified-ignore list is skipped (here, a direction-2 case).
+        # A phrase on the verified-ignore list is skipped (here, a
+        # direction-2 case).
         with mock.patch.object(
             cw,
             'HYPHENATION_VERIFIED_IGNORE',
@@ -2127,12 +2219,15 @@ class TestCheckWiki(unittest.TestCase):
             )
         assert f == []
 
-    # --- hyphenation lists loaded from the agent-writable data file ----------------
-    # The four lists live in .claude/skills/multi-skill/hyphenation-lists.md (audit grows
-    # them autonomously). The loader must parse the sections and degrade safely.
+    # --- hyphenation lists loaded from the agent-writable data file
+    # ---------------- The four lists live in
+    # .claude/skills/multi-skill/hyphenation-lists.md (audit grows them
+    # autonomously). The loader must parse the sections and degrade
+    # safely.
 
     def test_hyphenation_lists_load_from_real_data_file(self) -> None:
-        # The shipped data file populates all the lists the check depends on.
+        # The shipped data file populates all the lists the check
+        # depends on.
         assert 'belief-state' in cw.OPEN_COMPOUND_NOUN_SUGGEST
         assert cw.OPEN_COMPOUND_NOUN_SUGGEST['belief-state'] == 'belief state'
         assert 'gpt-3' in cw.HYPHENATED_COMPOUND_ALLOWED
@@ -2233,17 +2328,19 @@ class TestPaginationMap(unittest.TestCase):
         assert m == {'0-raw/papers/X.pdf': {1: 5}}
 
     def test_shipped_map_parses_with_well_formed_entries(self) -> None:
-        # The shipped file parses and every entry it yields is well-formed.
-        # Deliberately NOT an emptiness assertion: it ships with no raws, but a
-        # raw is registered on each ingest, so a vault running this suite may
-        # hold dozens — that is the file working as designed. What must hold in
-        # an empty and a populated map alike is that the prose headings and the
-        # `## <raw path — e.g. …>` example fence stay inert to the parser.
+        # The shipped file parses and every entry it yields is
+        # well-formed. Deliberately NOT an emptiness assertion: it ships
+        # with no raws, but a raw is registered on each ingest, so a
+        # vault running this suite may hold dozens — that is the file
+        # working as designed. What must hold in an empty and a
+        # populated map alike is that the prose headings and the `##
+        # <raw path — e.g. …>` example fence stay inert to the parser.
         m = cw._load_pagination_map()
         assert isinstance(m, dict)
         for raw, pages in m.items():
             assert raw.startswith('0-raw/'), raw
-            # A placeholder delimiter means a schematic heading was parsed.
+            # A placeholder delimiter means a schematic heading was
+            # parsed.
             assert '<' not in raw and '{' not in raw, raw
             assert isinstance(pages, dict), raw
             for phys, printed in pages.items():
@@ -2278,7 +2375,8 @@ class TestPaginationMap(unittest.TestCase):
     # --- map-aware exemption ---
     def test_exemption_paginated_requires_page(self) -> None:
         with mock.patch.object(cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {5: 5}}):
-            # page prints a number -> anchor alone (even `app.`) is incomplete
+            # page prints a number -> anchor alone (even `app.`) is
+            # incomplete
             assert not cw.locator_display_complete(
                 display='sec. 3', raw='0-raw/papers/X.pdf', phys=5
             )
@@ -2310,8 +2408,8 @@ class TestPaginationMap(unittest.TestCase):
             )
 
     def test_exemption_no_keys_is_pure_display_heuristic(self) -> None:
-        # Called without raw/phys (e.g. a caller with no deep-link keys): the
-        # original app.-only behaviour.
+        # Called without raw/phys (e.g. a caller with no deep-link
+        # keys): the original app.-only behaviour.
         assert cw.locator_display_complete(display='app. A')
         assert not cw.locator_display_complete(display='sec. 3')
 
@@ -2359,7 +2457,8 @@ class TestPaginationMap(unittest.TestCase):
             assert self._match(body) == []
 
     def test_mismatch_ignores_pp_ranges(self) -> None:
-        # Conservative for an error-severity check: `pp. M–N` ranges not matched.
+        # Conservative for an error-severity check: `pp. M–N` ranges not
+        # matched.
         with mock.patch.object(cw, 'PAGINATION_MAP', {'0-raw/papers/X.pdf': {5: 4175}}):
             body = (
                 '> - claim ([[1-wiki/sources/X.md|X]]; '
@@ -2368,7 +2467,8 @@ class TestPaginationMap(unittest.TestCase):
             assert self._match(body) == []
 
     def test_page_num_re_ignores_p_inside_app(self) -> None:
-        # The classic bug: the `p.` inside `app.` must not read as a page token.
+        # The classic bug: the `p.` inside `app.` must not read as a
+        # page token.
         assert cw.CITATION_PAGE_NUM_RE.search('app. D.1, tab. 8') is None
         assert cw.CITATION_PAGE_NUM_RE.search('sec. 3, p. 5').group(1) == '5'
 
@@ -2415,7 +2515,8 @@ class TestPaginationMap(unittest.TestCase):
             assert len(f) == 1  # one per raw, not per citation
 
 
-# --- book source type + unknown_source_type guard + invariants --------------
+# --- book source type + unknown_source_type guard + invariants
+# --------------
 
 _SRC_SLUGS = [
     'tldr',
@@ -2520,9 +2621,10 @@ class UnknownSourceTypeTests(unittest.TestCase):
         self.assertIn('unknown_source_type', ids)
 
     def test_unknown_type_still_runs_section_order(self) -> None:
-        # The core of the bug: before the fix, REQUIRED_SECTIONS.get('bok', [])
-        # was empty so section_order never fired — a missing Method callout on a
-        # typo'd page passed lint clean. The fallback must still catch it.
+        # The core of the bug: before the fix,
+        # REQUIRED_SECTIONS.get('bok', []) was empty so section_order
+        # never fired — a missing Method callout on a typo'd page passed
+        # lint clean. The fallback must still catch it.
         with tempfile.TemporaryDirectory() as td:
             missing_method = [s for s in _SRC_SLUGS if s != 'method']
             findings = self._ids(td, _typed_fm('bok'), missing_method)
@@ -2533,8 +2635,9 @@ class UnknownSourceTypeTests(unittest.TestCase):
         self.assertIn('method', so['message'])
 
     def test_missing_type_on_source_page_is_flagged(self) -> None:
-        # No `type:` field at all -> kind == '' -> also caught (not treated as
-        # an out-of-scope non-page file, because it lives under sources/).
+        # No `type:` field at all -> kind == '' -> also caught (not
+        # treated as an out-of-scope non-page file, because it lives
+        # under sources/).
         fm = (
             'title: "X"\nfile: "[[0-raw/books/X.pdf]]"\nattachments: []\n'
             'tags: []\nframes: []\ncreated: 2026-01-01\nupdated: 2026-01-01\n'
@@ -2545,9 +2648,9 @@ class UnknownSourceTypeTests(unittest.TestCase):
         self.assertIn('unknown_source_type', ids)
 
     def test_fallback_does_not_invent_subtype_fields(self) -> None:
-        # A mistyped media-shaped page (no authors/venue/year) must fall back to
-        # the fields COMMON to every source kind — never be told it needs
-        # `authors`, which only paper/article/book owe.
+        # A mistyped media-shaped page (no authors/venue/year) must fall
+        # back to the fields COMMON to every source kind — never be told
+        # it needs `authors`, which only paper/article/book owe.
         with tempfile.TemporaryDirectory() as td:
             findings = self._ids(td, _typed_fm('medai', authored=False))
         missing = [
@@ -2603,7 +2706,8 @@ class SourceSchemaInvariantTests(unittest.TestCase):
         self.assertEqual(cs, cw.SOURCE_COMMON_SECTIONS)
 
     def test_common_fields_is_the_intersection(self) -> None:
-        # No subtype-only field (authors/venue/year) leaks into the common set.
+        # No subtype-only field (authors/venue/year) leaks into the
+        # common set.
         for f in ('authors', 'venue', 'year'):
             self.assertNotIn(f, cw.SOURCE_COMMON_FIELDS)
         for f in ('type', 'title', 'file', 'status'):
@@ -2649,7 +2753,8 @@ class RawIntegrityBooksTests(unittest.TestCase):
             ids = {
                 f['check_id'] for f in cw.check_raw_integrity(wiki_root=d / '1-wiki')
             }
-        # The book raw is found, so no false "unresolved file" and no "uningested".
+        # The book raw is found, so no false "unresolved file" and no
+        # "uningested".
         self.assertNotIn('file_field_unresolved', ids)
         self.assertNotIn('raw_without_source_page', ids)
 

@@ -1,15 +1,16 @@
 """
 Regression tests for check_synonyms.py.
 
-Pins the per-skill allow-list behaviour a two-council review scrutinized:
-subset-match suppression (a recorded confirmed-distinct group suppresses a
-subset, but a newly-appearing term re-surfaces the candidate), and the
-` — rationale` tail split that must NOT mis-split a hyphenated term such as
-`belief-state`. Run from anywhere:
+Pins the per-skill allow-list behaviour a two-council review
+scrutinized: subset-match suppression (a recorded confirmed-distinct
+group suppresses a subset, but a newly-appearing term re-surfaces the
+candidate), and the ` — rationale` tail split that must NOT mis-split a
+hyphenated term such as `belief-state`. Run from anywhere:
 
-    python3 -m unittest discover -s .claude/skills/multi-skill/scripts/tests
+python3 -m unittest discover -s .claude/skills/multi-skill/scripts/tests
 
-The module is loaded by path so the tests do not depend on cwd or packaging.
+The module is loaded by path so the tests do not depend on cwd or
+packaging.
 """
 
 from __future__ import annotations
@@ -46,8 +47,9 @@ class TestSubsetSuppression(unittest.TestCase):
         assert found == [], found
 
     def test_new_term_resurfaces_past_a_narrow_ignore(self) -> None:
-        # 'row' joins the recorded record/entry pair -> present terms are no
-        # longer a subset of the allow-list entry, so it re-surfaces.
+        # 'row' joins the recorded record/entry pair -> present terms
+        # are no longer a subset of the allow-list entry, so it
+        # re-surfaces.
         body = 'record and record, entry and entry, a row and a row'
         found = cy.find_synonym_clashes(
             body=body,

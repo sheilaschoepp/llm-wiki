@@ -3,21 +3,21 @@
 Propose a pagination-map section for a raw PDF: what printed page number
 each physical page shows, read from the page footer.
 
-The pagination map (`.claude/skills/multi-skill/pagination-map.md`) records a fact the
-locator checks depend on — what each physical page PRINTS — that is not
-derivable by rule (proceedings offsets, appendices that restart, unpaginated
-pages). This script PROPOSES that map from the PDF's footers; it does not write
-the data file. A human confirms each line against the page before it lands,
-because a wrong `none` would license stripping a correct printed page from a
-citation and certifying the damage. The proposer is a starting point, never the
-authority.
+The pagination map (`.claude/skills/multi-skill/pagination-map.md`)
+records a fact the locator checks depend on — what each physical page
+PRINTS — that is not derivable by rule (proceedings offsets, appendices
+that restart, unpaginated pages). This script PROPOSES that map from the
+PDF's footers; it does not write the data file. A human confirms each
+line against the page before it lands, because a wrong `none` would
+license stripping a correct printed page from a citation and certifying
+the damage. The proposer is a starting point, never the authority.
 
 Usage:
     pagination_map.py <raw.pdf>                 # print a proposed `## <raw>` section
     pagination_map.py --verify <raw.pdf> <dir>  # render footer crops to <dir> for eyeballing
 
-Requires PyMuPDF (`fitz`), which ships in the `llm-wiki` conda env. Prints an
-error and exits 3 if it is missing, rather than guessing.
+Requires PyMuPDF (`fitz`), which ships in the `llm-wiki` conda env.
+Prints an error and exits 3 if it is missing, rather than guessing.
 """
 
 from __future__ import annotations
@@ -35,12 +35,12 @@ except ImportError:
     )
     raise SystemExit(3)
 
-# Fraction of page height, measured up from the bottom edge, treated as the
-# footer band where a page number sits.
+# Fraction of page height, measured up from the bottom edge, treated as
+# the footer band where a page number sits.
 FOOTER_BAND = 0.10
-# A footer LINE that is nothing but a page number — the strongest signal, since
-# a printed folio usually sits alone. A number embedded in a sentence (a
-# footnote, a year) is deliberately not matched.
+# A footer LINE that is nothing but a page number — the strongest
+# signal, since a printed folio usually sits alone. A number embedded in
+# a sentence (a footnote, a year) is deliberately not matched.
 ARABIC_LINE_RE = re.compile(r'^\d{1,5}$')
 ROMAN_LINE_RE = re.compile(r'^[ivxlcdm]{1,7}$', re.IGNORECASE)
 _STRIP = ' \t.,:;-–—[]()'

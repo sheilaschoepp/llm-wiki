@@ -1,17 +1,18 @@
 """
 Regression tests for check_structure.py.
 
-Pins the defects a two-council review found in the freshly-shipped checks:
-the `broken_inline_ref` recognizer was blind to the bare `<skill>/<file>.md`
-shape it documented itself as catching (false negative), and it must NOT
-fire on a fenced illustrative path (false positive); `body_over_length`
-deliberately counts fenced code and tables (a token-cost proxy, not a prose
-count) and its explanatory message tail must match the budget that tripped.
-Run from anywhere:
+Pins the defects a two-council review found in the freshly-shipped
+checks: the `broken_inline_ref` recognizer was blind to the bare
+`<skill>/<file>.md` shape it documented itself as catching (false
+negative), and it must NOT fire on a fenced illustrative path (false
+positive); `body_over_length` deliberately counts fenced code and tables
+(a token-cost proxy, not a prose count) and its explanatory message tail
+must match the budget that tripped. Run from anywhere:
 
-    python3 -m unittest discover -s .claude/skills/multi-skill/scripts/tests
+python3 -m unittest discover -s .claude/skills/multi-skill/scripts/tests
 
-The module is loaded by path so the tests do not depend on cwd or packaging.
+The module is loaded by path so the tests do not depend on cwd or
+packaging.
 """
 
 from __future__ import annotations
@@ -43,8 +44,8 @@ class TestSkillRefRecognizers(unittest.TestCase):
         assert looks(token='some-skill/SKILL.md')
 
     def test_looks_like_skill_ref_rejects(self) -> None:
-        # The bare 2-segment abbreviated form is NOT matched here — that is
-        # the blind spot _is_bare_skill_ref was added to cover.
+        # The bare 2-segment abbreviated form is NOT matched here — that
+        # is the blind spot _is_bare_skill_ref was added to cover.
         looks = cs._looks_like_skill_ref
         assert not looks(token='forget/removal-mechanics.md')
         assert not looks(token='<skill>/x.md')  # template char
@@ -58,8 +59,8 @@ class TestSkillRefRecognizers(unittest.TestCase):
         assert bare(token='multi-skill/multi-skill-memory.md', repo_root=REPO)
 
     def test_is_bare_skill_ref_declines_non_candidates(self) -> None:
-        # Leading segment is not a real skill dir -> not a candidate, so an
-        # ordinary two-segment path in prose is never flagged.
+        # Leading segment is not a real skill dir -> not a candidate, so
+        # an ordinary two-segment path in prose is never flagged.
         bare = cs._is_bare_skill_ref
         assert not bare(token='notaskill/foo.md', repo_root=REPO)
         assert not bare(token='<skill>/x.md', repo_root=REPO)  # template
@@ -76,7 +77,8 @@ class TestBrokenInlineRefIntegration(unittest.TestCase):
         )
 
     def test_flags_bare_broken_two_segment_ref(self) -> None:
-        # Regression: the bare form that ships broken must now be caught.
+        # Regression: the bare form that ships broken must now be
+        # caught.
         found = self._scan(['see `forget/removal-mechanics.md` here'])
         msgs = [f['message'] for f in found]
         assert any('forget/removal-mechanics.md' in m for m in msgs), found
@@ -102,9 +104,9 @@ class TestBodyLength(unittest.TestCase):
         )
 
     def test_fenced_code_is_counted(self) -> None:
-        # The word budget is a token-cost proxy: fenced content costs tokens,
-        # so it is counted (NOT stripped). A body over budget only because of
-        # a fenced block must still trip.
+        # The word budget is a token-cost proxy: fenced content costs
+        # tokens, so it is counted (NOT stripped). A body over budget
+        # only because of a fenced block must still trip.
         big = ' '.join(['x'] * (cs.SKILL_MD_MAX_WORDS + 1))
         found = self._run(['```', big, '```'])
         assert found and found[0]['check_id'] == 'body_over_length', found
@@ -116,8 +118,9 @@ class TestBodyLength(unittest.TestCase):
         assert 'under-measures' in msg, msg
 
     def test_message_tail_line_only_trip(self) -> None:
-        # >500 short lines but under the word budget: the line count is what
-        # tripped, so the tail must NOT claim the line count under-measures.
+        # >500 short lines but under the word budget: the line count is
+        # what tripped, so the tail must NOT claim the line count
+        # under-measures.
         msg = self._run(['w'] * (cs.SKILL_MD_MAX_LINES + 1))[0]['message']
         assert 'under-measures' not in msg, msg
         assert 'within budget' in msg, msg

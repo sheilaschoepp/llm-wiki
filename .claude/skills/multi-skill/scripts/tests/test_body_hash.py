@@ -17,9 +17,11 @@ These pin the load-bearing behaviour the module docstring promises:
 
 Run from anywhere:
 
-    python3 -m unittest discover -s .claude/skills/multi-skill/scripts/tests
+    python3 -m unittest discover -s
+    .claude/skills/multi-skill/scripts/tests
 
-The module is loaded by path so the tests do not depend on cwd or packaging.
+The module is loaded by path so the tests do not depend on cwd or
+packaging.
 """
 
 from __future__ import annotations
@@ -129,9 +131,11 @@ class TestBodyHash(unittest.TestCase):
         """
         a = FM + '# T\n\n- the `*[unverified]*` marker means pending -- alpha\n'
         b = FM + '# T\n\n- the `*[unverified]*` marker means pending -- beta\n'
-        # editing the non-code content moves the hash: the line is not masked away
+        # editing the non-code content moves the hash: the line is not
+        # masked away
         assert bh.body_hash(path=self.write(a)) != bh.body_hash(path=self.write(b))
-        # and the line is not dropped: the page does not hash as if the line were gone
+        # and the line is not dropped: the page does not hash as if the
+        # line were gone
         assert bh.body_hash(path=self.write(a)) != bh.body_hash(
             path=self.write(FM + '# T\n\n')
         )
