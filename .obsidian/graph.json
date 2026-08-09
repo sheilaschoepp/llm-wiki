@@ -8,24 +8,31 @@
   "collapse-color-groups": false,
   "colorGroups": [
     {
-      "query": "path:1-wiki/sources  ",
+      "query": "path:1-wiki/sources",
       "color": {
         "a": 1,
         "rgb": 14048348
       }
     },
     {
-      "query": "path:1-wiki/concepts  ",
+      "query": "path:1-wiki/concepts",
       "color": {
         "a": 1,
         "rgb": 6062550
       }
     },
     {
-      "query": "path:1-wiki/entities  ",
+      "query": "path:1-wiki/entities",
       "color": {
         "a": 1,
         "rgb": 11392604
+      }
+    },
+    {
+      "query": "path:1-wiki/syntheses",
+      "color": {
+        "a": 1,
+        "rgb": 14069084
       }
     }
   ],
@@ -35,9 +42,9 @@
   "nodeSizeMultiplier": 1,
   "lineSizeMultiplier": 1,
   "collapse-forces": false,
-  "centerStrength": 0.518713248970312,
-  "repelStrength": 10,
-  "linkStrength": 1,
+  "centerStrength": 0.12,
+  "repelStrength": 18,
+  "linkStrength": 0.3,
   "linkDistance": 250,
   "scale": 0.8824806574369578,
   "close": true
