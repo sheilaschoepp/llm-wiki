@@ -16,9 +16,10 @@ Usage:
     python check_structure.py <skill-dir-or-SKILL.md> [--single-file]
 
 Flags:
-    --single-file    Lint only the SKILL.md file; do not traverse references/.
-                     Use this when the user explicitly pointed at a
-                     single file rather than a skill directory.
+    --single-file    Lint only the SKILL.md file; do not traverse
+                     references/. Use this when the user explicitly
+                     pointed at a single file rather than a skill
+                     directory.
 
 Exit codes:
     0 = ran successfully (findings may be present in JSON)

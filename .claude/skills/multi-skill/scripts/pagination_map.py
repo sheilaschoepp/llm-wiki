@@ -13,8 +13,10 @@ license stripping a correct printed page from a citation and certifying
 the damage. The proposer is a starting point, never the authority.
 
 Usage:
-    pagination_map.py <raw.pdf>                 # print a proposed `## <raw>` section
-    pagination_map.py --verify <raw.pdf> <dir>  # render footer crops to <dir> for eyeballing
+    pagination_map.py <raw.pdf>
+        Print a proposed `## <raw>` section.
+    pagination_map.py --verify <raw.pdf> <dir>
+        Render footer crops to <dir> for eyeballing.
 
 Requires PyMuPDF (`fitz`), which ships in the `llm-wiki` conda env.
 Prints an error and exits 3 if it is missing, rather than guessing.

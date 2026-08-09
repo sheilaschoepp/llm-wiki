@@ -2926,8 +2926,9 @@ def main() -> int:
     # Exit codes:
     #   0  clean (no findings)
     #   1  ran to completion, found drift
-    #   2  did NOT complete — a check crashed, the manifest wiring is broken, or
-    #      the invocation was malformed (bad path / unknown check / bad --packet)
+    #   2  did NOT complete — a check crashed, the manifest wiring is
+    #      broken, or the invocation was malformed (bad path / unknown
+    #      check / bad --packet)
     # Distinguish the exit-2 cases by stdout: a crash or wiring error
     # prints a JSON array carrying an `(internal)` finding; an
     # invocation error prints nothing to stdout and a message to stderr.
