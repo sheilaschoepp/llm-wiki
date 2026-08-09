@@ -106,11 +106,12 @@ JACCARD_THRESHOLD = 0.75
 # across sections" rule. This is the cheap lexical half; the semantic
 # half (reworded repeats) lives in ingest's note-quality packet and
 # audit's walk. Two arms, because redundancy shows up two ways:
-#   - Jaccard arm catches near-twin bullets of similar length (a point copied
-#     into two sections with light edits).
-#   - Overlap-coefficient arm (|A∩B| / min(|A|,|B|)) catches CONTAINMENT — a
-#     short bullet whose whole point is folded inside a longer bullet, where
-#     Jaccard is dragged down by the longer bullet's extra tokens.
+#   - Jaccard arm catches near-twin bullets of similar length (a point
+#     copied into two sections with light edits).
+#   - Overlap-coefficient arm (|A∩B| / min(|A|,|B|)) catches CONTAINMENT
+#     — a short bullet whose whole point is folded inside a longer
+#     bullet, where Jaccard is dragged down by the longer bullet's extra
+#     tokens.
 # Comparison is over content tokens only (wikilinks, citations, markers,
 # and stopwords stripped), so two bullets that merely cite the same
 # source or share function words do not collide. MIN floors keep short,
@@ -499,8 +500,8 @@ def _derive_source_common_schema(
 
 # The common-denominator field/section lists an `unknown_source_type`
 # page falls back to (see check_page). Computed once at import; the two
-# invariants above
-# raise loudly here if the source-schema tables are internally inconsistent.
+# invariants above raise loudly here if the source-schema tables are
+# internally inconsistent.
 SOURCE_COMMON_FIELDS, SOURCE_COMMON_SECTIONS = _derive_source_common_schema(
     source_kinds=SOURCE_KINDS,
     required_fields=REQUIRED_FIELDS,
@@ -705,13 +706,13 @@ LOCATOR_ANCHOR_TOKEN_RE = re.compile(
 # anchor).
 SOURCE_PAGE_LINK_RE = re.compile(r'\[\[1-wiki/sources/[^\]|#]+\.md\|[^\]]*\]\]')
 # A callout body bullet that opens with a wiki-PAGE wikilink: `> -
-# [[1-wiki/…|display]]…`.
-# Group 1 is the display text. Tolerates indented sub-bullets (`>   - `). Only
-# matches when the wikilink is the first content on the bullet
-# (sentence-initial), which is what the leading-capital rule keys on
-# (CLAUDE.md -> Wikilink Format). Scoped to `1-wiki/` targets so a
-# bullet opening with a raw-file locator deep-link (`[[0-raw/…#page=5|p.
-# 5]]`, a page token, not a page name) is not force-capitalized.
+# [[1-wiki/…|display]]…`. Group 1 is the display text. Tolerates
+# indented sub-bullets (`>   - `). Only matches when the wikilink is the
+# first content on the bullet (sentence-initial), which is what the
+# leading-capital rule keys on (CLAUDE.md -> Wikilink Format). Scoped to
+# `1-wiki/` targets so a bullet opening with a raw-file locator
+# deep-link (`[[0-raw/…#page=5|p. 5]]`, a page token, not a page name)
+# is not force-capitalized.
 BULLET_INITIAL_WIKILINK_RE = re.compile(
     r'^>[ ]*-[ ]+\[\[1-wiki/[^\]|]+\|([^\]]*)\]\]', re.MULTILINE
 )
@@ -812,10 +813,10 @@ VAGUE_SOURCE_REFERENT = re.compile(
 # benchmark"); a hyphenated form is drift. Mapping is banned-hyphenated
 # -> open form (the fix the report suggests). Deliberately NOT listed,
 # so they are never flagged:
-#   - `multi-agent` (and `multi-agent-debate` etc.) — a prefixed compound,
-#     universally hyphenated in the field; correct as written.
-#   - `foundation-model` — hyphenated as an attributive modifier by convention;
-#     left as written.
+#   - `multi-agent` (and `multi-agent-debate` etc.) — a prefixed
+#     compound, universally hyphenated in the field; correct as written.
+#   - `foundation-model` — hyphenated as an attributive modifier by
+#     convention; left as written.
 #   - `in-context` — conventionally hyphenated as a modifier.
 # Keys are matched longest-first so `deep-reinforcement-learning` wins
 # over `reinforcement-learning`, and `self-supervised-learning` over
@@ -863,16 +864,17 @@ HYPHENATED_OPEN_COMPOUND = re.compile(
 # prose): correct OPEN as a noun ("tool use is costly"), correct
 # HYPHENATED as an attributive modifier ("belief-state representation",
 # CMOS 5.91). The four lists:
-#   DISALLOWED (OPEN_COMPOUND_NOUN_SUGGEST): hyphenated -> open. Direction 1 opens
-#     a hyphenated bare noun; direction 2 re-hyphenates an open compound before a
-#     head noun (an overcorrection).
-#   ALLOWED (HYPHENATED_COMPOUND_ALLOWED): keep-hyphenated look-alikes never
-#     flagged (proper names like GPT-3, established fine-tuning, prefixed
-#     multi-agent). A hard never-flag guard.
-#   HEADS (COMPOUND_MODIFIER_HEADS): head nouns that mark a modifier — the
-#     direction-2 gate, so a following verb never triggers a hyphen.
-#   VERIFIED-IGNORE (HYPHENATION_VERIFIED_IGNORE): confirmed-correct phrases,
-#     skipped both directions.
+#   DISALLOWED (OPEN_COMPOUND_NOUN_SUGGEST): hyphenated -> open.
+#     Direction 1 opens a hyphenated bare noun; direction 2
+#     re-hyphenates an open compound before a head noun (an
+#     overcorrection).
+#   ALLOWED (HYPHENATED_COMPOUND_ALLOWED): keep-hyphenated look-alikes
+#     never flagged (proper names like GPT-3, established fine-tuning,
+#     prefixed multi-agent). A hard never-flag guard.
+#   HEADS (COMPOUND_MODIFIER_HEADS): head nouns that mark a modifier —
+#     the direction-2 gate, so a following verb never triggers a hyphen.
+#   VERIFIED-IGNORE (HYPHENATION_VERIFIED_IGNORE): confirmed-correct
+#     phrases, skipped both directions.
 # Data file: .claude/skills/multi-skill/hyphenation-lists.md.
 HYPHENATION_LISTS_FILE = Path(__file__).resolve().parent.parent / 'hyphenation-lists.md'
 
@@ -2570,11 +2572,10 @@ def check_citation_form(body: str, rel: str, end: int) -> list[dict[str, Any]]:
             )
         # Canonical form pairs the deep-link with a source-page link
         # earlier in the same bullet. Callout bullets are single
-        # physical lines, so scan
-        # from the start of the deep-link's line — this allows the common
-        # "Source notes X … (sec. Y, p. M)" form (source named at the
-        # bullet start, location cited at the end) as well as the
-        # adjacent form.
+        # physical lines, so scan from the start of the deep-link's line
+        # — this allows the common "Source notes X … (sec. Y, p. M)"
+        # form (source named at the bullet start, location cited at the
+        # end) as well as the adjacent form.
         line_start = scan.rfind('\n', 0, m.start()) + 1
         window = scan[line_start : m.start()]
         if not SOURCE_PAGE_LINK_RE.search(window):
@@ -4056,11 +4057,10 @@ def check_reciprocal_contradictions(wiki_root: Path) -> list[dict[str, Any]]:
 KEBAB_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
 
 # A wikilink with whitespace adjacent to the pipe. `[^\]\n]` keeps the
-# match
-# from crossing a `]]` boundary into the next link AND from spanning a newline
-# (a match across lines would let the auto-fix join two body lines); the
-# adjacency uses `[^\S\n]` so only non-newline whitespace beside the
-# pipe flags.
+# match from crossing a `]]` boundary into the next link AND from
+# spanning a newline (a match across lines would let the auto-fix join
+# two body lines); the adjacency uses `[^\S\n]` so only non-newline
+# whitespace beside the pipe flags.
 PIPE_SPACING_RE = re.compile(r'\[\[[^\]\n]*?(?:[^\S\n]\||\|[^\S\n])[^\]\n]*?\]\]')
 
 # A wikilink (not an image embed — negative lookbehind for `!`). Group 1

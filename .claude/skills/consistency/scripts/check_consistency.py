@@ -93,12 +93,12 @@ META_SKILL_NAMES = {
 
 # Standalone skills deliberately kept out of the project catalogues:
 # skills that serve some out-of-band purpose rather than the wiki
-# workflow, and so are exempt
-# from the Operations list, the directory tree, and the output-kind naming registry.
-# Their on-disk skill folders and `2-outputs/` folders must not be
-# flagged as missing from those catalogues (same exemption shape as
-# OUTPUT_ARCHIVE_DIRS). Currently empty — no standalone skill exists.
-# Add a folder name here to exempt a future one.
+# workflow, and so are exempt from the Operations list, the directory
+# tree, and the output-kind naming registry. Their on-disk skill folders
+# and `2-outputs/` folders must not be flagged as missing from those
+# catalogues (same exemption shape as OUTPUT_ARCHIVE_DIRS). Currently
+# empty — no standalone skill exists. Add a folder name here to exempt a
+# future one.
 STANDALONE_SKILL_NAMES: set[str] = set()
 
 EXPECTED_SECTIONS = {
