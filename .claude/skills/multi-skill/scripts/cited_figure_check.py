@@ -18,27 +18,27 @@ requires PyMuPDF (`fitz`), installed in the `llm-wiki` conda env by
 setup.sh.
 
 Scope and policy:
-- Detect-only, NEVER auto-fix. Like a mislabelled-locator finding, the check
-  cannot tell which half is wrong — the figure, the page, or the source
-  — so it flags for a human or `audit` to open the cited page and settle
-  it.
-- Numeric figures only, and only DECIMALS and PERCENTAGES (`37.2`, `37.2%`,
-  `40%`). Bare integers are skipped: they recur everywhere and would
-  flood the output with false positives. Locator machinery (`sec. 3.1`,
-  `p. 4`, `#page=4`) sits inside a masked-out `[[...]]` span, so a
+- Detect-only, NEVER auto-fix. Like a mislabelled-locator finding, the
+  check cannot tell which half is wrong — the figure, the page, or the
+  source — so it flags for a human or `audit` to open the cited page and
+  settle it.
+- Numeric figures only, and only DECIMALS and PERCENTAGES (`37.2`,
+  `37.2%`, `40%`). Bare integers are skipped: they recur everywhere and
+  would flood the output with false positives. Locator machinery (`sec.
+  3.1`, `p. 4`, `#page=4`) sits inside a masked-out `[[...]]` span, so a
   section number is never read as a claim figure.
-- A figure on a bullet is "off page" only when it appears on NONE of that
-  bullet's cited raw pages, and only when every cited page was readable.
-  A multi-source bullet citing two pages passes if the figure is on
-  either; it flags only when the figure is on neither — the mis-location
-  signature.
-- The presence test is deliberately generous (whitespace-tolerant, matches the
-  decimal core of a percentage), so the check errs toward "present": a
-  false "present" quietly drops a finding, which is safer for a backstop
-  than a false "absent" that cries wolf.
-- It cannot catch a mislocated QUALITATIVE claim (no figure to match). That is
-  ingest's and audit's job; this backstop settles only the numeric
-  subset a script can settle.
+- A figure on a bullet is "off page" only when it appears on NONE of
+  that bullet's cited raw pages, and only when every cited page was
+  readable. A multi-source bullet citing two pages passes if the figure
+  is on either; it flags only when the figure is on neither — the
+  mis-location signature.
+- The presence test is deliberately generous (whitespace-tolerant,
+  matches the decimal core of a percentage), so the check errs toward
+  "present": a false "present" quietly drops a finding, which is safer
+  for a backstop than a false "absent" that cries wolf.
+- It cannot catch a mislocated QUALITATIVE claim (no figure to match).
+  That is ingest's and audit's job; this backstop settles only the
+  numeric subset a script can settle.
 
 Output: JSON list of findings ({check_id, severity, file, line,
 message}) to stdout, mirroring `check_wiki.py`. `severity` is always

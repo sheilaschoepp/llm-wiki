@@ -91,13 +91,14 @@ META_SKILL_NAMES = {
     'cleanup',
 }
 
-# Standalone skills deliberately kept out of the project catalogues: skills that
-# serve some out-of-band purpose rather than the wiki workflow, and so are exempt
+# Standalone skills deliberately kept out of the project catalogues:
+# skills that serve some out-of-band purpose rather than the wiki
+# workflow, and so are exempt
 # from the Operations list, the directory tree, and the output-kind naming registry.
-# Their on-disk skill folders and `2-outputs/` folders must not be flagged as
-# missing from those catalogues (same exemption shape as OUTPUT_ARCHIVE_DIRS).
-# Currently empty — no standalone skill exists. Add a folder name here to exempt
-# a future one.
+# Their on-disk skill folders and `2-outputs/` folders must not be
+# flagged as missing from those catalogues (same exemption shape as
+# OUTPUT_ARCHIVE_DIRS). Currently empty — no standalone skill exists.
+# Add a folder name here to exempt a future one.
 STANDALONE_SKILL_NAMES: set[str] = set()
 
 EXPECTED_SECTIONS = {
@@ -2927,9 +2928,10 @@ def main() -> int:
     #   1  ran to completion, found drift
     #   2  did NOT complete — a check crashed, the manifest wiring is broken, or
     #      the invocation was malformed (bad path / unknown check / bad --packet)
-    # Distinguish the exit-2 cases by stdout: a crash or wiring error prints a
-    # JSON array carrying an `(internal)` finding; an invocation error prints
-    # nothing to stdout and a message to stderr. JSON is always printed first.
+    # Distinguish the exit-2 cases by stdout: a crash or wiring error
+    # prints a JSON array carrying an `(internal)` finding; an
+    # invocation error prints nothing to stdout and a message to stderr.
+    # JSON is always printed first.
     if crashed:
         return 2
     return 0 if not all_findings else 1

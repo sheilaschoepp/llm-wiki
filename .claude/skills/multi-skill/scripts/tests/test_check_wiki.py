@@ -751,7 +751,8 @@ class TestCheckWiki(unittest.TestCase):
         )  # the generic one is gone, the genuine one stays
 
     def test_unlinked_mention_verified_ignore_is_page_scoped(self) -> None:
-        # The same wording on a DIFFERENT page is judged again — an entry recorded
+        # The same wording on a DIFFERENT page is judged again — an
+        # entry recorded
         # for one page never silently suppresses a genuine reference on another.
         _write_page(
             self.tmp,

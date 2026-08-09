@@ -4,16 +4,18 @@ verified->draft demotion, so a wrong hash silently mis-demotes or
 wrongly preserves a verified page.
 
 These pin the load-bearing behaviour the module docstring promises:
-- the body excludes frontmatter (mechanical metadata edits do not move the hash);
-- every line carrying `*[unverified]*` is masked, so a marked claim can change
-  freely while the page stays verified;
-- the mask is line-scoped, so a marked claim's continuation line still counts
-  (the "keep a marked claim to its single bullet line" contract);
-- CRLF and LF inputs hash identically (existing stamps stay valid across line
-  endings);
-- a page with no markers hashes exactly as the same body without the masking;
-- a frontmatter block opened but never closed raises ValueError rather than
-  hashing the whole file and returning a valid-looking hash.
+- the body excludes frontmatter (mechanical metadata edits do not move
+  the hash);
+- every line carrying `*[unverified]*` is masked, so a marked claim can
+  change freely while the page stays verified;
+- the mask is line-scoped, so a marked claim's continuation line still
+  counts (the "keep a marked claim to its single bullet line" contract);
+- CRLF and LF inputs hash identically (existing stamps stay valid across
+  line endings);
+- a page with no markers hashes exactly as the same body without the
+  masking;
+- a frontmatter block opened but never closed raises ValueError rather
+  than hashing the whole file and returning a valid-looking hash.
 
 Run from anywhere:
 
