@@ -45,7 +45,7 @@ pip install --upgrade pip
 # Runtime dependency for the ingest skill's PDF figure extraction.
 echo 'Installing PyMuPDF (ingest figure extraction).'
 pip install \
-    'PyMuPDF>=1.28.0'
+    'PyMuPDF>=1.28.2'
 
 # Formatter and linter for the skill scripts. Installed into the env
 # rather than relied on globally: a global ruff sees no pyproject.toml
@@ -54,7 +54,8 @@ pip install \
 # at the repo root.
 echo 'Installing ruff (formatter and linter).'
 pip install \
-    'ruff>=0.15'
+    'docformatter>=1.7.8' \
+    'ruff>=0.16.2' \
 
 echo ''
 echo "Done. Activate the env with: conda activate ${ENV_NAME}"
