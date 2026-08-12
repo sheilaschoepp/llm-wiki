@@ -1,6 +1,6 @@
 ---
 name: consistency
-description: Run project-level consistency checks after schema or skill changes. Checks CLAUDE.md, README.md, skill files, wiki page section templates, index/hot/log structure, callout CSS, and scripts for drift from the current schema. Use after a schema change, skill rewrite, feature removal, or major refactor. Also use when the user asks whether a refactor broke anything, whether the project is consistent with its schema, whether a skill or its description still matches the schema after editing a SKILL.md or CLAUDE.md, or to propagate a renamed or moved section, callout, or field across the project. Different from lint and audit, which check individual wiki pages (lint structurally, audit semantically); from checkup, which runs all three together; from cleanup, which checks memory-entry content and prunes unneeded outputs (consistency only counts memory entries against a cap); and from skill-linter, which reviews one skill's authoring quality, not the project's agreement with its schema.
+description: Run project-level consistency checks after schema or skill changes. Checks CLAUDE.md, README.md, skill files, wiki page section templates, index/hot/log structure, callout CSS, and scripts for drift from the current schema. Use after a schema change, skill rewrite, feature removal, or major refactor. Also use when the user asks whether a refactor broke anything, whether the project is consistent with its schema, whether a skill or its description still matches the schema after editing a SKILL.md or CLAUDE.md, or to propagate a renamed or moved section, callout, or field across the project. Different from lint and audit, which check individual wiki pages (lint structurally, audit semantically); from cleanup, which checks memory-entry content and prunes unneeded outputs (consistency only counts memory entries against a cap); and from skill-linter, which reviews one skill's authoring quality, not the project's agreement with its schema.
 ---
 
 # consistency
@@ -216,7 +216,7 @@ Derive `result:` from the script's exit code — capture it with `$?` after the 
 - Proposed (root-level, awaiting user): CLAUDE.md / skill / script change (or "none")
 ```
 
-10. **Present the proposals.** End the run by presenting every root-level proposal from Step 6 to the user as a concrete, actionable change: the exact edit to `CLAUDE.md`, the skill file, or the script. A proposal must not exist only inside the report or the log. If the user approves one, apply it then, on that explicit instruction. When consistency runs inside `checkup`, the proposals are carried up into checkup's closing summary instead of presented here.
+10. **Present the proposals.** End the run by presenting every root-level proposal from Step 6 to the user as a concrete, actionable change: the exact edit to `CLAUDE.md`, the skill file, or the script. A proposal must not exist only inside the report or the log. If the user approves one, apply it then, on that explicit instruction. When consistency runs as a sub-run of `audit` (satisfying audit's precondition), the proposals are carried up into audit's closing summary instead of presented here.
 
 ## Deterministic Checks
 

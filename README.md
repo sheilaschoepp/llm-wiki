@@ -71,13 +71,13 @@ Steps:
 You can get the whole point of this system with two skills:
 
 - **`/ingest <file>`** — add a source. Drop a paper or article into `0-raw/`, ingest it, and the agent drafts the notes (asking before it writes). This is how knowledge gets *in*.
-- **`/checkup`** — keep it healthy. Run it now and then; it checks and tidies the whole wiki for you, bundling the maintenance skills so you don't have to remember them.
+- **`/audit`** — keep it healthy. Run it now and then; it checks and tidies the whole wiki for you, running the other maintenance skills itself so you don't have to remember them.
 
 And one more, to actually use what you've built:
 
 - **`/query <question>`** — ask the wiki a question and get an answer with its sources.
 
-That's the daily loop: **ingest** sources, **query** them, run a **checkup** once in a while. Everything else is icing — finer control you can pick up whenever you want it.
+That's the daily loop: **ingest** sources, **query** them, run an **audit** once in a while. Everything else is icing — finer control you can pick up whenever you want it.
 
 ## Skills
 
@@ -98,12 +98,11 @@ Correcting and maintaining the wiki:
 - **forget** — Remove a page or a link you no longer want, keeping a quarantined copy so nothing is ever truly lost. *Use it when a page or source no longer belongs.*
 - **lint** — A fast, automatic check of the wiki's *structure* — missing sections, broken links, miscounted sources, stray formatting — that quietly fixes the safe, mechanical problems. Cheap, so run it often. *Use it right after an ingest, or any time for a quick structural pass.*
 - **audit** — A slower, deeper read that judges whether the notes are actually *good*: one clear idea per page, properly supported, honest about disagreements. It re-checks pages against the original sources and either promotes them to "verified" or flags what needs fixing. *Use it before you rely on the wiki for something important, or after a batch of ingests.*
-- **checkup** — Run consistency, then lint, then audit back-to-back, hands-off, so the whole wiki gets checked and fixed in one go. The easiest way to keep things healthy. *Use it when you just want everything checked at once and don't want to think about order.*
 
 Internals (rarely needed once you're running):
 
-- **consistency** — Check that the project still agrees with its own rulebook (CLAUDE.md, the skills, the templates) after you change something. It catches drift and *proposes* fixes rather than silently editing the rules. *Use it after you edit the rulebook or a skill (or just run `/checkup`).*
-- **cleanup** — Two housekeeping jobs. First, look through the agent's saved notes-to-self and decide which have hardened into permanent rules (and can be cleared) versus which are still live guidance. Second, prune unneeded files from `2-outputs/` — junk, superseded check reports, reports about a deleted source or skill, and old artifacts. Every deletion is confirmed one file at a time. *Use it when the memory files or the outputs folder feel cluttered.*
+- **consistency** — Check that the project still agrees with its own rulebook (CLAUDE.md, the skills, the templates) after you change something. It catches drift and *proposes* fixes rather than silently editing the rules. *Use it after you edit the rulebook or a skill (or just run `/audit`, which runs it for you).*
+- **cleanup** — Two housekeeping jobs. First, look through the agent's saved notes-to-self and decide which have hardened into permanent rules (and can be cleared) versus which are still live guidance. Second, prune unneeded files from `2-outputs/` — junk, superseded check reports, reports about a deleted source or skill, and old artifacts; anything it cannot classify is reported rather than proposed. Every deletion is confirmed before it happens, and each one is written into the wiki's log alongside the commit that last held the file, so a pruned report can still be recovered from git history. *Use it when the memory files or the outputs folder feel cluttered.*
 - **skill-linter** — Review a skill file itself against good skill-writing practices, and tidy it up. *Use it when you're writing or editing a skill.*
 - **skill-llm-council** — Put one skill in front of two independent "councils" of five reviewers each — one judging it through general thinking lenses, one through skill-specialist lenses — let them critique it anonymously, then apply the changes they agree on and save the whole debate. The slower, deeper companion to `skill-linter`. *Use it when a quick lint isn't enough and you want a skill stress-tested from many angles.*
 
@@ -113,8 +112,8 @@ Each skill is self-contained in `.claude/skills/<name>/SKILL.md`.
 
 Nothing runs on its own — you invoke each skill yourself with `/<name>`. A few relationships are worth knowing:
 
-- **The everyday loop.** Ingest sources, query them, and run `/checkup` from time to time. That's the whole core cycle; the rest is there when you need finer control.
-- **One skill runs the others.** `/checkup` runs `consistency`, then `lint`, then `audit`, in that order, hands-off — so you rarely call those three directly. (`audit` needs a recent clean `lint` and `consistency` first; `checkup` handles that ordering for you.)
+- **The everyday loop.** Ingest sources, query them, and run `/audit` from time to time. That's the whole core cycle; the rest is there when you need finer control.
+- **One skill runs the others.** `/audit` runs `consistency` and `lint` itself when their last reports are stale or not clean, and re-runs `lint` over anything it changed — so you rarely call those two directly. Run them on their own when you want just that one layer checked.
 - **Write vs. read.** Skills that change the wiki — `ingest`, `supersede`, `forget`, `synthesis` — always show you their plan and ask before writing. Read-only skills — `query`, `brief`, `compare`, `reflect` — never touch the wiki; they save their output under `2-outputs/` for you to keep or discard.
 
 ## Examples

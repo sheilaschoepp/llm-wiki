@@ -82,12 +82,11 @@ SKILL_COUNT_PROSE = re.compile(
 
 # Meta-skills excluded from the working-skill count (CLAUDE.md
 # Operations section: consistency, skill-linter, skill-llm-council,
-# checkup, and cleanup are project-scoped meta-skills).
+# and cleanup are project-scoped meta-skills).
 META_SKILL_NAMES = {
     'consistency',
     'skill-linter',
     'skill-llm-council',
-    'checkup',
     'cleanup',
 }
 
