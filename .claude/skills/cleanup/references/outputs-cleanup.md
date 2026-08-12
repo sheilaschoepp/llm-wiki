@@ -1,15 +1,15 @@
-# cleanup — Outputs Candidate Classification (Step 4)
+# cleanup — outputs candidate classification (Step 4)
 
 How the outputs job sorts each `2-outputs/` file into a deletion-candidate category. SKILL.md Step 4 resolves the age threshold and establishes recoverability (`references/removal-safety.md`); this file holds the five categories, the repeatable-check-vs-working-artifact split they turn on, the inbound-reference check, and how the protected set is applied. The memory job never loads this.
 
 ## Contents
 
-- Repeatable Check Vs Working Artifact
-- The Five Categories
-- Inbound-Reference Check
-- Apply The Protected Set
+- Repeatable check vs working artifact
+- The four categories
+- Inbound-reference check
+- Apply the protected set
 
-## Repeatable Check Vs Working Artifact
+## Repeatable check vs working artifact
 
 Walk `2-outputs/` and sort each file into the first category it matches, in the order below.
 
@@ -22,7 +22,7 @@ The superseded-check-vs-aged split turns on kind, and every kind sits on exactly
 
 `skill-linter` and `skill-llm-council` sit on the working-artifact side despite reviewing skills: both are per-skill deliverables, and a fresh review of one skill supersedes nothing — not another skill's review, and not its own earlier review, which recorded a different state of the file. Retaining one copy per skill indefinitely would pin a growing set of reports that the log's removal record and git history already preserve, so they age out on date alone.
 
-## The Five Categories
+## The five categories
 
 - **junk** — OS cruft and orphaned writes: `.DS_Store`, `Thumbs.db`, and any zero-byte file that is not a `.gitkeep`. Trivially safe; always proposed.
 - **superseded-check** — for the four repeatable check kinds, every report except the most recent of that kind. All four supersede globally — keep the single most-recent of each. Resolve the date from the `{kind}-YYYY-MM-DD-HHMM` filename, not mtime. Two reports of the same kind can share a minute, because the check skills append a disambiguating suffix (`-rerun`, `-after-fixes`, `-2`) rather than overwrite: the suffixed one is the later write and is the most recent, so the bare-named one is superseded like any other. Additionally keep the most-recent `lint` and `consistency` report whose frontmatter `result:` is `clean` (read the frontmatter to find it), so `audit`'s precondition — a recent clean lint and consistency — survives the prune; `audit` writes no `result:` of its own, so its latest report is kept simply as the most-recent of its kind. A `superseded-check` candidate is a stale check report proposed for deletion — unrelated to the protected `2-outputs/supersede/preserve/` preservation folder, which is never touched. Those kept reports are protected, not candidates.
@@ -30,11 +30,11 @@ The superseded-check-vs-aged split turns on kind, and every kind sits on exactly
 - **aged** — any remaining report at least as old as the resolved threshold (`today − filename date ≥ threshold`, in whole days), at every non-protected *path*, including every working artifact. Say path, not kind: `forget` and `supersede` are non-protected kinds, but `forget/quarantine/` and `supersede/preserve/` sit inside their folders and are protected by path, so a kind-scoped reading would sweep the preservation copies. At a threshold of zero ("everything not protected") every non-protected report lands here whatever its date, including one written today; skip the category entirely when the user chose "no age cutoff this run".
 - **unrecognized** — a file matching none of the four above: no `{kind}-YYYY-MM-DD-HHMM` filename to classify by, or a name whose kind disagrees with its folder, or a file in `2-outputs/` root rather than a kind folder. A hand-dropped note, a pasted image, an agent's scratch write. Its age or subject cannot be resolved, so cleanup takes no position: list it in the report under its own heading and move on. Never propose one for deletion and never gate one — the user decides by hand. (An unregistered kind *folder* is `consistency`'s `output_kinds_match_disk` to report, not this skill's.)
 
-## Inbound-Reference Check
+## Inbound-reference check
 
 Run this before proposing any working artifact (`query`, `brief`, `compare`, `reflect`, `ingest`, `forget`, `supersede`, `synthesis`, `skill-linter`, `skill-llm-council`) for aged or orphaned deletion. A promoted synthesis page records where it came from in `origin:` frontmatter pointing at the report it grew from (CLAUDE.md → Synthesis frontmatter: `origin: "[[2-outputs/query/…]]"`), and a live page may wikilink a report in its body. Before proposing such a report for deletion, grep `1-wiki/` for its path — synthesis `origin:` fields first, then body wikilinks. If a live page references it, note that inbound link on the file's Step 7 per-file gate so the user removes it knowing a live page's `origin:` pointer will be left dangling. The dangler is tolerated — `forget` and `supersede` likewise leave a live-page-to-output `origin:` link frozen rather than repairing it, and CLAUDE.md already expects `log.md`/`hot.md` danglers into `2-outputs/` — so this is pre-deletion transparency, not a blocked deletion. It mirrors the inbound-reference sweep `forget` and `supersede` run before removing a wiki page.
 
-## Apply The Protected Set
+## Apply the protected set
 
 Apply the protected set (Scope → Outputs cleanup) before proposing anything: never surface a `.gitkeep`, a kept-latest check report, or any file under `forget/quarantine/` or `supersede/preserve/`. Record in the report what was protected and skipped, so a sweep that holds content back reads as deliberate, not missed.
 

@@ -1,6 +1,6 @@
 # Skill self-report
 
-The canonical statement of the skill self-report convention, kept as a shared `multi-skill/references/` file so every skill carries the rule in its own tree — self-sufficient of `CLAUDE.md` at run time (the Skill Authoring self-sufficiency principle; `CLAUDE.md` → Skill Self-Report is the project-level summary). It binds every skill, read-only and write alike, and is a durable rule, not a provisional in-use correction — those, and only those, live in the `*-memory.md` files.
+The canonical statement of the skill self-report convention, kept as a shared `multi-skill/references/` file so every skill carries the rule in its own tree — self-sufficient of `CLAUDE.md` at run time (the Skill authoring self-sufficiency principle; `CLAUDE.md` → Skill self-report is the project-level summary). It binds every skill, read-only and write alike, and is a durable rule, not a provisional in-use correction — those, and only those, live in the `*-memory.md` files.
 
 Every skill run ends with a self-report: a short, honest account of the limitations it hit *this run* and how the skill itself should be upgraded. It appears in the skill's report as a `## Self-report` section, and is mirrored (one line per item) in the chat summary. A skill that invokes another aggregates the sub-run's self-report alongside its own — `audit` does this for the `lint` and `consistency` runs it performs.
 

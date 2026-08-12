@@ -431,7 +431,7 @@ CHECK_MANIFEST = [
         'check_id': 'section_lists_match_schema',
         'packet': 'schema-language',
         'name': 'section lists match schema',
-        'scope': "CLAUDE.md '### Required Callout Sections' vs EXPECTED_SECTIONS in the script. Parses the numbered slug lists for source, concept/entity, and synthesis pages and asserts they equal the script's hardcoded copy, so a section-template edit in CLAUDE.md cannot silently leave body_section_order enforcing the old schema. Findings are root-level proposals.",
+        'scope': "CLAUDE.md '### Required callout sections' vs EXPECTED_SECTIONS in the script. Parses the numbered slug lists for source, concept/entity, and synthesis pages and asserts they equal the script's hardcoded copy, so a section-template edit in CLAUDE.md cannot silently leave body_section_order enforcing the old schema. Findings are root-level proposals.",
     },
     {
         'check_id': 'output_kinds_match_disk',
@@ -2408,7 +2408,10 @@ def _parse_claude_section_lists(
     unrecognized heading is not appended to whichever recognized list
     came last.
     """
-    m = re.search(r'^### Required Callout Sections\s*$', text, re.MULTILINE)
+    m = re.search(
+        r'^### Required [Cc]allout [Ss]ections\s*$', text, re.MULTILINE
+    )  # case-insensitive on the heading: CLAUDE.md headings are sentence case,
+       # but the older title-case form must keep parsing too
     if not m:
         return {}, []
     body_start = m.end()
@@ -2457,7 +2460,7 @@ def check_section_lists_match_schema(root: Path) -> list[dict[str, Any]]:
             finding(
                 check_id='section_lists_match_schema',
                 file='CLAUDE.md',
-                message="'### Required Callout Sections' lists not found or unparseable.",
+                message="'### Required callout sections' lists not found or unparseable.",
                 fix_hint='Keep the numbered "`slug` - Name" lists under that heading so '
                 'the script can verify EXPECTED_SECTIONS against the schema.',
             )
@@ -2471,7 +2474,7 @@ def check_section_lists_match_schema(root: Path) -> list[dict[str, Any]]:
             finding(
                 check_id='section_lists_match_schema',
                 file='CLAUDE.md',
-                message=f"'### Required Callout Sections' documents a `{label}` list "
+                message=f"'### Required callout sections' documents a `{label}` list "
                 'the script does not validate.',
                 fix_hint='Add the page type to CLAUDE_SECTION_LABELS, EXPECTED_SECTIONS, '
                 'and the comparison loop in check_consistency.py, or remove the list.',
@@ -2489,7 +2492,7 @@ def check_section_lists_match_schema(root: Path) -> list[dict[str, Any]]:
                     check_id='section_lists_match_schema',
                     file='CLAUDE.md',
                     message=f'No callout list for `{kind}` pages found under '
-                    "'### Required Callout Sections'.",
+                    "'### Required callout sections'.",
                     fix_hint=f'Document the {kind}-page sections, or align '
                     'EXPECTED_SECTIONS in check_consistency.py.',
                 )

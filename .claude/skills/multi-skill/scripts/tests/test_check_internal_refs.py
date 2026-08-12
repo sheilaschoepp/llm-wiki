@@ -8,6 +8,9 @@ all resolve. Also pins the reference-file carve-out — a references/*.md
 sibling cites its parent SKILL.md's steps and defines none of its own,
 so running the check there would flag every legitimate citation.
 
+The h2-case carve-out tests that once lived here now have their own
+file, test_check_h2_case.py, alongside the rest of that check.
+
 Run from anywhere:
 
 python3 -m unittest discover -s .claude/skills/multi-skill/scripts/tests
@@ -96,45 +99,6 @@ class TestStaleStepReference(unittest.TestCase):
         # cross-reference.
         text = '# f\n\n1. **A.** ok\n\n```text\nSee Step 99.\n```\n'
         self.assertEqual(self.check(text), [])
-
-
-class TestH2IdentifierCarveOut(unittest.TestCase):
-    """
-    The sibling h2-case rule shares this file's motivation: a heading
-    segment that names a literal argument carries no case to correct.
-    """
-
-    def setUp(self) -> None:
-        h2_script = HERE.parents[1] / 'check_h2_case.py'
-        h2_spec = importlib.util.spec_from_file_location('check_h2_case', h2_script)
-        self.h2 = importlib.util.module_from_spec(h2_spec)
-        assert h2_spec and h2_spec.loader
-        h2_spec.loader.exec_module(self.h2)
-
-    def test_identifier_after_label_is_not_flagged(self) -> None:
-        for heading in (
-            'Packet: schema-language',
-            'Packet: naming',
-            'Packet: ai-writing-tells',
-            'Mode: full',
-        ):
-            self.assertTrue(
-                self.h2.is_title_case(heading=heading),
-                msg=f'{heading!r} should be treated as an identifier',
-            )
-
-    def test_prose_after_a_colon_is_still_flagged(self) -> None:
-        # Several unhyphenated words after the colon are prose, not a slug.
-        self.assertFalse(self.h2.is_title_case(heading='Note: this is prose'))
-
-    def test_hyphenated_prose_without_a_label_is_still_flagged(self) -> None:
-        self.assertFalse(
-            self.h2.is_title_case(heading='Working with well-formed pages')
-        )
-
-    def test_ordinary_headings_unaffected(self) -> None:
-        self.assertTrue(self.h2.is_title_case(heading='The Five Categories'))
-        self.assertFalse(self.h2.is_title_case(heading='The five categories'))
 
 
 if __name__ == '__main__':

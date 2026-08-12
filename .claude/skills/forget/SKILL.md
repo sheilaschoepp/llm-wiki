@@ -13,7 +13,7 @@ Forgetting removes content from the active wiki while preserving a quarantined r
 
 Recoverability differs by scope. Whole pages and attachments are copied to `2-outputs/forget/quarantine/` before deletion, so a vault-navigable, log-linkable copy survives: a git blob is not a page the user can open and link in Obsidian, and a page that was never committed has no git history at all, so quarantine is then its only copy. In-place edits — a bullet or section removed, a support link dropped, an embed deleted — leave no quarantine artifact: they are recoverable from git history only, and not at all if the change was never committed. The cascade plan tags which is which so the user can weigh each veto honestly.
 
-## Conventions (Recap From CLAUDE.md)
+## Conventions (recap from CLAUDE.md)
 
 - Every wikilink is path-qualified from the repo root, includes `.md`, and uses a pipe-rendered display name: `[[1-wiki/concepts/scaled-dot-product-attention.md|Scaled Dot-Product Attention]]`. Authors: `[[1-wiki/entities/ashish-vaswani.md|Ashish Vaswani]]`. Attachment embeds `![[...]]` take the path but no pipe. Because no wikilink uses a bare basename, every path-qualified wikilink to a removed page is found by an exact-path grep; un-linked alias or acronym mentions need the separate alias sweep in the inbound-reference-discovery reference.
 - No bold and no italic in the wiki body, in `hot.md`, `index.md`, or `log.md`. The bullet markers `*\[unverified\]*` / `*\[tentative\]*` / `*\[disputed — see Contradictions\]*` are the only exceptions. Inline backticks for paths and code are fine.
@@ -21,11 +21,11 @@ Recoverability differs by scope. Whole pages and attachments are copied to `2-ou
 - Obtain the operation timestamp **once** at write time with `TZ='UTC' date '+%Y-%m-%d-%H%M'` (the session context provides the date but not the current minute), and reuse that single value everywhere a `YYYY-MM-DD-HHMM` appears in this operation — the quarantine filename, the report filename, the log heading, and the Recent-activity line — never re-running `date` for a later reference, or a minute rollover between calls yields a filename and a link that point at different names (a dangling link).
 - Terms: a *cascade plan* (Step 3) is the full preview of every removal, repair, and status change; a *support link* is a source page's listing in a concept/entity/synthesis page's `sources:` frontmatter and `Sources` callout; a *stem* is the raw filename without extension, shared by the source page and its `1-wiki/attachments/{stem}/` folder.
 
-## When To Invoke
+## When to invoke
 
 Use when the user names a page, source, claim, or support relationship that should no longer be active, with a reason: wrong, retracted, irrelevant, duplicated elsewhere, or simply unwanted.
 
-## When Not To Invoke
+## When not to invoke
 
 - The user wants to replace content with a better version. Use `supersede`.
 - The user wants to refresh an existing source page. Use `ingest` in existing-source mode.
@@ -157,7 +157,7 @@ Then remove the forgotten page's entry from `index.md` (Sources/Entities/Concept
 - Marked needs-update: [[1-wiki/concepts/layer-normalization.md|layer normalization]] (or "none")
 ```
 
-## Edge Cases
+## Edge cases
 
 - **Historical and quarantined content reference removed pages.** Leave outputs and quarantined pages unchanged; they are history. Step 2 greps `1-wiki/` only by design — wikilinks from quarantined or output files into the live wiki, from a surviving page into a quarantined output (e.g. a synthesis `origin:` pointing at a now-quarantined query), and between quarantined pages are all frozen danglers, not repaired and not lint findings. `1-wiki/log.md` lives inside the grep scope but its historical entries are frozen too — exclude log.md matches from the repair set.
 - **Only one source support link is wrong.** Do not delete the whole note if other sources still support it.
@@ -170,6 +170,6 @@ Then remove the forgotten page's entry from `index.md` (Sources/Entities/Concept
 - Never modify or delete `0-raw/`.
 - Never rewrite historical log entries.
 
-## Quarantine Path Convention
+## Quarantine path convention
 
 Pages quarantine to `2-outputs/forget/quarantine/quarantine-YYYY-MM-DD-HHMM-{filename}.md` (date-prefixed). Attachment files and whole-stem folders move to `2-outputs/forget/quarantine/attachments/{stem}/` with their original names — no date stamp, because the `{stem}` folder is the grouping key. For the name-clash suffix rule (`-N` before the extension; the `.gitignore` trap) and the preserved-copy verification, see `.claude/skills/multi-skill/references/quarantine-path-convention.md`; point the log link at the suffixed name.

@@ -25,7 +25,7 @@ For each check below: read the relevant part of the skill, decide whether the is
 - Time-sensitive content
 - Scripts (if the skill bundles any)
 
-## Description Quality
+## Description quality
 
 These sit in `SKILL.md` frontmatter, between the `---` markers.
 
@@ -35,7 +35,7 @@ These sit in `SKILL.md` frontmatter, between the `---` markers.
 
 **`description_undertriggers`** (suggestion). The description is technically fine but timid — it would only trigger on the most explicit phrasings. If the skill could plausibly help with adjacent or implicit phrasings the user might use, suggest broadening: "Also use when the user mentions <related term> even if they don't explicitly ask for <skill domain>." This is a real failure mode — Claude tends to under-trigger skills.
 
-## Body Content Quality
+## Body content quality
 
 **`inconsistent_terminology`** (suggestion). The body switches between synonyms for the same concept. This applies to *all* prose, not just technical jargon — narrative writing slips into this constantly. Watch for:
 
@@ -51,29 +51,42 @@ When the variants genuinely name *different* things (a log **entry** vs a memory
 
 **`punts_to_claude`** (suggestion). The body says things like "use your best judgement", "do whatever is appropriate", "Claude knows what to do" in places where the user clearly wants a specific behaviour. The whole point of a skill is to provide context Claude doesn't already have; if the skill doesn't add anything, why does it exist? Suggest replacing each punt with concrete guidance.
 
-## Examples And Concreteness
+## Examples and concreteness
 
 **`abstract_examples`** (suggestion). Examples in the body use placeholders (`<thing>`, `[your value]`, `foo/bar`) where concrete examples would be clearer. Concrete input/output pairs teach more than abstract templates. Flag the example block, suggest replacing with a realistic case.
 
 **`missing_examples_for_format`** (suggestion). The body asks Claude to produce output in a specific format (a report, a commit message, a JSON shape) but doesn't show a concrete example of what good output looks like. Format requirements without examples often don't stick.
 
-## Formatting Conventions
+## Formatting conventions
 
-**`h2_heading_case`** (suggestion). H2 section headers in `SKILL.md` and `references/*.md` should be in **title case** (e.g. `## When To Invoke`, `## When Not To Invoke`, `## Edge Cases`, `## Procedure`, `## Limits`, `## Worked Example`). This matches the prevailing convention across the project's skills. Flag sentence-case H2s (`## When to invoke`, `## Worked example`) as `suggestion` with a fix that converts them to title case. **Do not run the conversion in reverse**: title-case H2s are correct, not a defect. **Never alter a literal code token while title-casing** — a backtick span, filename, path, or identifier (anything with a `.`, `/`, or `_`, e.g. a heading like `## What check_structure.py Catches`): title-case only the natural-language words around it, and drop the candidate if re-casing the code token would be the only change. The same carve-out covers a bare slug naming a literal argument after a colon-terminated label (`## Packet: schema-language`, `## Packet: naming`); `check_h2_case.py` now recognizes that shape itself and no longer raises the candidate, so it is not a judgement you have to re-make each pass. The H1 (`# Skill Name`) is a normal Markdown heading and does not follow this rule. Wikilink display names inside body prose follow CLAUDE.md's wikilink convention (sentence case for common nouns, title case for proper nouns) — that is separate from the H2 rule and not what this check targets.
+**`h2_heading_case`** (suggestion). H2 section headers in `SKILL.md` and `references/*.md` should be in **sentence case** (e.g. `## When to invoke`, `## When not to invoke`, `## Edge cases`, `## Procedure`, `## Limits`, `## Worked example`). Capitalize the first word only, plus proper nouns and acronyms. Flag title-case H2s (`## When To Invoke`, `## Worked Example`) as `suggestion` with a fix that converts them to sentence case. **Do not run the conversion in reverse**: sentence-case H2s are correct, not a defect. This matches Anthropic's own skill-authoring documentation, which is sentence case throughout, and the prevailing convention across the rest of this repo.
 
-This check is also enforced deterministically by `scripts/check_h2_case.py`, which walks SKILL.md and every `references/*.md`. The judgement entry remains here because the script's stopword list is intentionally conservative — a heading the script accepts may still read awkwardly and warrants a judgement review. Treat the script as the primary enforcement and the judgement pass as a secondary check.
+Four things never lose their capital, because re-casing them would rename the thing they point at:
 
-## Workflows And Instruction Style
+- **Literal code tokens** — a backtick span, filename, path, or identifier (anything with a `.`, `/`, or `_`, e.g. `## What check_structure.py catches`). Re-case only the natural-language words around it, and drop the candidate if the code token would be the only change.
+- **A bare slug naming a literal argument** after a colon-terminated label (`## Packet: schema-language`, `## Packet: naming`). `check_h2_case.py` recognizes that shape itself and does not raise the candidate, so it is not a judgement to re-make each pass.
+- **Proper nouns and product names** — `Claude`, `Anthropic`, `Obsidian`, `Python`, `Markdown`, `GitHub`. The script's `PROPER_NOUNS` list carries these; extend it rather than accepting a wrong flag.
+- **Acronyms** — `LLM`, `PDF`, `IDs`, `TL;DR`. These need no allowlist entry: the flag pattern matches only a capital followed by lowercase, so an all-caps or mixedCase token is structurally excluded.
+
+The numbered procedure labels this repo capitalizes in prose (`Step 4`, `Council 1`, `Pattern 2`, `Layer 3`, `Part 1`) are in `PROPER_NOUNS` for the same reason — a heading reading `(step 4)` while every prose reference reads `Step 4` is drift, not consistency.
+
+The H1 (`# Skill name`) follows the same sentence-case rule. Wikilink display names inside body prose follow CLAUDE.md's wikilink convention (sentence case for common nouns, title case for proper nouns) — that is separate from the H2 rule and not what this check targets.
+
+This check is also enforced deterministically by `scripts/check_h2_case.py`, which walks SKILL.md and every `references/*.md`. The judgement entry remains here because the script's `PROPER_NOUNS` list is intentionally short — a heading the script accepts may still read awkwardly, and a proper noun the list does not yet carry will be wrongly flagged. Treat the script as the primary enforcement and the judgement pass as a secondary check.
+
+Two file-level companions the script does not check: a `## Contents` list mirrors its headings, so re-casing a heading means re-casing its TOC entry (and the TOC may mirror H3s, not H2s — read it before regenerating); and a heading named as a literal parse target by a script or another document must be updated on both sides, or matched case-insensitively there.
+
+## Workflows and instruction style
 
 **`workflow_no_checklist`** (suggestion). The body describes a multi-step workflow (3+ steps that must be sequenced) but doesn't include a copyable checklist. For complex workflows, a checklist Claude can copy into its response improves follow-through.
 
 **`workflow_no_validation`** (warning). The body describes a quality-critical operation (file edits, document generation, data transformation) but has no validation/verification step before declaring done. Run-validator-then-fix loops dramatically improve output quality. Suggest adding one.
 
-## Time-Sensitive Content
+## Time-sensitive content
 
 **`time_sensitive_info`** (warning). The body contains phrasing that anchors instructions to a specific date or version transition: "If you're doing this before <date>", "After <month> use the new API", "As of <year>". This information goes stale silently. Suggest moving obsolete content into an `## Old Patterns` section or a reference file so the current path stays clean.
 
-## Scripts (Only If The Skill Bundles `.py` / `.sh` / `.js` Files)
+## Scripts (only if the skill bundles `.py` / `.sh` / `.js` files)
 
 For each script in `scripts/`:
 
@@ -85,7 +98,7 @@ For each script in `scripts/`:
 
 **`positional_call`** (error). A bare-name call passes positional arguments where the keyword-argument convention from `coding-best-practices.md` applies. This check is now enforced deterministically by `scripts/check_kwargs.py`, which AST-walks every `scripts/*.py`. The judgement entry remains here as a backstop and for surfacing patterns the script's allow-list misses: a positional call to an imported helper across files (the AST scan only knows same-file definitions and the explicit allow-list). Treat the script as the primary enforcement and the judgement pass as a secondary check.
 
-## How To Apply This Checklist
+## How to apply this checklist
 
 Read SKILL.md once end-to-end and any reference files it points at. As you read, jot findings against the IDs above. Don't grade things into oblivion — if you'd find a check borderline, mark it `suggestion` rather than `warning`. The user trusts the linter more if false alarms stay rare.
 

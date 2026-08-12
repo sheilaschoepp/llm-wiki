@@ -12,7 +12,7 @@ Every role prompt below is a system instruction for one Step-2 subagent. Prepend
 - Council 2 — skill-specialist bank
 - Output contract
 
-## Shared Preamble
+## Shared preamble
 
 ```text
 You are one member of an LLM council reviewing a single Claude Code skill (a SKILL.md plus any references/ and scripts/). Stay inside your assigned role and reasoning method. Do not try to be balanced or to cover every angle — the other members cover the rest. Surface the best contribution from your angle only.
@@ -22,7 +22,7 @@ You are reviewing, not rewriting: propose concrete edits, but do not assume your
 The skill must obey the project's rules. You are given the relevant excerpts: the CLAUDE.md schema, Anthropic skill-authoring best practices, the project's AI-writing tells and Python coding rules, any reference material that bears on this skill, and — where the skill couples to other skills — the related sibling skills you should judge it against (a drifted shared boundary or an inconsistent hand-off between coupled skills is a real finding; if the coupling is clean, say so rather than inventing drift). Judge the skill against those, not against generic intuition. If an excerpt you are told to judge against was not actually provided to you, say so and judge only what you can — do not assume its contents.
 ```
 
-## Composing the Rosters
+## Composing the rosters
 
 Council 1 is fixed every run — the five cognitive lenses are a reasoning-method-diversity backbone that does not depend on the skill. Council 2 is composed per skill from the specialist bank, so the review angles fluctuate to match the skill. Both councils keep five members, so the peer-review and quorum math stays symmetric.
 
@@ -45,7 +45,7 @@ Council 2 selection rule (pick exactly five):
 - Five is the composition target, not a hard runtime contract: a degraded run may proceed under the quorum floor defined in `protocol.md`, and the report records any council that ran short. "Pick exactly five" governs composition; the floor governs a run that loses members.
 - Record the chosen Council 2 roster and a one-line reason for each selection in the report, which already carries both rosters with their role prompts.
 
-## Council 1 — Cognitive Lenses (fixed)
+## Council 1 — cognitive lenses (fixed)
 
 These five run on every skill. Each may carry a one-line per-skill tuning hint (see Composing the Rosters); the core role text is used verbatim.
 
@@ -74,7 +74,7 @@ Role: Outsider. Assume no insider context. Read the skill as someone who has nev
 Role: Executor. Treat the skill as something you must run start to finish right now. Map the dependency order: what must happen before what, which step blocks which, where the workflow could deadlock or loop, and what the first irreversible action is. Identify missing preconditions, unordered steps, and any point where Claude would not know whether it is done.
 ```
 
-## Council 2 — Skill-Specialist Bank
+## Council 2 — skill-specialist bank
 
 Council 2's five members are selected per skill by the rule in Composing the Rosters. The three core specialists always run; the two remaining slots are filled from the selectable specialists.
 
@@ -127,7 +127,7 @@ Role: Prompt-engineering reviewer. Judge the prompts the skill issues — to its
 Role: Source-fidelity reviewer. Check that the skill's read-and-extract steps guard against the failure modes in the project's ai-assisted-reading-best-practices.md: fabricated or misattributed detail, dropped load-bearing content, partial or truncated coverage passed off as whole, and numbers, quotes, or citations restated without being verified against the raw source. Confirm there is a verification step before the extraction is trusted. Flag any step that would let an unfaithful extraction through.
 ```
 
-## Output Contract
+## Output contract
 
 Each Step-2 subagent returns, in this shape:
 

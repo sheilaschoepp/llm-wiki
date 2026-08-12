@@ -58,7 +58,7 @@ The two preservation folders hold the only findable copy of removed or replaced 
 
 Do not read or modify `0-raw/`. `MEMORY.md`, `CLAUDE.md`, and the `SKILL.md` files are read-only here — an entry that has not landed in its home is reported, never written there (Step 7). The write boundary is stated once in Limits.
 
-## When To Invoke
+## When to invoke
 
 - The user wants to clear, prune, consolidate, or clean up memory files, old outputs, or both.
 - The user asks whether memory has been absorbed into MEMORY.md, CLAUDE.md, or the skills.
@@ -67,7 +67,7 @@ Do not read or modify `0-raw/`. `MEMORY.md`, `CLAUDE.md`, and the `SKILL.md` fil
 - The user asks to clear out old, superseded, orphaned, or junk reports under `2-outputs/`.
 - As a periodic consolidation pass when memory files or `2-outputs/` have grown.
 
-## When Not To Invoke
+## When not to invoke
 
 - The user wants the memory entry count against the soft cap only — that is the mechanical `memory_file_graduation_prompt` check.
 - The user wants to add a new memory entry. Append it directly per CLAUDE.md → Memory tiers.

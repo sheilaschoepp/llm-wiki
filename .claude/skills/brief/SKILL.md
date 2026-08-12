@@ -11,13 +11,13 @@ Create a short brief.
 
 A brief helps the user see the current state of a topic without promoting new wiki content.
 
-## When To Invoke
+## When to invoke
 
 Use when the user asks for broad orientation on a topic: "lay of the land on X," "orient me on X," "catch me up on X," "state of the wiki on X," "give me an overview of X," "an X primer." Keep this set in sync with the frontmatter description's phrasings.
 
 Pick `brief` over `query` when the user wants the lay of the land across a topic, not an answer to one question; if there is a single answerable question, use `query`.
 
-## When Not To Invoke
+## When not to invoke
 
 - Specific research question. Use `query`.
 - Side-by-side comparison. Use `compare`.
@@ -42,9 +42,9 @@ Brief Progress:
 
    **Exclude `status: draft` pages by default.** Drafts are unreviewed; their claims have not been verified. Include them only when the user explicitly asks or when no non-draft page covers the topic. When a draft is the only coverage, surface it under a "Drafts (unverified)" sub-bullet, or mark the individual bullet `*[from draft]*` inline (the marker `query` and `compare` use), so the reader knows the support level. If the entire topic is covered only by drafts, still produce the brief but state up front that all support is unverified: the TL;DR's opening bullet itself carries the unverified caveat (do not defer it to a lower section), and Suggested reading flags any draft target — do not present it as settled state of the wiki, and do not silently decline.
 
-   **Apply the same discipline at the claim level.** Verification is claim-level, not all-or-nothing for the page (`CLAUDE.md` → Page Status), so a `verified` page may still carry individual bullets marked `*[unverified]*` — the pending delta from edits made since its last fact-check. A `verified` status does not guarantee every bullet is checked: check the specific bullets you draw on for the `*[unverified]*` marker. Treat an `*[unverified]*` claim like draft content — exclude it by default, even on an otherwise-`verified` page. Include it only when it is the only coverage of a sub-topic the brief must state; then surface it separately and flagged (carry the `*[unverified]*` marker through, or place it under the "Drafts (unverified)" framing) so the reader knows it is not yet fact-checked.
+   **Apply the same discipline at the claim level.** Verification is claim-level, not all-or-nothing for the page (`CLAUDE.md` → Page status), so a `verified` page may still carry individual bullets marked `*[unverified]*` — the pending delta from edits made since its last fact-check. A `verified` status does not guarantee every bullet is checked: check the specific bullets you draw on for the `*[unverified]*` marker. Treat an `*[unverified]*` claim like draft content — exclude it by default, even on an otherwise-`verified` page. Include it only when it is the only coverage of a sub-topic the brief must state; then surface it separately and flagged (carry the `*[unverified]*` marker through, or place it under the "Drafts (unverified)" framing) so the reader knows it is not yet fact-checked.
 
-   **Treat `needs-update` pages like drafts.** A page marked `status: needs-update` (a known contradiction, stale support, or coverage gap per `CLAUDE.md` → Page Status) is not settled state. Do not present its claims as solid; surface it separately under the unverified framing and carry its `needs_update_reason` (or the live `Contradictions`/`Tensions` entry) so the reader sees what is unresolved.
+   **Treat `needs-update` pages like drafts.** A page marked `status: needs-update` (a known contradiction, stale support, or coverage gap per `CLAUDE.md` → Page status) is not settled state. Do not present its claims as solid; surface it separately under the unverified framing and carry its `needs_update_reason` (or the live `Contradictions`/`Tensions` entry) so the reader sees what is unresolved.
 
    **Coverage gate (before Step 3).** First, if the topic is over-broad (a keyword sweep hits a large fraction of the index) or ambiguous (multiple distinct readings), narrow it to the dominant cluster and state the narrowing in the brief's TL;DR, or ask one focused clarifying question — never silently truncate a whole-wiki-sized topic to fit the word target (that census is `reflect`'s job). Then decide the outcome by a countable test: one or more pages (any status) bear on the topic → produce the brief, framing draft/`needs-update`/`*[unverified]*`-only coverage as unverified per the rules above; zero pages bear on the topic at all → do not write a brief file, but still log the declined topic in Step 5 (CLAUDE.md logs every operation), say so, and suggest sources to ingest — naming only sources you are confident genuinely exist, marking any uncertain one `(verify exists)`, never fabricating a title, author, or venue (CLAUDE.md academic-integrity rule). This is the single decline rule: it fires only on the zero-page case, not thin-but-present coverage (which still produces a brief, with the thin support named in State of the wiki/Gaps).
 

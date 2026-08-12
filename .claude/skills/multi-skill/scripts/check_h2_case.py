@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-check_h2_case.py — flag sentence-case H2 headings in SKILL.md and refs.
+check_h2_case.py — flag title-case H2 headings in SKILL.md and refs.
 
-Why a separate script? The H2 title-case rule
+Why a separate script? The H2 sentence-case rule
 (.claude/skills/multi-skill/references/skill-authoring-checklist.md
 `h2_heading_case`) is meant to apply to SKILL.md AND every
 references/*.md sibling. As a judgement check, it depended on the agent
 remembering to scan every reference file every pass — and the agent kept
-forgetting, fixing SKILL.md while leaving sentence-case H2s in
+forgetting, fixing SKILL.md while leaving title-case H2s in
 references/. Promoting the check to a deterministic script makes
 coverage mechanical: every file the script walks is checked.
 
@@ -27,32 +27,40 @@ import re
 import sys
 from pathlib import Path
 
-# Words that stay lowercase mid-heading in title case (articles, short
-# prepositions, conjunctions). The first word is always capitalized
-# even if it appears here. Matches the convention in published style
-# guides (Chicago, AP) at the permissive end.
-TITLE_CASE_STOPWORDS = frozenset(
+# Words that legitimately keep a capital mid-heading under sentence
+# case: proper nouns, product names, and the numbered procedure labels
+# this repo capitalizes in prose ("Step 4", "Council 1"). Everything
+# else capitalized after the first word is a title-case remnant.
+#
+# Acronyms need no entry — the flag pattern only matches Capitalized
+# words whose remainder is lowercase, so LLM, PDF, IDs, and TL;DR are
+# structurally excluded.
+PROPER_NOUNS = frozenset(
     {
-        'a',
-        'an',
-        'and',
-        'as',
-        'at',
-        'but',
-        'by',
-        'for',
-        'in',
-        'nor',
-        'of',
-        'on',
-        'or',
-        'the',
-        'to',
-        'up',
-        'vs',
-        'with',
+        'Anthropic',
+        'Bash',
+        'BibTeX',
+        'Canadian',
+        'Claude',
+        'Council',
+        'English',
+        'GitHub',
+        'LaTeX',
+        'Layer',
+        'Markdown',
+        'Obsidian',
+        'Overleaf',
+        'Part',
+        'Pattern',
+        'Python',
+        'Step',
+        'Steps',
     }
 )
+
+# A title-case remnant: capital first letter, lowercase remainder.
+# Deliberately excludes ALLCAPS and mixedCase tokens.
+TITLE_CASE_WORD_RE = re.compile(r"^[A-Z][a-z]+(?:[-'][A-Za-z]+)*$")
 
 H2_RE = re.compile(r'^##\s+(.+?)\s*$')
 
@@ -102,45 +110,43 @@ def find_identifier_indices(words: list[str]) -> set[int]:
     return identifiers
 
 
-def is_title_case(heading: str) -> bool:
+def find_title_case_words(heading: str) -> list[str]:
     """
-    Return True if `heading` follows the title-case convention.
+    Return the words in `heading` that carry a title-case capital.
 
     Rules
     -----
-    - The first word must start with an uppercase letter.
-    - Every subsequent word must start with an uppercase letter unless
-      it is in TITLE_CASE_STOPWORDS.
-    - Words that start with a non-letter (digits, punctuation,
-      backticks) are skipped — they have no case.
+    - The first word is exempt — sentence case capitalizes it.
+    - A later word is flagged only when it matches
+      TITLE_CASE_WORD_RE (capital, then lowercase), which structurally
+      excludes acronyms (LLM, IDs) and mixedCase identifiers.
+    - Words in PROPER_NOUNS are exempt.
+    - Words starting with a non-letter (digits, punctuation, backticks)
+      are skipped — they carry no case.
     - Identifier tokens after a `Label:` word are skipped; see
       find_identifier_indices.
     """
     words = heading.split()
     if not words:
-        return True
+        return []
     identifier_indices = find_identifier_indices(words=words)
+    flagged = []
     for index, word in enumerate(words):
-        first_char = word[0]
-        if not first_char.isalpha():
+        if index == 0 or index in identifier_indices:
             continue
-        if index in identifier_indices:
+        if not word[0].isalpha():
             continue
-        if index == 0:
-            if not first_char.isupper():
-                return False
+        bare = word.strip('.,:;!?()[]')
+        if bare in PROPER_NOUNS:
             continue
-        lowered = word.lower().strip('.,:;!?')
-        if lowered in TITLE_CASE_STOPWORDS:
-            continue
-        if not first_char.isupper():
-            return False
-    return True
+        if TITLE_CASE_WORD_RE.match(bare):
+            flagged.append(bare)
+    return flagged
 
 
 def find_h2_case_issues(file_path: Path) -> list[dict]:
     """
-    Walk one markdown file and return findings for sentence-case H2s.
+    Walk one markdown file and return findings for title-case H2s.
 
     H2s inside fenced code blocks are ignored — they are markdown
     examples, not real section headers.
@@ -159,7 +165,8 @@ def find_h2_case_issues(file_path: Path) -> list[dict]:
         if not match:
             continue
         heading_text = match.group(1)
-        if is_title_case(heading=heading_text):
+        offenders = find_title_case_words(heading=heading_text)
+        if not offenders:
             continue
         findings.append(
             {
@@ -168,13 +175,15 @@ def find_h2_case_issues(file_path: Path) -> list[dict]:
                 'file': file_path.name,
                 'line': line_index,
                 'message': (
-                    f"H2 heading '## {heading_text}' uses sentence case; "
-                    f'project convention is title case.'
+                    f"H2 heading '## {heading_text}' uses title case; "
+                    f'project convention is sentence case '
+                    f'(capitalized: {", ".join(offenders)}).'
                 ),
                 'fix_hint': (
-                    'Rewrite as title case (capitalize the first letter '
-                    'of every word except short articles, prepositions, '
-                    'and conjunctions). See '
+                    'Rewrite as sentence case: capitalize only the first '
+                    'word, plus proper nouns and acronyms. Never re-case '
+                    'a backticked code token or an identifier after a '
+                    '`Label:` word. See '
                     '.claude/skills/multi-skill/references/skill-authoring-checklist.md `h2_heading_case`.'
                 ),
             }

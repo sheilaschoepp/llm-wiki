@@ -1,4 +1,4 @@
-# Deterministic Checks Reference
+# Deterministic checks reference
 
 This is the catalogue of checks performed by `scripts/check_structure.py` and the five separate scanner scripts (`check_synonyms.py`, `check_musts.py`, `check_h2_case.py`, `check_kwargs.py`, `check_internal_refs.py`). Each entry lists what triggers the finding, the severity, and the rationale (so you can explain it back to the user when they ask "why is this a warning").
 
@@ -11,10 +11,9 @@ This is the catalogue of checks performed by `scripts/check_structure.py` and th
 - Synonym candidate scan (separate script)
 - H2 title-case scan (separate script)
 - Keyword-argument scan (separate script)
-- Internal cross-reference scan (separate script)
 - Severity rationale
 
-## Frontmatter Checks
+## Frontmatter checks
 
 | `check_id` | Severity | Triggers when |
 |---|---|---|
@@ -28,7 +27,7 @@ This is the catalogue of checks performed by `scripts/check_structure.py` and th
 | `description_xml_tags` | error | `description` contains `<` or `>`. Angle brackets break the prompt-injection step. |
 | `description_first_person` | warning | Description uses first/second person ("I can...", "we will...", "you can use this..."). The description is a third-party statement of capability, not a self-introduction. |
 
-## Body Length, Formatting, And Paths
+## Body length, formatting, and paths
 
 | `check_id` | Severity | Triggers when |
 |---|---|---|
@@ -37,7 +36,7 @@ This is the catalogue of checks performed by `scripts/check_structure.py` and th
 | `process_substitution` | error | A line outside a code fence contains bash process substitution `<(...)`, which some skill-upload pipelines reject as a malformed HTML tag (upload-breaking). Replace with a temp file or a pipe. |
 | `windows_path` | warning | A line contains a backslash-separated path with a typical extension (`.md`, `.py`, `.json`, etc.). Windows paths break on Unix; use forward slashes. |
 
-## Reference Depth, Inline Refs, And Table Of Contents
+## Reference depth, inline refs, and table of contents
 
 | `check_id` | Severity | Triggers when |
 |---|---|---|
@@ -46,7 +45,7 @@ This is the catalogue of checks performed by `scripts/check_structure.py` and th
 | `missing_toc` | suggestion | A reference file is longer than 100 lines but has no `## Contents` / `## Table of contents` / `## TOC` heading within the first 100 lines (see `scripts/check_structure.py` `REFERENCE_TOC_THRESHOLD`, which the TOC search window now matches). Without a TOC, Claude may preview with `head -100` and miss content below. |
 | `broken_inline_ref` | warning | An inline-code path to a skill file resolves nowhere on disk (checked repo root, `.claude/skills/`, and the skill dir). Recognized forms: a `.claude/`-prefixed path, a `references/`- or `scripts/`-prefixed path, any path containing a `/references/` or `/scripts/` segment, a path whose last segment is `SKILL.md`, and — disk-gated on the leading segment naming a real skill dir — the bare abbreviated `<skill>/<file>.md` form that drops the `references/`/`scripts/` segment (e.g. a broken `<skill>/removal-mechanics.md` for `<skill>/references/removal-mechanics.md`, the shape that once shipped uncaught). `broken_md_link` only sees Markdown-hyperlink references; this covers the inline-code path syntax these skills actually use. Runs in directory mode only and needs a CLAUDE.md-rooted repo (`find_repo_root`); it is skipped, with no finding, in single-file mode and for an out-of-repo or `.skill`-bundle target with no repo root. Scanned across SKILL.md and every `references/*.md`; fenced code blocks, `{…}`/`<…>` templates, and wiki/raw/output/archive paths are excluded (they carry legitimate examples). |
 
-## Heavy-Handed Imperative Candidate Scan (Separate Script)
+## Heavy-handed imperative candidate scan (separate script)
 
 `check_musts.py` scans the SKILL.md body for ALL-CAPS imperatives (`ALWAYS`, `NEVER`, `MUST`, `MUST NOT`, `DO NOT`, `DON'T`) and flags any paragraph that contains one without a nearby explanation cue (`because`, `to avoid`, `to ensure`, em-dash, parenthetical, etc.).
 
@@ -56,7 +55,7 @@ This is the catalogue of checks performed by `scripts/check_structure.py` and th
 
 The agent reading these findings must decide whether the imperative genuinely needs reasoning (keep as a finding, ideally promoted to `heavy_handed_musts`) or whether the why is obvious from surrounding context (drop the candidate).
 
-## Synonym Candidate Scan (Separate Script)
+## Synonym candidate scan (separate script)
 
 `check_synonyms.py` scans the SKILL.md body for known synonym groups (image/photo/picture, customer/client/user, field/box/element, extract/pull/get, etc.) and flags any group where two or more terms each appear at least twice.
 
@@ -68,17 +67,17 @@ These are *candidates*, not confirmed findings. The agent reading this output mu
 
 A per-skill confirmed-distinct allow-list, `synonym-ignore.md` in the skill-linter folder, suppresses groups a prior run already adjudicated as distinct *for that skill*, so the same false positives don't re-surface every run (they used to, since the check has no memory) — mirroring lint's verified-ignore data files. The parser suppresses a finding whose present terms are a subset of a listed group under the target skill's `## <skill-name>` section. When a run confirms a candidate is a genuine domain distinction, append it there (agent-writable curated data); never record a genuine inconsistency, and removing an entry re-surfaces its candidate.
 
-## H2 Title-Case Scan (Separate Script)
+## H2 title-case scan (separate script)
 
 `check_h2_case.py` walks SKILL.md and every `references/*.md` sibling, flagging H2 headings that are not in title case (e.g. `## Worked example`). The check skips H2s inside fenced code blocks so markdown examples are not flagged, and skips identifier tokens after a colon-terminated label (`## Packet: schema-language`, `## Mode: full`) — a slug that names a literal argument carries no case to correct, and title-casing it would rename the thing it points at. The carve-out is deliberately narrow: it applies only to an all-lowercase word that follows a `Label:` and either contains a hyphen or is the sole word after the colon, so prose after a colon (`## Note: this is prose`) and hyphenated prose without a label (`## Working with well-formed pages`) are both still flagged.
 
 | `check_id` | Severity | Triggers when |
 |---|---|---|
-| `h2_heading_case` | suggestion | An H2 heading in SKILL.md or any `references/*.md` is not in title case (first word and every non-stopword word must start with a capital letter). |
+| `h2_heading_case` | suggestion | An H2 heading in SKILL.md or any `references/*.md` is not in sentence case (only the first word, proper nouns, and acronyms may start with a capital letter). |
 
 Unlike the synonym and musts scanners, every finding here is actionable — there is no judgement call to drop a candidate. Prior judgement-only passes reliably checked SKILL.md but forgot the reference files; this script makes coverage mechanical. The stopwords (words that stay lowercase mid-heading) are defined once in `TITLE_CASE_STOPWORDS` (`scripts/check_h2_case.py`) — the conventional small set of articles, short prepositions, and conjunctions.
 
-## Keyword-Argument Scan (Separate Script)
+## Keyword-argument scan (separate script)
 
 `check_kwargs.py` AST-walks every Python file under `scripts/` and flags positional calls to bare-name functions that are not in the allow-list. Attribute calls (`obj.method()`, `module.func()`) are always allowed, matching the stdlib-helper exception in `coding-best-practices.md`.
 
@@ -92,7 +91,7 @@ The allow-list lives in `scripts/check_kwargs.py` (`ALLOW_LIST_BUILTINS`, `ALLOW
 
 The severity is `error` (not `suggestion`) because `coding-best-practices.md` lists keyword-only calls as a hard project rule, and `references/checklist.md` says "missing type hints, positional args at a call site that has kwargs available" are `error`-tier deviations.
 
-## Internal Cross-Reference Scan (Separate Script)
+## Internal cross-reference scan (separate script)
 
 `check_internal_refs.py` checks a skill's references to its own procedure. It collects every step the file defines — a numbered `1. **Label.**` line and a bolded sub-step label such as `**8.0 — …**` — then flags any `Step N` or `Step N.M` citation in prose with no matching definition. Fenced blocks are skipped, so an example `Step 99` in a template is not a live reference.
 
@@ -106,7 +105,7 @@ Severity is `warning`, not `suggestion`, because a dangling step pointer is a fa
 
 Two limits, stated so the check is not trusted for more than it does. It is an **existence** check: a reference that resolves to the *wrong* existing step (`8.4` where `8.3` was meant) passes, and only a reader catches it. And it deliberately does **not** check renamed template *fields* — a reconcile step still naming a `Ledger:` line after the template renamed it to `Removed:`. That was built and cut: a backticked `Foo:` in a skill's prose is usually a field of some *other* document (a wiki page's `sources:`, a report's `result:`), so the check fired on all fourteen skills in this repo without finding one real defect. Separating a field this skill's own template dropped from a field it never had needs the file's prior state, which a single-file scanner does not have; a git-diff variant is the way to revive it.
 
-## Severity Rationale
+## Severity rationale
 
 The severity tier reflects user-facing impact, not authoring effort:
 

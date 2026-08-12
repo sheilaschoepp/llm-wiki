@@ -20,7 +20,7 @@ The printed number is a fact about the raw, not derivable by rule, and getting i
 
 `check_wiki.py` never opens a PDF — it reads only this map — so lint stays cheap and dependency-free. `scripts/pagination_map.py` proposes a map from the PDF's rendered footers; **a human confirms each line against a rendered footer before it lands** (a wrong `none` would license stripping a correct printed page from a citation and certifying the damage), then adds the section here.
 
-This file is **agent-writable data, not script logic** (`CLAUDE.md` → Stay In Your Lane). A missing or unreadable file degrades every raw to "unregistered": the locator checks fall back to the older `app.`-anchor heuristic and `locator_page_mismatch` does not run — the safe direction, recoverable from git — so keep it valid. A malformed line is skipped, never fatal.
+This file is **agent-writable data, not script logic** (`CLAUDE.md` → Stay in your lane). A missing or unreadable file degrades every raw to "unregistered": the locator checks fall back to the older `app.`-anchor heuristic and `locator_page_mismatch` does not run — the safe direction, recoverable from git — so keep it valid. A malformed line is skipped, never fatal.
 
 ## Entry format
 

@@ -13,7 +13,7 @@ The failure this fixes: an open-ended "propose a few weak-tie links" instruction
 5. **Do not stop early.** Walk the inventory role by role. For each role-cluster, either surface a relationship or state explicitly that there is no related page in that cluster. A cluster checked and found empty is recorded, not skipped — that record is what makes a miss visible.
 6. **Produce a relationship map**: the concept's role(s); for each role-cluster, the related existing pages with their relationship type and proposed destination; and the clusters with nothing related. `ingest` posts this in its Step 3 context message so the user can point at a miss before drafting; `audit` records it as connection-completeness findings.
 
-## Relationship Taxonomy
+## Relationship taxonomy
 
 Each relationship has a type and a destination. Unless noted, the edit is reciprocal — make it on both pages.
 
@@ -22,10 +22,10 @@ Each relationship has a type and a destination. Unless noted, the edit is recipr
 - **Part-of / component-of / composed-of** — the new concept is a component of an existing one, or is built from existing ones. Destination: `Connections` on both pages.
 - **Parallel / cross-paradigm analogue** — an existing concept plays the *same role in a different framework or paradigm*, even when the mechanism differs (for example a member-selection step in one framework and a member-recruitment step in another). Destination: `Connections` on both pages, naming the shared role and the analogue; **and** a `Not This` bullet on each to draw the line between them. This is the most-missed type — seek it deliberately for every new concept.
 - **Contrast / easily-confused-with** — a neighbouring concept a reader would mix up with this one. Destination: `Not This` on both pages, stating the distinguishing difference.
-- **Enables / depends-on / mechanism-for** — the new concept enables, relies on, or is the mechanism behind an existing one (a functional or causal link). Destination: `Connections` on both pages, carrying the reason for the link (per CLAUDE.md → Plain-Language Style, "Claims carry their reason").
+- **Enables / depends-on / mechanism-for** — the new concept enables, relies on, or is the mechanism behind an existing one (a functional or causal link). Destination: `Connections` on both pages, carrying the reason for the link (per CLAUDE.md → Plain-language style, "Claims carry their reason").
 - **Contradicts / in-tension-with** — the new concept disputes a claim an existing page makes. Destination: reciprocal `Contradictions` bullets on both pages (never resolve by deleting a side), and `status: needs-update` on the existing page only when the dispute is load-bearing for it. This overlaps the Step 3 contradiction cross-check; record it once.
 
-## Cross-Paradigm Emphasis
+## Cross-paradigm emphasis
 
 A paradigm or framework is a self-contained approach with its own vocabulary; the same functional role recurs across them under different names, and those recurrences are the parallels this pass hunts.
 
@@ -35,7 +35,7 @@ For every new concept, ask explicitly: *what is its closest counterpart in each 
 
 Every `Connections`, `Not This`, and `Contradictions` edit is mirrored on the other page. One-sided links are a known lint/audit finding. The reciprocal edit on the existing page is part of the approved action for that relationship, not a separate later pass — this is the half that gets missed at ingest and only surfaces in audit.
 
-## Worked Example
+## Worked example
 
 Continuing the optimization-corpus illustration from step 2: the new concept is `adaptive-moment-estimation` (Adam, from a new optimizer ingest). Role: update rule — how each step turns the gradient into a parameter update.
 

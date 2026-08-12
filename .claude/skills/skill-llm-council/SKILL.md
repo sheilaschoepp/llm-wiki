@@ -15,11 +15,11 @@ The design follows the council pattern documented in `a-archive/reference/llm-co
 
 Skill-LLM-council is the deep review pass for a single skill: two independent five-agent councils argue over the same skill from different angles, a chair synthesizes each, and a meta-chair (the orchestrating agent itself) reconciles them into the edits actually made. Reach for it when one reviewer's read is not enough.
 
-## When To Invoke
+## When to invoke
 
 Use when the user asks to convene or run a council on a skill, do a deep or multi-agent review of a skill, deliberate over a SKILL.md, stress-test a skill from many angles, get several independent reviewers or perspectives on a skill, or get a heavier second opinion than `skill-linter` gives — before relying on a skill heavily, after a big rewrite, or when a skill keeps misbehaving and you want it stress-tested.
 
-## When Not To Invoke
+## When not to invoke
 
 - A cheap structural or best-practices pass on a skill is enough. Use `skill-linter` (single-context); run it first to clear mechanical fixes — this skill folds the latest `skill-linter` report in as context.
 - The target is a wiki page or note under `1-wiki/`. Use `lint` (structural) or `audit` (semantic).

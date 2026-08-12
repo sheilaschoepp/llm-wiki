@@ -1,4 +1,4 @@
-# cleanup — Memory Graduation Classification (Step 3)
+# cleanup — memory graduation classification (Step 3)
 
 The detailed classification logic the memory job assigns from. SKILL.md Step 3 names each entry's permanent home and verifies the substance is actually present there — matching the entry's direction, not just its subject; this file holds the six categories it chooses among, the tie-break order, the sensitive-content screen, and the keep-vs-graduate-vs-delete judgement. The outputs job never loads this.
 
@@ -7,10 +7,10 @@ Every category below is a report verdict, never an instruction to edit. cleanup 
 ## Contents
 
 - Categories
-- Tie-Break When Two Categories Fit
-- Sensitive-Content Screen
-- Keep, Graduate, Or Delete Is A Judgement, Not A Count
-- Age Is A Hint, Not A Trigger
+- Tie-break when two categories fit
+- Sensitive-content screen
+- Keep, graduate, or delete is A judgement, not A count
+- Age is A hint, not A trigger
 
 ## Categories
 
@@ -23,22 +23,22 @@ Assign each entry exactly one category:
 - **keep-in-memory** — the entry belongs where it is and will be useful again, in either of two ways: (a) a journal entry that is situational but recurring (a lesson tied to a class of sources, frames, or situations that will come up again — too specific for the rulebook, but the next member of that class will need it) or still provisional (a fresh correction that may yet be revised); or (b) a `MEMORY.md` entry that is a stable behavioural rule already in its terminal home — settled, not headed onward to `CLAUDE.md` or a `SKILL.md`. Record it with a one-line reason; it stays.
 - **spent** — the entry was used by a single past operation, carries no reusable kernel, and its situation will not recur. It has done its job. Propose deleting it (gated on approval, like any deletion). git history and the original ingest/operation report already preserve what happened — the journal is a working pad, not the archive. Before deleting, check once for a general kernel worth promoting; if there is one the entry is not spent — reclassify it `not-graduated` and report the kernel with its home, so it stays resident until that kernel has landed.
 
-## Tie-Break When Two Categories Fit
+## Tie-break when two categories fit
 
 Apply the first that matches: (1) `contradicted`, if the home states a rule that actively disagrees with the entry (not merely a narrower version); (2) `graduated`, if the home states the entry's do/never *and* every clause and exception the entry carries — the clause check is part of the graduated gate, so an entry whose home has the main rule but is missing one exception is not graduated; (3) `partial`, if the home states the do/never but is missing a specific, nameable clause the entry carries — if you cannot name the missing clause, it is not partial; (4) `not-graduated`, if the entry's do/never is absent from every home it should live in (a home documenting only the subject or mechanism counts as absent) — but a `MEMORY.md` entry that is a stable behavioural rule whose only correct home is `MEMORY.md` itself is already home, so it is `keep-in-memory` (terminal), never `not-graduated`; (5) `keep-in-memory` / `spent`, only for entries with no general rule to graduate. A home stating a weaker-scoped version of the rule is `partial` (name the missing scope), never `contradicted`.
 
-## Sensitive-Content Screen
+## Sensitive-content screen
 
 Before reporting any entry's text for promotion into `MEMORY.md` or `CLAUDE.md`, screen the entry against CLAUDE.md → Memory hygiene (no medical, family, relationship, financial, or legal specifics about anyone). If the entry carries such content, do not report its text for promotion — promoting it would push the violation into a more permanent, more-read home, and a shared file propagated across sibling repos would carry it further still. Instead route it to the Step 7 per-item gate as a hygiene-flagged entry, whose own gated decision offers redact-in-place, remove, or defer — so a hygiene-violating entry is acted on, not just flagged and left resident. Redaction is the one case where cleanup rewrites an entry's text rather than removing it (SKILL.md → Step 8.1, and the write it is permitted in Limits); it is a flag carried alongside the entry's category, not a category of its own, so the entry keeps its classification for a later run.
 
-## Keep, Graduate, Or Delete Is A Judgement, Not A Count
+## Keep, graduate, or delete is A judgement, not A count
 
 The keep / graduate / delete call is a common-sense judgement about the content, not a frequency count. An entry is written to memory once — it does not need to recur, be re-confirmed across sessions, or appear N times before it can graduate. Read what the entry actually says and ask two questions:
 
 1. **Is there a stable, general rule in it?** A rule that would apply across future operations and is not bound to a single source, frame, or one-time incident belongs in its permanent home (MEMORY.md, CLAUDE.md, or the skill) → not-graduated; report its home and the exact text now, and leave the entry resident until it lands there.
 2. **If not general — will its situation recur?** A lesson tied to a class of situations that will happen again → keep-in-memory. A lesson tied to one past operation that will not happen again, with nothing reusable left → spent, propose deletion.
 
-## Age Is A Hint, Not A Trigger
+## Age is A hint, not A trigger
 
 Age is a hint for this judgement, not a trigger. Journal entries (the per-skill and multi-skill files) carry their date in the `## YYYY-MM-DD` heading, so the audit can compute their age. `MEMORY.md` entries use topic headings with no date, so age is not available there. Where age is available, use it only to sharpen the spent-vs-keep call: an old, never-graduated, one-off-looking journal entry is a strong spent candidate worth proposing for deletion. Never expire an entry on age alone — a long-dormant situational entry is still valuable the moment its class of situation recurs, so recurrence, not the clock, decides.
 

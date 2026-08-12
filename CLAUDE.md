@@ -1,8 +1,8 @@
-# LLM Wiki Schema
+# LLM wiki schema
 
 This is a personal LLM wiki for academic research. It is browsed in Obsidian and maintained with local agent skills.
 
-`MEMORY.md` at the repo root holds stable, transferable cross-machine context about the user, the project, and feedback rules — exported from auto-memory so it travels with the repo. Treat its contents as point-in-time observations and verify against the current state of files before asserting them as fact. See **Memory tiers** below for how `MEMORY.md` relates to the per-skill memory files (`.claude/skills/<skill>/<skill>-memory.md`), the multi-skill memory file (`.claude/skills/multi-skill/multi-skill-memory.md`), and this `CLAUDE.md` schema file, and **Workflow Rules → Session start order** for when each is read.
+`MEMORY.md` at the repo root holds stable, transferable cross-machine context about the user, the project, and feedback rules — exported from auto-memory so it is committed to this repo and follows it across machines, rather than living in a machine-local auto-memory directory. It is repo-specific, not shared: it is the one file never copied into a wiki seeded from this one, so each wiki keeps its own. Treat its contents as point-in-time observations and verify against the current state of files before asserting them as fact. See **Memory tiers** below for how `MEMORY.md` relates to the per-skill memory files (`.claude/skills/<skill>/<skill>-memory.md`), the multi-skill memory file (`.claude/skills/multi-skill/multi-skill-memory.md`), and this `CLAUDE.md` schema file, and **Workflow Rules → Session start order** for when each is read.
 
 The design is a hybrid: it borrows the three-layer pattern (immutable raw sources, an LLM-maintained markdown wiki, and a schema file driving an agent) from Andrej Karpathy's LLM wiki sketch, and the atomic, source-grounded, interlinked note discipline from Sönke Ahrens' smart-note method. The layers:
 
@@ -11,11 +11,11 @@ The design is a hybrid: it borrows the three-layer pattern (immutable raw source
 - `1-wiki/concepts/` and `1-wiki/entities/` hold concept/entity pages. Each concept/entity page explains one reusable idea in very simple language.
 - `1-wiki/syntheses/` holds cross-source argument pages that serve as entry points into developed topics.
 - `1-wiki/attachments/` holds figures and other images extracted from raw sources for embedding in wiki pages.
-- `2-outputs/` holds dated working artifacts. Outputs are not part of the durable wiki until the user explicitly promotes them. Every `2-outputs/` kind is uncapped and never auto-pruned — `lint`, `consistency`, `audit`, `skill-linter`, `query`, `brief`, `compare`, `reflect`, `ingest`, `cleanup`, `skill-llm-council`, `forget`, `supersede`, `synthesis`, and the `forget/quarantine`/`supersede/preserve` preservation subfolders all retain every report and artifact they accumulate. No skill auto-prunes them — the `cleanup` skill surfaces deletion candidates (OS junk, superseded check reports, subject-orphaned reports, and aged artifacts) and removes them only file by file on the user's approval, so reports are removed only by deliberate user action. Historical `log.md` / `hot.md` links pointing into `2-outputs/` at reports that no longer exist on disk (deleted under the former retention cap, now lifted, or otherwise removed by hand) remain expected danglers, not lint findings.
+- `2-outputs/` holds dated working artifacts. Outputs are not part of the durable wiki until the user explicitly promotes them. Every `2-outputs/` kind is uncapped and never auto-pruned — `lint`, `consistency`, `audit`, `skill-linter`, `query`, `brief`, `compare`, `reflect`, `ingest`, `cleanup`, `skill-llm-council`, `forget`, `supersede`, `synthesis`, and the `forget/quarantine`/`supersede/preserve` preservation subfolders all retain every report and artifact they accumulate. No skill auto-prunes them — the `cleanup` skill surfaces deletion candidates in four categories (OS junk, superseded check reports, subject-orphaned reports, and aged artifacts) and removes them only file by file on the user's approval, so reports are removed only by deliberate user action. A file whose kind `cleanup` cannot resolve — no dated filename, or a name whose kind disagrees with the folder it sits in — falls into a fifth category, `unrecognized`, which is reported and never proposed for deletion. The two preservation subfolders are pruned only through an opt-in sub-mode the user invokes by naming them, never as part of a sweep. Every removal `cleanup` makes — in either of its jobs, of every kind — is recorded in that run's `1-wiki/log.md` entry, which pairs each removed path with the verified commit that last held it, so a pruned artifact stays retrievable. That record lives in the log rather than in a file of its own, because `log.md` is already the permanent, complete record of every operation. Historical `log.md` / `hot.md` links pointing into `2-outputs/` at reports that no longer exist on disk (deleted under the former retention cap, now lifted, or otherwise removed by hand) remain expected danglers, not lint findings.
 
 The wiki is source-grounded, but concept/entity pages are not citation wallpaper: obvious bullets stay uncited and the `Sources` callout lists support once at the bottom, while a non-obvious factual claim carries an inline citation to the specific source it draws from, next to a locator identifying where in the source (see Source Support And Verification). Source pages remain the fullest home for exact page, section, and figure locators (especially in the Evidence section), but inline claim citations on concept/entity/synthesis pages now carry their own locator too.
 
-## Directory Structure
+## Directory structure
 
 ```text
 llm-wiki/
@@ -69,7 +69,7 @@ Folder prefixes (`0-`, `1-`, `2-`, `a-`) keep Obsidian sorted in workflow order.
 
 `setup.sh` provisions the `llm-wiki` conda env the skills run against — PyMuPDF, ImageMagick, and Poppler (the ingest figure-extraction toolchain; see [Attachments](#attachments)). Run once with `bash setup.sh`, then `conda activate llm-wiki`.
 
-## Page Filenames
+## Page filenames
 
 Concept pages, entity pages, synthesis pages, and attachment files in `1-wiki/` use kebab-case lowercase: ASCII letters, digits, and hyphens. No spaces, no underscores, no uppercase, no camel-case.
 
@@ -88,7 +88,7 @@ Examples:
 
 Wikilinks always include the `.md` extension and use a pipe-rendered display name where the display reads naturally in context (see [Wikilink Format](#wikilink-format) below).
 
-## Raw Sources
+## Raw sources
 
 Raw files are curated by the user and never edited by the agent. Raw filenames may use any convention the user chose (bibkeys, original filenames, etc.) — the kebab-case rule applies only to wiki files.
 
@@ -110,7 +110,7 @@ The attachments folder for a source uses the same stem: `1-wiki/attachments/{sou
 
 Long sources may be split by chapter or major section (`Vaswani2017AttentionIA-ch01`, `Vaswani2017AttentionIA-ch02`) when one source page would become too large.
 
-## Wikilink Format
+## Wikilink format
 
 Every wikilink in the wiki — frontmatter values, callout bullets, inline prose, hot/index/log references — is path-qualified from the repo root and uses this form:
 
@@ -205,7 +205,7 @@ Extraction uses PyMuPDF (`fitz`) and ImageMagick (`magick`), both installed in t
 
 Extraction is part of the `ingest` skill only (any mode — new or existing source, normal or deep). Other skills do not create new attachments. Attachments removed during `forget` or `supersede` follow the same quarantine rules as the source page they belong to.
 
-## Body Sections As Callouts
+## Body sections as callouts
 
 Wiki page bodies use Obsidian callouts instead of H2 section headings:
 
@@ -224,7 +224,7 @@ The H1 (`# Page Title`) is a normal Markdown heading. Every required section app
 
 Empty placeholders are the correct content when a section has nothing genuine to say. Sections are not quotas. Do not invent content, paraphrase the same point across sections, or stretch a single bullet into multiple to avoid an empty placeholder. A page with several placeholders is fine; a page with padded sections is not.
 
-### Callout Block IDs
+### Callout block IDs
 
 Every callout carries a block ID, written as the last line inside the `>` block: `> ^idea`, `> ^key-claims`, `> ^open-questions`, and so on. This makes each section directly linkable. Obsidian does not anchor links to callout *titles* (`[[page#Idea]]` will not resolve), so the block ID is what enables section links — see [Wikilink Format](#wikilink-format).
 
@@ -234,7 +234,7 @@ Every callout carries a block ID, written as the last line inside the `>` block:
 - Every callout gets one, including empty-placeholder sections, so any section is linkable whether or not it currently has content.
 - Adding or correcting a block ID is a mechanical edit that does not change a page's meaning. It is on the verification-neutral allowlist (see Page Status): a skill that adds or fixes a block ID on a `verified` page re-stamps `verified_hash:` in the same pass and the page stays `verified`. A block-ID edit made outside a skill that does not re-stamp still trips the body hash and resets the page to `draft` — the safe fallback.
 
-### Required Callout Sections
+### Required callout sections
 
 Source pages:
 
@@ -275,7 +275,7 @@ Synthesis pages:
 8. `connections` - Connections
 9. `sources` - Sources
 
-## Source Pages
+## Source pages
 
 Source pages summarize one source and preserve the audit trail needed to revisit it. They are allowed to be more detailed than concept/entity pages because they are evidence records.
 
@@ -335,7 +335,7 @@ When an evidence bullet has an embedded image, put the locator on the parent bul
 >
 ```
 
-## Concepts and Entities
+## Concepts and entities
 
 Concept and entity pages are reusable idea pages. They are not summaries of individual sources. Each page captures one reusable idea or named thing in simple language.
 
@@ -386,7 +386,7 @@ The `Sources` callout lists source pages only:
 > - [[1-wiki/sources/Kingma2015AdamAM.md|Kingma2015AdamAM]]
 ```
 
-## Synthesis Pages
+## Synthesis pages
 
 Synthesis pages are durable cross-source argument pages and the main entry points into developed topics. They answer a reusable question, compare positions, preserve a debate map, or organize a cluster of concept/entity pages around a topic.
 
@@ -425,7 +425,7 @@ Synthesis rules:
 - Use `What Would Change This Answer` for *future* evidence that would invalidate or revise the answer — replication failures, counterexamples, simpler alternative explanations. Distinct from `Tensions` (present-tense pushback) and `Open Questions` (currently unanswered). Empty `> - None yet` placeholder is fine while the answer is still firming up.
 - Do not create, update, or promote a synthesis without user approval. This binds the `synthesis` skill and user-initiated changes; `audit` is the standing exception — it fact-checks a synthesis page's content against its sources and applies the resulting fixes autonomously, preserving the prior version, exactly as on any other page (see Workflow Rules → the audit autonomy exception). Synthesis pages are left `status: draft` precisely for that later audit to validate.
 
-## Source Support And Verification
+## Source support and verification
 
 The vault keeps provenance at the note level — the `sources:` frontmatter and `Sources` callout carry a page's overall support, and obvious or definitional bullets, plus the author's own marked judgement (`Appraisal`, `Open Questions`, `Assumptions`), need no inline citation. Sourced counterevidence in `Disconfirming Evidence` (concept/entity) or `Tensions` (synthesis) is cited like any non-obvious claim — it is left uncited only when it is a purely own observation with no source.
 
@@ -479,7 +479,7 @@ The *form* of every citation stays the two canonical forms above; these principl
 - **A page/section/figure locator links the raw file at the cited page (`#page=N`), not the wiki source page.** When an output, or any concept/entity/synthesis page, cites a specific page, section, figure, table, equation, or theorem-environment result — anything with a `sec.`/`p.`/`fig.`/`tab.`/`app.`/`eq.`/`def.`/`thm.`/`lem.`/`prop.`/`cor.`/`alg.` locator — it uses the canonical form above: the source-page wikilink, then the parenthesized raw-file `#page=N` deep-link carrying both the structural anchor and the page as its readable display, e.g. `[[1-wiki/sources/Devlin2019BERTPO.md|Devlin2019BERTPO]] ([[0-raw/papers/Devlin2019BERTPO.pdf#page=16|app. C, tab. 8, p. 4186]])`. **N is the physical PDF page, not the printed page.** They differ whenever the source is not paginated from 1 — e.g. NAACL/ACL proceedings (printed `p. 4171` is physical page 1) or CHI article pagination. Determine N by opening the PDF: read the printed page number on its first physical page, then `N = printed − (first_printed − 1)` (so a paper printed from page 1 has `N = printed`; Devlin2019 prints from 4171, offset 4170). Do not guess the offset from the cited range — the cited range may not start at the paper's first page. **A single offset does not always describe a raw** — an appendix may restart its numbering, so the offset that holds in the body is wrong in the supplement. The per-page truth for every registered raw is recorded in the pagination map (`.claude/skills/multi-skill/pagination-map.md`) — read `p. M` off it rather than re-deriving an offset, and register a raw there when you ingest it; `lint`'s `locator_page_mismatch` checks every `p. M` against it. This is distinct from two things that stay bare source-page links: a general attribution that names the source without a locator, and a reference to the wiki's own callout section (`[[1-wiki/sources/X.md#^appraisal|Appraisal]]`), which points at the wiki's processed judgement, not a place in the raw source.
 - If a concept/entity page cannot be traced to at least one source page, it does not belong in `1-wiki/`.
 
-### When To Cite
+### When to cite
 
 The **non-obvious** test above is the operational shorthand; these are the general principles behind it, applying to every body Claude produces (wiki pages and `2-outputs/` artifacts alike).
 
@@ -511,7 +511,7 @@ Reports use one of two severity vocabularies, picked deliberately:
 
 The split is intentional. Don't unify across the board. When extending a report's severity tier, pick the vocabulary that already fits the report's audience.
 
-## Page Status
+## Page status
 
 `status:` may be:
 
@@ -527,7 +527,7 @@ The split is intentional. Don't unify across the board. When extending a report'
 
 **Changing an existing verified claim demotes the whole page to `draft` — marking it does not hold the page `verified`.** The asymmetry is mechanical, not a judgement call, and `body_hash.py` makes it exact: an *added* claim marked `*[unverified]*` was never part of `verified_hash` (a masked new line is invisible to the hash), so the page stays `verified`; but a *changed* claim was already in the hash (it was unmarked and verified), so altering its text — or marking it, which removes its line from the hashed body — moves the hash, and `lint`'s hash check resets the page to `draft` for a later `audit` to re-verify. So an addition rides as a marked pending claim; a change re-verifies the whole page. The lone exception is a pure move: relocating a claim whose text stays byte-identical and whose meaning its new position does not change is a verification-neutral edit the moving skill re-stamps (see below), so a simple move keeps the page `verified`.
 
-A scope-widening change to `frames:` — one where the new union admits source material the old union did not (a strict superset) — still resets the page to `draft`: it grows the unmarked body, so the whole page needs re-checking. A change that admits nothing new (a reword, or a lens the body already covers) and a pure field migration that preserves the same scope (e.g. the one-time `frame:` → `frames:` rename) do not. Mechanical metadata updates — `updated:`, `source_count`, index and log bookkeeping — do not change status. `audit` accepts a mode argument: `partial` (default) fact-checks every non-verified page (`draft` and `needs-update`) **and every `*[unverified]*` claim on an otherwise-`verified` page** — the pending delta wherever it sits; `full` re-fact-checks every claim on every page, including verified ones. Routine runs and `/checkup` use `partial` to keep audit affordable; the audit skill defines when a `full` pass is warranted.
+A scope-widening change to `frames:` — one where the new union admits source material the old union did not (a strict superset) — still resets the page to `draft`: it grows the unmarked body, so the whole page needs re-checking. A change that admits nothing new (a reword, or a lens the body already covers) and a pure field migration that preserves the same scope (e.g. the one-time `frame:` → `frames:` rename) do not. Mechanical metadata updates — `updated:`, `source_count`, index and log bookkeeping — do not change status. `audit` accepts a mode argument: `partial` (default) fact-checks every non-verified page (`draft` and `needs-update`) **and every `*[unverified]*` claim on an otherwise-`verified` page** — the pending delta wherever it sits; `full` re-fact-checks every claim on every page, including verified ones. Routine runs use `partial` to keep audit affordable; the audit skill defines when a `full` pass is warranted.
 
 `audit` enforces verification with a content stamp scoped to the checked content: when it sets a page `verified` it writes `verified_hash:` to the frontmatter — the SHA-256 of the page body **excluding every `*[unverified]*`-marked claim**. The exclusion is what makes the claim-level model work:
 
@@ -558,7 +558,7 @@ These are graph, orthographic, or format edits: the reader reads the same claim 
 
 So the rule for editing a `verified` page is: **mark each newly-added non-obvious claim `*[unverified]*`** (the page keeps its verified status and only the marked additions need re-checking), and **let a change to an existing claim demote the page** — marking a previously-verified claim does not hold the page `verified`, because its line was in `verified_hash` and altering or masking it moves the hash. If you change verified (unmarked) content that is neither a newly-marked addition nor an allowlisted verification-neutral edit (a pure move included), `lint`'s hash check demotes the whole page to `draft` and a later `audit` re-verifies it. Two re-stamps are legitimate: (1) `audit`'s own, when it fact-checks a page against the raw during a run — clearing its `*[unverified]*` markers or fixing claims — it re-stamps the `verified_hash:` for the pages it checked; and (2) the verification-neutral re-stamp above, when a skill applies an allowlisted determinate edit. Never re-stamp `verified_hash` by hand after any *other* unmarked body edit; let the hash-mismatch reset fire. Outside these two cases, `verified_hash` is earned only by `audit` fact-checking against the raw source.
 
-## Bullet Markers
+## Bullet markers
 
 Most bullets have no suffix. Use markers sparingly:
 
@@ -579,7 +579,7 @@ The useful question is: **"in what future situation will I want to stumble back 
 
 If a tag isn't doing retrieval work, it's noise; remove it.
 
-## Plain-Language Style
+## Plain-language style
 
 - Wiki page callout bodies use bullets, not prose paragraphs. Each bullet is one atomic fact or claim. If a section's content reads as a paragraph, decompose it into atomic bullets instead of relaxing to prose form — the reader assembles the paragraph mentally; bullets remain scannable and individually verifiable. Applies to all callouts on source, concept/entity, and synthesis pages.
 - Bullets must be standalone — each readable without the source paper.
@@ -621,7 +621,7 @@ Working skills live under `.claude/skills/<name>/SKILL.md`.
 - `ingest` - process one raw source into a source page and propose only the concept/entity pages it genuinely supports. Auto-detects mode: creates the page first-time, or reingests in place for a stated reason if it already exists. Deep mode produces a paper-grade source page for a load-bearing source. Optional frames scope the source page and accumulate across reingests.
 - `query` - answer from the wiki first; save every response to `2-outputs/query/`; ask before promotion.
 - `lint` - cheap structural check and safe mechanical fixes.
-- `audit` - semantic check for one-idea clarity, support, contradictions, duplicates, and verification.
+- `audit` - semantic check for one-idea clarity, support, contradictions, duplicates, and verification. Satisfies its own preconditions by running `consistency` and `lint` when their reports are stale or not clean, and re-runs `lint` over the pages it changed.
 - `forget` - remove a page or support trail while quarantining the old content.
 - `supersede` - replace a note or claim while preserving the prior view.
 - `brief` - one-shot topical orientation output.
@@ -634,20 +634,19 @@ Meta skills:
 - `consistency` - check cross-file schema and skill drift after refactors.
 - `skill-linter` - review skill quality.
 - `skill-llm-council` - deeply review and autonomously improve one skill via two independent LLM councils (cognitive lenses and skill specialists), reconciled by a meta-chair; the deliberative companion to `skill-linter`.
-- `checkup` - autonomously run consistency, lint, and audit in one invocation, in the order that satisfies audit's preconditions.
-- `cleanup` - two jobs: graduate memory-file entries into their permanent home (MEMORY.md, CLAUDE.md, or a skill) and clear the absorbed ones, and prune unneeded `2-outputs/` files (junk, superseded check reports, subject-orphaned reports, aged artifacts). Every deletion is gated file by file.
+- `cleanup` - two jobs: check whether each memory-file entry has already graduated into its permanent home (MEMORY.md, CLAUDE.md, or a skill) and clear only the absorbed ones — it never writes a rule into a home itself, so an un-absorbed entry is reported with its home and the text to add, and left resident — and prune unneeded `2-outputs/` files (junk, superseded check reports, subject-orphaned reports, aged artifacts), reporting rather than proposing anything it cannot classify. Every deletion is gated on the user's approval — per file, or as one multiSelect batch where every file in it is verified git-recoverable — and recorded in the run's log entry with the commit that last held it.
 
 A **standalone skill** is one that lives under `.claude/skills/` but sits outside the wiki workflow, so it is intentionally **not** catalogued here, in the directory tree, or in the output-kind naming registry, and should not be referenced by the other skills. `consistency` exempts any such skill via its `STANDALONE_SKILL_NAMES` set — its omission from the catalogues is by design, not drift. The set is currently empty (no standalone skill exists); add a folder name to it to register a future one.
 
-## Skill Self-Report
+## Skill self-report
 
-Every skill run ends with a self-report: a short, honest account of the limitations it hit *this run* and how the skill itself should be upgraded. It appears in the skill's report and is surfaced again in the chat summary. It is present on **every** run: when the run genuinely hit no limitation the self-report reads `none noted this run`, so a reader can always see the skill checked itself. This binds every skill, read-only and write alike; `checkup` aggregates its sub-skills' self-reports plus its own.
+Every skill run ends with a self-report: a short, honest account of the limitations it hit *this run* and how the skill itself should be upgraded. It appears in the skill's report and is surfaced again in the chat summary. It is present on **every** run: when the run genuinely hit no limitation the self-report reads `none noted this run`, so a reader can always see the skill checked itself. This binds every skill, read-only and write alike; a skill that invokes another aggregates the sub-run's self-report alongside its own.
 
 The canonical, self-sufficient statement of this rule — the skills' runtime copy kept in the skill rules, so a skill produces its self-report without this schema file fresh in context (the Skill Authoring self-sufficiency principle) — is `.claude/skills/multi-skill/references/self-report.md`. This section summarizes it for project-level reference; that file is canonical.
 
 Each item is specific and genuine — a gap that actually bit this run (the two founding shapes: audit leaving a confirmed distortion it could not safely fix as a passive finding instead of setting `needs-update`; ingest marking a whole page `draft` after adding one bullet) — paired with the upgrade that would prevent it, and never invented or padded (that is the fabrication the wiki forbids; `none noted this run` is the correct clean-run content). A confirmed item graduates to the skill's memory file (which holds only provisional in-use corrections) or a skill fix via the ordinary user-gated path; the self-report never writes to memory or edits a skill. The `## Self-report` format and the full statement live in the reference above.
 
-## Skill Authoring
+## Skill authoring
 
 Conventions for the skills under `.claude/skills/`. These govern how skills are written, not what the wiki contains.
 
@@ -656,7 +655,7 @@ Conventions for the skills under `.claude/skills/`. These govern how skills are 
 - **Don't restate a Limits rule inline.** A rule already stated in a skill's Limits section is not also repeated inline in a procedure step — one canonical place per rule.
 - **Avoid HTML-tag-like syntax in skill content.** Some skill-upload pipelines reject content that reads as an HTML tag, including bash process substitution `<(...)`. Outside code fences, avoid raw `<`/`>`; for process substitution use a temp file or a pipe instead.
 
-## Workflow Rules
+## Workflow rules
 
 - **Session start order.** Read in this order at the start of every session: (1) `CLAUDE.md` — schema and behavioural defaults; (2) `a-archive/about-me/about-me.md` — high-level professional identity (read when context warrants, e.g., when discussing research direction or when the response should reflect the user's working preferences); (3) `a-archive/style/ai-writing-tells.md` — patterns to avoid in any output; (4) `a-archive/style/coding-best-practices.md` — design principles and Python style (read when writing or reviewing code); (5) `MEMORY.md` — stable transferable memory; (6) `1-wiki/hot.md` — orientation cache; (7) `1-wiki/index.md` — page catalog. Every skill (write or read-only) additionally reads both its own skill memory at `.claude/skills/<skill>/<skill>-memory.md` and the multi-skill memory at `.claude/skills/multi-skill/multi-skill-memory.md` at the start of the operation. Read-only skills are included because scope and framing corrections to those skills also need somewhere to live.
 - Never modify `0-raw/`.
@@ -760,11 +759,11 @@ The repo carries three tiers of persistent context for the agent. They are not i
 
    Write memory-worthy corrections and lessons to the right tier directly — don't ask permission or merely offer ("want me to add it?"). Exercise judgement about what is memory-worthy and which tier it belongs in. This covers memory writes only; it does not change the rule to ask before substantive wiki content changes or anything outward-facing.
 
-**Graduation path.** An entry in either memory file is provisional. Once it has held up across multiple operations (proven durable — not contradicted or revised later, not recorded repeatedly) and is no longer at risk of revision, it graduates: stable behavioural rules promote into `MEMORY.md` (or, if they're really about wiki structure rather than agent behaviour, into `CLAUDE.md`). After graduation, the original entry may be struck through with a note pointing at where the rule now lives, or removed during a memory-consolidation pass. Not every removed entry graduates first: an entry that served a single past operation, holds no reusable rule, and will not recur is retired as spent — removed in the same consolidation pass without graduating. Removal does not imply prior graduation. Memory files are working journals, not archives.
+**Graduation path.** An entry in either memory file is provisional. Once it has held up across multiple operations (proven durable — not contradicted or revised later, not recorded repeatedly) and is no longer at risk of revision, it graduates: stable behavioural rules promote into `MEMORY.md` (or, if they're really about wiki structure rather than agent behaviour, into `CLAUDE.md`). Promotion is a deliberate act by the user or by ordinary session work — never something `cleanup` performs. `cleanup` only *detects* that a rule has landed and clears the absorbed journal entry; an entry that has not landed is reported with its home and the text that would graduate it, and left resident. The reason is that `CLAUDE.md` and the `.claude/skills/` folders are shared files, existing as hand-propagated copies across this wiki and its sibling repos: a rule an agent wrote into one copy would either be overwritten the next time they are brought back into step or never reach the others, while the journal copy that carried it had already been cleared — leaving the rule nowhere it can be relied on. A skill-procedure or schema rule is therefore promoted wherever those shared files are authored, and the journal entry here clears on a later `cleanup` once this wiki's copy states it. After graduation, the original entry may be struck through with a note pointing at where the rule now lives, or removed during a memory-consolidation pass. Not every removed entry graduates first: an entry that served a single past operation, holds no reusable rule, and will not recur is retired as spent — removed in the same consolidation pass without graduating. Removal does not imply prior graduation. Memory files are working journals, not archives.
 
 When uncertain whether a piece of context belongs in `MEMORY.md` or in a memory file: if you'd be surprised the rule was still true a year from now, it belongs in a memory file. If you'd be surprised if it stopped being true, it belongs in `MEMORY.md`.
 
-## Hot, Index, And Log
+## Hot, index, and log
 
 `1-wiki/hot.md` is the short orientation cache. It has four H2 sections:
 
@@ -787,7 +786,7 @@ Recent activity is a rolling cache of the five newest entries: `lint` trims it t
 
 The `HH:MM` is 24-hour UTC — pinned to one timezone rather than the runner's local clock so that entries written on different machines sort consistently against each other. Stamps are obtained with `TZ='UTC' date '+%Y-%m-%d-%H%M'`, never a bare `date`, which would record the runner's local time. The rendered timestamp stays bare (no suffix); the timezone is fixed by convention, not annotated per entry. `lint` checks this: `chronology_missing_time` flags an entry with no time — `sort_chronology.py` auto-recovers it from the entry's own linked report filename (`…-HHMM`) when determinate (one matching-date link), else it is left for a manual time — and `chronology_out_of_order` flags (and re-sorts) a log or hot Recent-activity section whose timed entries are not in descending order; the same `sort_chronology.py` performs both the recovery and the re-sort.
 
-## Stay In Your Lane
+## Stay in your lane
 
 - `0-raw/` is hard read-only.
 - `a-archive/` is soft read-only — user-curated reference material. Edit only on explicit instruction.
@@ -796,7 +795,7 @@ The `HH:MM` is 24-hour UTC — pinned to one timezone rather than the runner's l
 - `1-wiki/`, `2-outputs/`, and `MEMORY.md` are agent-managed under workflow discipline. Existing memory entries are user-curated — append new entries when warranted, but don't silently rewrite existing ones.
 - **Stale-path repairs are always allowed**, in any file regardless of read-only status: when a file moves or is renamed, references to it may be updated in place to point at the new location. Narrow — the path itself (and display text that should match), not the surrounding content; leave historical `log.md` entries that record a past path alone.
 
-## Known Limitations
+## Known limitations
 
 - The wiki is a synthesis layer, not the source of truth.
 - Source pages can still be wrong if extraction was wrong. High-stakes work should reopen raw sources.

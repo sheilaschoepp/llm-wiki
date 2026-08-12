@@ -27,7 +27,7 @@ Beyond the deterministic file checks above, the judgment-drift packet (Step 2) r
 
 Do not check or modify `0-raw/`.
 
-## When To Invoke
+## When to invoke
 
 - After changing `CLAUDE.md`.
 - After rewriting skills.
@@ -36,7 +36,7 @@ Do not check or modify `0-raw/`.
 - To propagate a renamed or moved section, callout, or field across the project.
 - After changing lint/audit behaviour.
 
-## When Not To Invoke
+## When not to invoke
 
 - Single-page structural check. Use `lint`.
 - Semantic note review. Use `audit`.
@@ -218,7 +218,7 @@ Derive `result:` from the script's exit code — capture it with `$?` after the 
 
 10. **Present the proposals.** End the run by presenting every root-level proposal from Step 6 to the user as a concrete, actionable change: the exact edit to `CLAUDE.md`, the skill file, or the script. A proposal must not exist only inside the report or the log. If the user approves one, apply it then, on that explicit instruction. When consistency runs as a sub-run of `audit` (satisfying audit's precondition), the proposals are carried up into audit's closing summary instead of presented here.
 
-## Deterministic Checks
+## Deterministic checks
 
 The script supports `--list-checks` for the live check manifest, `--packet <name>` for a named packet, and `--checks <id,id>` for an exact subset. With no selector, it runs every deterministic check across the five script packets (schema-language, wiki-pages, styles-files, ai-writing-tells, naming).
 

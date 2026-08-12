@@ -12,7 +12,7 @@ This file holds the operational detail for the workflow in `SKILL.md`. The roste
 - Why no self-revision round
 - Why no convergence loop
 
-## Spawning Subagents
+## Spawning subagents
 
 Use the Agent tool. Within one council, the five Step-2 calls go out in a single message so they run in parallel — five separate tool calls in one response, not five turns. Parallel launch is what keeps the responses independent; a sequential launch lets an earlier response leak into a later one's context.
 
@@ -24,7 +24,7 @@ Three further failure paths beyond a missing advisor: (a) a chair subagent that 
 
 A response that returns but whose proposed edits carry no locatable anchor (no file plus a findable heading or old-text) has those unusable edits discarded — never apply an edit whose anchor cannot be located in the target; re-anchor it or drop it, and note the drop in the report. Whether the response still counts toward the advisor floor turns on its findings, not its edits: a response carrying usable findings counts toward the floor even when every edit it proposed was unanchored (discard the edits only, keep the findings for the chair); only a response with neither a usable finding nor a single anchored edit is a non-return. Re-run the role if dropping a genuine non-return would put the council below three usable advisors plus a chair.
 
-## Step 3 — Anonymization And The Peer-Review Prompt
+## Step 3 — anonymization and the peer-review prompt
 
 Before peer review, relabel a council's five Step-2 responses as A, B, C, D, E with a mapping you store but the reviewers never see (e.g. `A → Outsider`, `B → Contrarian`, ...). Randomize which role gets which letter so position carries no signal. Reviewers judge content, not authorship; the report de-anonymizes afterward for transparency.
 
@@ -44,7 +44,7 @@ Keep it under 200 words. Do not rewrite anyone's proposal; you are judging the s
 
 There is no separate self-revision call — reviewers do not get their own Step-2 answer back to rewrite.
 
-## Step 4 — The Chair Prompt
+## Step 4 — the chair prompt
 
 Run one chair pass per council over the de-anonymized Step-2 responses plus all Step-3 peer reviews. The chair is a subagent — the council's sixth agent, spawned after its peer review — never the orchestrating agent, so each council's synthesis is independent of the meta-chair that applies edits in Step 6. (The meta-chair is the one synthesis layer that is the orchestrating agent, because it is the agent that applies; see Step 5.) The chair arbitrates, it does not count votes.
 
@@ -63,7 +63,7 @@ Return:
 If a minority argument is stronger than the majority view, say so and rank it accordingly.
 ```
 
-## Step 5 — The Meta-Chair Prompt
+## Step 5 — the meta-chair prompt
 
 The orchestrating agent runs this over both chair syntheses to produce the single final change-set. This is where the two councils' reads are reconciled.
 
@@ -84,7 +84,7 @@ For every edit in the final set, tag its scope:
 Each edit must either quote the chair-synthesis line it derives from or be marked a meta-chair addition with its reason; a final set whose meta-chair additions outnumber its chair-traced edits is a defect to explain. The quotes you give will be checked against the recorded chair syntheses, so quote each line as it actually appears, not a paraphrase. Output the final set as an ordered list of edits, each with file, anchor, the change, scope, and one line of rationale.
 ```
 
-## Step 6 — The Adversarial-Verification (Refuter) Prompt
+## Step 6 — the adversarial-verification (refuter) prompt
 
 Before Step 6 applies the change-set, each load-bearing in-folder judgement edit is checked by one refuter subagent, run in parallel and independent of the meta-chair. This is the independent check the meta-chair cannot be, since the meta-chair both decides the final set and applies it. The refuter's job is to kill a weak edit before it reaches disk, so an edit does not ship on the meta-chair's say-so alone.
 
@@ -107,12 +107,12 @@ WHY: one or two sentences, quoting the ground truth you checked.
 
 An edit a refuter marks "refuted" is demoted to a `[needs-review]` proposal in Step 6, not applied; record the verdict and the one-line reason in the report. Absence of ground-truth support for a load-bearing edit is itself a refutation, not a pass. This is not a self-revision round — the refuters are fresh agents attacking a claim, the opposite of authors caving to the group (see "Why No Self-Revision Round" below); it is also where ground-truth checking happens, so there is no separate ground-truth pass.
 
-## Why No Self-Revision Round
+## Why no self-revision round
 
 The user asked early on whether agents should revise their proposals after seeing each other's; the decision was to drop it. The council literature (`a-archive/reference/llm-council-best-practices.md`, citing Wynn et al. 2025) finds that revision rounds pull agents toward agreement — sycophancy and social conformity can shift a correct position to an incorrect one once an agent sees the group. Anonymized peer review still shares every answer and lets the chair act on cross-pollination, without giving each agent the chance to cave. If this turns out to cost real signal on some skill, record it in the per-skill memory file and revisit — do not quietly add a revision call back in.
 
 Note the deliberate asymmetry: the conformity risk is accepted at the synthesis layer (a chair, then the meta-chair, each absorb the group's signal by design — that is their job) and refused at the advisor layer (independent first responses, no self-revision). The protection is placed where it matters most — keeping the five first reads independent — not pretended to exist everywhere.
 
-## Why No Convergence Loop
+## Why no convergence loop
 
 `skill-linter` iterates its fix-and-recheck until two consecutive clean passes, because a cheap deterministic pass can re-run freely and a fix can introduce drift in a check it did not touch. This skill does not loop the council. After the meta-chair's change-set is applied, it verifies with a single orchestrator pass — the deterministic scripts plus one semantic re-read (see SKILL.md Step 6) — and stops; it does not re-convene the councils. The reason is cost: re-councilling is ~20 subagent calls per iteration, so an iterate-to-convergence loop would multiply the most expensive part of the skill for diminishing returns. The single re-read is the bounded substitute for `skill-linter`'s re-run discipline. If applied edits routinely need rework that the single pass misses, record it in the per-skill memory file and revisit — do not silently add a re-council loop.
