@@ -1631,7 +1631,9 @@ def check_verified_hash(
     try:
         actual = body_hash(path=str(path))
     except OSError:
-        return []  # unreadable mid-run (TOCTOU); check_page's own read already surfaces a real absence
+        # Unreadable mid-run (TOCTOU); check_page's own read already
+        # surfaces a real absence.
+        return []
     except ValueError:
         # body_hash refuses a frontmatter block it cannot cleanly close:
         # it needs an exact `---` delimiter line, but
@@ -1809,15 +1811,17 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
         # Zero-source pages (check_id: zero_source_page).
         if actual == 0 and kind in {'entity', 'concept', 'synthesis'}:
             sev = 'error' if kind == 'synthesis' else 'warning'
+            reason = (
+                'syntheses are structurally invalid without sources'
+                if kind == 'synthesis'
+                else 'fragile'
+            )
             findings.append(
                 finding(
                     severity=sev,
                     check='zero_source_page',
                     file=rel,
-                    message=(
-                        f'{kind.capitalize()} page has no sources '
-                        f'({"syntheses are structurally invalid without sources" if kind == "synthesis" else "fragile"}).'
-                    ),
+                    message=(f'{kind.capitalize()} page has no sources ({reason}).'),
                     fix_hint='Add source support or quarantine the page via /forget.',
                 )
             )

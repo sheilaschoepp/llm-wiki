@@ -365,91 +365,196 @@ CHECK_MANIFEST = [
         'check_id': 'personal_info_leakage',
         'packet': 'styles-files',
         'name': 'personal information leakage',
-        'scope': 'repo-wide except 0-raw/, a-archive/ (which contains about-me/), 2-outputs/, .git/, .obsidian/, and the STANDALONE_SKILL_NAMES folders',
+        'scope': (
+            'repo-wide except 0-raw/, a-archive/ (which contains about-me/), '
+            '2-outputs/, .git/, .obsidian/, and the STANDALONE_SKILL_NAMES folders'
+        ),
     },
     {
         'check_id': 'identity_term_leakage',
         'packet': 'styles-files',
         'name': 'identity term leakage',
-        'scope': 'repo-wide except 0-raw/, a-archive/ (which contains about-me/), 2-outputs/, .git/, .obsidian/, and the STANDALONE_SKILL_NAMES folders',
+        'scope': (
+            'repo-wide except 0-raw/, a-archive/ (which contains about-me/), '
+            '2-outputs/, .git/, .obsidian/, and the STANDALONE_SKILL_NAMES folders'
+        ),
     },
     {
         'check_id': 'domain_literature_leakage',
         'packet': 'styles-files',
         'name': 'domain literature leakage',
-        'scope': "CLAUDE.md + .claude/skills/** text files including scripts; the structural exemptions are *-memory.md journals, the agent-writable curated data files in AGENT_DATA_FILES (hyphenation-lists / unlinked-mention-ignore / pagination-map — data, not logic, whose content is by construction the vault's own), and the STANDALONE_SKILL_NAMES folders. Flags bibkey-pattern paper citations not in the placeholder allowlist (PLACEHOLDER_BIBKEYS); these leak a vault's research-corpus literature into generic infra. Legitimate citations in any other domain-specific skill are recorded as sanctioned exceptions in consistency-memory.md, not special-cased in the check. Domain terms and claims are left to the judgment-drift packet. Root-level proposals.",
+        'scope': (
+            'CLAUDE.md + .claude/skills/** text files including scripts; the '
+            'structural exemptions are *-memory.md journals, the agent-writable '
+            'curated data files in AGENT_DATA_FILES (hyphenation-lists / '
+            'unlinked-mention-ignore / pagination-map — data, not logic, whose content '
+            "is by construction the vault's own), and the STANDALONE_SKILL_NAMES "
+            'folders. Flags bibkey-pattern paper citations not in the placeholder '
+            "allowlist (PLACEHOLDER_BIBKEYS); these leak a vault's research-corpus "
+            'literature into generic infra. Legitimate citations in any other '
+            'domain-specific skill are recorded as sanctioned exceptions in '
+            'consistency-memory.md, not special-cased in the check. Domain terms and '
+            'claims are left to the judgment-drift packet. Root-level proposals.'
+        ),
     },
     {
         'check_id': 'ai_writing_tells',
         'packet': 'ai-writing-tells',
         'name': 'AI-writing tells in project docs',
-        'scope': 'CLAUDE.md, README.md, MEMORY.md, a-archive/style/, .claude/skills/*/SKILL.md and references',
+        'scope': (
+            'CLAUDE.md, README.md, MEMORY.md, a-archive/style/, '
+            '.claude/skills/*/SKILL.md and references'
+        ),
     },
     {
         'check_id': 'file_naming_consistency',
         'packet': 'naming',
         'name': 'file naming consistency',
-        'scope': '1-wiki/ (kebab-case), 2-outputs/{kind}/ (dated form), .claude/skills/ (kebab-case)',
+        'scope': (
+            '1-wiki/ (kebab-case), 2-outputs/{kind}/ (dated form), .claude/skills/ '
+            '(kebab-case)'
+        ),
     },
     {
         'check_id': 'filename_references_resolve',
         'packet': 'styles-files',
         'name': 'filename references resolve',
-        'scope': 'CLAUDE.md, README.md, MEMORY.md, .claude/skills/**/*.md, a-archive/**/*.md, 1-wiki/**/*.md — backticked bare filenames must exist somewhere in the repo',
+        'scope': (
+            'CLAUDE.md, README.md, MEMORY.md, .claude/skills/**/*.md, '
+            'a-archive/**/*.md, 1-wiki/**/*.md — backticked bare filenames must exist '
+            'somewhere in the repo'
+        ),
     },
     {
         'check_id': 'memory_file_graduation_prompt',
         'packet': 'styles-files',
         'name': 'memory file graduation prompt',
-        'scope': 'MEMORY.md (cap 15, graduates to CLAUDE.md), .claude/skills/multi-skill/multi-skill-memory.md, and each .claude/skills/<skill>/<skill>-memory.md (cap 10) — marks files above their soft entry cap as graduation candidates; the per-entry graduation audit reads the content',
+        'scope': (
+            'MEMORY.md (cap 15, graduates to CLAUDE.md), '
+            '.claude/skills/multi-skill/multi-skill-memory.md, and each '
+            '.claude/skills/<skill>/<skill>-memory.md (cap 10) — marks files above '
+            'their soft entry cap as graduation candidates; the per-entry graduation '
+            'audit reads the content'
+        ),
     },
     {
         'check_id': 'dir_tree_drift',
         'packet': 'styles-files',
         'name': 'CLAUDE.md directory tree drift',
-        'scope': "CLAUDE.md — parses the ASCII directory tree and compares it to the actual repo. The tree is the first text-fenced block holding branch characters, located structurally rather than by its heading or its root line, so a repo whose root folder is named something other than the tree's root line still resolves. Tree entries that don't exist on disk are flagged stale; on-disk paths that should appear in the tree (top-level docs, top-level dirs, immediate children of 0-raw/, 2-outputs/, a-archive/, plus 1-wiki/'s hot/index/log files and child dirs, plus .claude/skills/) but are missing are flagged. STANDALONE_SKILL_NAMES output folders are exempt — kept out of the tree by design; OUTPUT_EXEMPT_DIRS user-owned free-form folders are exempt the same way.",
+        'scope': (
+            'CLAUDE.md — parses the ASCII directory tree and compares it to the actual '
+            'repo. The tree is the first text-fenced block holding branch characters, '
+            'located structurally rather than by its heading or its root line, so a '
+            "repo whose root folder is named something other than the tree's root line "
+            "still resolves. Tree entries that don't exist on disk are flagged stale; "
+            'on-disk paths that should appear in the tree (top-level docs, top-level '
+            'dirs, immediate children of 0-raw/, 2-outputs/, a-archive/, plus '
+            "1-wiki/'s hot/index/log files and child dirs, plus .claude/skills/) but "
+            'are missing are flagged. STANDALONE_SKILL_NAMES output folders are exempt '
+            '— kept out of the tree by design; OUTPUT_EXEMPT_DIRS user-owned free-form '
+            'folders are exempt the same way.'
+        ),
     },
     {
         'check_id': 'unbackticked_paths_resolve',
         'packet': 'styles-files',
         'name': 'unbackticked schema-prefix path references resolve',
-        'scope': 'CLAUDE.md — finds path-shaped tokens starting with a known schema prefix (0-raw/, 1-wiki/, 2-outputs/, a-archive/, .claude/) in prose outside backticks and code fences, and verifies each resolves to an existing path. Pairs with filename_references_resolve (which scans backticked filenames); together they catch path drift regardless of backtick convention.',
+        'scope': (
+            'CLAUDE.md — finds path-shaped tokens starting with a known schema prefix '
+            '(0-raw/, 1-wiki/, 2-outputs/, a-archive/, .claude/) in prose outside '
+            'backticks and code fences, and verifies each resolves to an existing '
+            'path. Pairs with filename_references_resolve (which scans backticked '
+            'filenames); together they catch path drift regardless of backtick '
+            'convention.'
+        ),
     },
     {
         'check_id': 'operations_list_matches_skills',
         'packet': 'schema-language',
         'name': 'CLAUDE.md Operations list matches skill folders',
-        'scope': "CLAUDE.md '## Operations' section vs '.claude/skills/*/'. Parses bulleted skill names in the Operations section and cross-checks both directions: skills listed in CLAUDE.md but missing on disk are flagged stale, and skill folders on disk that are missing from the Operations list are flagged. STANDALONE_SKILL_NAMES skills are dropped from both sides — they are deliberately out of the catalogue.",
+        'scope': (
+            "CLAUDE.md '## Operations' section vs '.claude/skills/*/'. Parses bulleted "
+            'skill names in the Operations section and cross-checks both directions: '
+            'skills listed in CLAUDE.md but missing on disk are flagged stale, and '
+            'skill folders on disk that are missing from the Operations list are '
+            'flagged. STANDALONE_SKILL_NAMES skills are dropped from both sides — they '
+            'are deliberately out of the catalogue.'
+        ),
     },
     {
         'check_id': 'retired_skill_references',
         'packet': 'schema-language',
         'name': 'retired/merged skill names not routed to',
-        'scope': "CLAUDE.md, README.md, and .claude/skills/ bodies and scripts. Flags references that route to a skill that no longer exists after a merge or rename. `ingest-deep` (now ingest's deep mode) is flagged anywhere it appears; `reingest` (now ingest's existing-source mode) is flagged only in its routing form — backticked `reingest` or the /reingest slash command — because unbackticked 'reingest' survives as legitimate mode vocabulary. Also resolves the 'operation/meta skills `...`' required-skills enumeration: every backticked skill name there must be a current skill folder. Exempts the owning ingest/ folder (mode-verb log template), the consistency/ folder (documents this check), and *-memory.md history.",
+        'scope': (
+            'CLAUDE.md, README.md, and .claude/skills/ bodies and scripts. Flags '
+            'references that route to a skill that no longer exists after a merge or '
+            "rename. `ingest-deep` (now ingest's deep mode) is flagged anywhere it "
+            "appears; `reingest` (now ingest's existing-source mode) is flagged only "
+            'in its routing form — backticked `reingest` or the /reingest slash '
+            "command — because unbackticked 'reingest' survives as legitimate mode "
+            "vocabulary. Also resolves the 'operation/meta skills `...`' "
+            'required-skills enumeration: every backticked skill name there must be a '
+            'current skill folder. Exempts the owning ingest/ folder (mode-verb log '
+            'template), the consistency/ folder (documents this check), and '
+            '*-memory.md history.'
+        ),
     },
     {
         'check_id': 'section_lists_match_schema',
         'packet': 'schema-language',
         'name': 'section lists match schema',
-        'scope': "CLAUDE.md '### Required callout sections' vs EXPECTED_SECTIONS in the script. Parses the numbered slug lists for source, concept/entity, and synthesis pages and asserts they equal the script's hardcoded copy, so a section-template edit in CLAUDE.md cannot silently leave body_section_order enforcing the old schema. Findings are root-level proposals.",
+        'scope': (
+            "CLAUDE.md '### Required callout sections' vs EXPECTED_SECTIONS in the "
+            'script. Parses the numbered slug lists for source, concept/entity, and '
+            "synthesis pages and asserts they equal the script's hardcoded copy, so a "
+            'section-template edit in CLAUDE.md cannot silently leave '
+            'body_section_order enforcing the old schema. Findings are root-level '
+            'proposals.'
+        ),
     },
     {
         'check_id': 'output_kinds_match_disk',
         'packet': 'naming',
         'name': 'output kinds match disk',
-        'scope': 'OUTPUT_KIND_DIRS in the script vs the on-disk 2-outputs/ subfolders (minus the OUTPUT_EXEMPT_DIRS free-form folders and the STANDALONE_SKILL_NAMES output folders; the quarantine/preserve preservation subfolders now nest under forget/ and supersede/, so they are not immediate children). Flags an output folder that exists but is absent from OUTPUT_KIND_DIRS (its files would escape file_naming_consistency) and a listed kind whose folder is missing while its owning skill still exists. Standalone skills are exempt. Findings are root-level proposals (the constant lives in the script).',
+        'scope': (
+            'OUTPUT_KIND_DIRS in the script vs the on-disk 2-outputs/ subfolders '
+            '(minus the OUTPUT_EXEMPT_DIRS free-form folders and the '
+            'STANDALONE_SKILL_NAMES output folders; the quarantine/preserve '
+            'preservation subfolders now nest under forget/ and supersede/, so they '
+            'are not immediate children). Flags an output folder that exists but is '
+            'absent from OUTPUT_KIND_DIRS (its files would escape '
+            'file_naming_consistency) and a listed kind whose folder is missing while '
+            'its owning skill still exists. Standalone skills are exempt. Findings are '
+            'root-level proposals (the constant lives in the script).'
+        ),
     },
     {
         'check_id': 'catalogue_matches_manifest',
         'packet': 'schema-language',
         'name': 'catalogue matches manifest',
-        'scope': "references/checks.md per-check catalogue vs the script's CHECK_MANIFEST / PACKET_CHECKS. Parses the '## Packet:' sections, their bullet check_ids, and the stated total and per-packet counts, and asserts they match the live manifest. Guards the doc copy the SKILL.md catalogue refactor moved into references/checks.md. Findings are root-level proposals (the file lives in the consistency skill).",
+        'scope': (
+            "references/checks.md per-check catalogue vs the script's CHECK_MANIFEST / "
+            "PACKET_CHECKS. Parses the '## Packet:' sections, their bullet check_ids, "
+            'and the stated total and per-packet counts, and asserts they match the '
+            'live manifest. Guards the doc copy the SKILL.md catalogue refactor moved '
+            'into references/checks.md. Findings are root-level proposals (the file '
+            'lives in the consistency skill).'
+        ),
     },
     {
         'check_id': 'shared_reference_integrity',
         'packet': 'styles-files',
         'name': 'shared multi-skill references are shared and single-copy',
-        'scope': "`.claude/skills/multi-skill/references/*.md` vs the skill tree. Each shared reference must be (a) cited by >= 2 distinct skills — that location is for genuinely cross-skill material; a reference used by one skill belongs in that skill's own references/ — and (b) a single copy, with no same-named references/<file> duplicated in any skill folder. Motivating case: verification.md, run by ingest (Step 8) and query (page-authoring path). CLAUDE.md -> Stay In Your Lane. Root-level proposals.",
+        'scope': (
+            '`.claude/skills/multi-skill/references/*.md` vs the skill tree. Each '
+            'shared reference must be (a) cited by >= 2 distinct skills — that '
+            'location is for genuinely cross-skill material; a reference used by one '
+            "skill belongs in that skill's own references/ — and (b) a single copy, "
+            'with no same-named references/<file> duplicated in any skill folder. '
+            'Motivating case: verification.md, run by ingest (Step 8) and query '
+            '(page-authoring path). CLAUDE.md -> Stay In Your Lane. Root-level '
+            'proposals.'
+        ),
     },
 ]
 
@@ -639,7 +744,10 @@ def check_old_schema_wording(root: Path) -> list[dict[str, Any]]:
                         finding(
                             check_id='old_schema_wording',
                             file=relstr,
-                            message=f'Stale old-schema wording: {content.strip()[:MESSAGE_SNIPPET_LEN]}',
+                            message=(
+                                'Stale old-schema wording: '
+                                f'{content.strip()[:MESSAGE_SNIPPET_LEN]}'
+                            ),
                             fix_hint='Update to the current schema.',
                             line=line_no,
                         )
@@ -1193,7 +1301,10 @@ def check_personal_info_leakage(root: Path) -> list[dict[str, Any]]:
                         check_id='personal_info_leakage',
                         file=rel,
                         message=f'Possible personal information (email): {m.group(0)}',
-                        fix_hint='Move to the about-me page (a-archive/about-me/about-me.md) or redact.',
+                        fix_hint=(
+                            'Move to the about-me page '
+                            '(a-archive/about-me/about-me.md) or redact.'
+                        ),
                         line=i,
                     )
                 )
@@ -1207,7 +1318,10 @@ def check_personal_info_leakage(root: Path) -> list[dict[str, Any]]:
                         check_id='personal_info_leakage',
                         file=rel,
                         message=f'Possible personal information (phone): {m.group(0)}',
-                        fix_hint='Move to the about-me page (a-archive/about-me/about-me.md) or redact.',
+                        fix_hint=(
+                            'Move to the about-me page '
+                            '(a-archive/about-me/about-me.md) or redact.'
+                        ),
                         line=i,
                     )
                 )
@@ -1403,7 +1517,10 @@ def check_identity_term_leakage(root: Path) -> list[dict[str, Any]]:
                             check_id='identity_term_leakage',
                             file=rel,
                             message=f'Identity term `{term}` appears outside about-me/.',
-                            fix_hint='Move the mention to the about-me page (a-archive/about-me/about-me.md) or remove it.',
+                            fix_hint=(
+                                'Move the mention to the about-me page '
+                                '(a-archive/about-me/about-me.md) or remove it.'
+                            ),
                             line=i,
                         )
                     )
@@ -1419,7 +1536,10 @@ def check_identity_term_leakage(root: Path) -> list[dict[str, Any]]:
                             check_id='identity_term_leakage',
                             file=rel,
                             message=f'Personal URL handle `{handle}` appears outside about-me/.',
-                            fix_hint='Move the mention to the about-me page (a-archive/about-me/about-me.md) or remove it.',
+                            fix_hint=(
+                                'Move the mention to the about-me page '
+                                '(a-archive/about-me/about-me.md) or remove it.'
+                            ),
                             line=i,
                         )
                     )
@@ -1963,7 +2083,8 @@ def check_memory_file_graduation_prompt(root: Path) -> list[dict[str, Any]]:
                     'candidates for graduation. Long memory files become a '
                     'per-operation token tax for every skill (or session) that '
                     'reads them.',
-                    fix_hint='Run the `cleanup` skill (its memory graduation audit) for a per-entry check '
+                    fix_hint='Run the `cleanup` skill (its memory '
+                    'graduation audit) for a per-entry check '
                     f'of what has already graduated into {target}, then graduate '
                     'stable rules and remove the absorbed originals. This counter '
                     'only flags the file; it does not read entry content.',
@@ -2411,7 +2532,7 @@ def _parse_claude_section_lists(
     m = re.search(
         r'^### Required [Cc]allout [Ss]ections\s*$', text, re.MULTILINE
     )  # case-insensitive on the heading: CLAUDE.md headings are sentence case,
-       # but the older title-case form must keep parsing too
+    # but the older title-case form must keep parsing too
     if not m:
         return {}, []
     body_start = m.end()

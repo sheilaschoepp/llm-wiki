@@ -184,7 +184,8 @@ def find_h2_case_issues(file_path: Path) -> list[dict]:
                     'word, plus proper nouns and acronyms. Never re-case '
                     'a backticked code token or an identifier after a '
                     '`Label:` word. See '
-                    '.claude/skills/multi-skill/references/skill-authoring-checklist.md `h2_heading_case`.'
+                    '.claude/skills/multi-skill/references/'
+                    'skill-authoring-checklist.md `h2_heading_case`.'
                 ),
             }
         )
