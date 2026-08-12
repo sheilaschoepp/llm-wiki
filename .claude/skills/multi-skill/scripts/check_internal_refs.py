@@ -8,9 +8,9 @@ and a common kind of damage from an edit is prose left pointing at
 something the edit renumbered. The prose stays grammatical and
 internally plausible, so no spell-check, link-check, or heading-check
 sees it; only a reader who looks up the named step notices it is gone.
-A real instance: a procedure grew a sub-step, the later sub-steps shifted
-down, and a "carry the pointer forward to 8.4" line kept pointing one
-step past its target.
+A real instance: a procedure grew a sub-step, the later sub-steps
+shifted down, and a "carry the pointer forward to 8.4" line kept
+pointing one step past its target.
 
 One deterministic check:
 
@@ -84,7 +84,9 @@ def split_fenced_and_prose(text: str) -> tuple[list[str], list[tuple[int, str]]]
 
 
 def collect_defined_steps(text: str) -> set[str]:
-    """Return every step and sub-step number the file defines."""
+    """
+    Return every step and sub-step number the file defines.
+    """
     defined: set[str] = set()
     for line in text.splitlines():
         step_match = STEP_DEF_RE.match(line)
@@ -93,7 +95,6 @@ def collect_defined_steps(text: str) -> set[str]:
         for substep in SUBSTEP_DEF_RE.findall(line):
             defined.add(substep)
     return defined
-
 
 
 def find_stale_step_references(
@@ -145,7 +146,9 @@ def find_stale_step_references(
 
 
 def check_file(file_path: Path, display_name: str) -> list[dict]:
-    """Run both checks over one markdown file."""
+    """
+    Run both checks over one markdown file.
+    """
     text = file_path.read_text(encoding='utf-8')
     _, prose = split_fenced_and_prose(text=text)
     defined = collect_defined_steps(text=text)
