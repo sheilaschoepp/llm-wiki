@@ -1,6 +1,6 @@
 # Deterministic Checks Reference
 
-This is the catalogue of checks performed by `scripts/check_structure.py` and the four separate scanner scripts (`check_synonyms.py`, `check_musts.py`, `check_h2_case.py`, `check_kwargs.py`). Each entry lists what triggers the finding, the severity, and the rationale (so you can explain it back to the user when they ask "why is this a warning").
+This is the catalogue of checks performed by `scripts/check_structure.py` and the five separate scanner scripts (`check_synonyms.py`, `check_musts.py`, `check_h2_case.py`, `check_kwargs.py`, `check_internal_refs.py`). Each entry lists what triggers the finding, the severity, and the rationale (so you can explain it back to the user when they ask "why is this a warning").
 
 ## Contents
 
@@ -11,6 +11,7 @@ This is the catalogue of checks performed by `scripts/check_structure.py` and th
 - Synonym candidate scan (separate script)
 - H2 title-case scan (separate script)
 - Keyword-argument scan (separate script)
+- Internal cross-reference scan (separate script)
 - Severity rationale
 
 ## Frontmatter Checks
@@ -69,7 +70,7 @@ A per-skill confirmed-distinct allow-list, `synonym-ignore.md` in the skill-lint
 
 ## H2 Title-Case Scan (Separate Script)
 
-`check_h2_case.py` walks SKILL.md and every `references/*.md` sibling, flagging H2 headings that are not in title case (e.g. `## Worked example`). The check skips H2s inside fenced code blocks so markdown examples are not flagged.
+`check_h2_case.py` walks SKILL.md and every `references/*.md` sibling, flagging H2 headings that are not in title case (e.g. `## Worked example`). The check skips H2s inside fenced code blocks so markdown examples are not flagged, and skips identifier tokens after a colon-terminated label (`## Packet: schema-language`, `## Mode: full`) — a slug that names a literal argument carries no case to correct, and title-casing it would rename the thing it points at. The carve-out is deliberately narrow: it applies only to an all-lowercase word that follows a `Label:` and either contains a hyphen or is the sole word after the colon, so prose after a colon (`## Note: this is prose`) and hyphenated prose without a label (`## Working with well-formed pages`) are both still flagged.
 
 | `check_id` | Severity | Triggers when |
 |---|---|---|
@@ -90,6 +91,20 @@ Unlike the synonym and musts scanners, every finding here is actionable — ther
 The allow-list lives in `scripts/check_kwargs.py` (`ALLOW_LIST_BUILTINS`, `ALLOW_LIST_EXCEPTIONS`, `ALLOW_LIST_OTHER`). Add to `ALLOW_LIST_OTHER` only when a real call site is flagged that the user decides should be allowed; record the reason in a one-line comment next to the entry so the allow-list stays auditable.
 
 The severity is `error` (not `suggestion`) because `coding-best-practices.md` lists keyword-only calls as a hard project rule, and `references/checklist.md` says "missing type hints, positional args at a call site that has kwargs available" are `error`-tier deviations.
+
+## Internal Cross-Reference Scan (Separate Script)
+
+`check_internal_refs.py` checks a skill's references to its own procedure. It collects every step the file defines — a numbered `1. **Label.**` line and a bolded sub-step label such as `**8.0 — …**` — then flags any `Step N` or `Step N.M` citation in prose with no matching definition. Fenced blocks are skipped, so an example `Step 99` in a template is not a live reference.
+
+| `check_id` | Severity | Triggers when |
+|---|---|---|
+| `stale_step_reference` | warning | Prose cites a step or sub-step number the same file does not define. Almost always renumbering damage: a step was inserted or removed and the cross-references were not repointed. |
+
+The step check runs on `SKILL.md` only. A `references/*.md` sibling legitimately cites its parent's steps ("SKILL.md Step 3 names each entry's home") and defines none of its own, so running it there would flag every correct citation.
+
+Severity is `warning`, not `suggestion`, because a dangling step pointer is a factual error in the procedure rather than a style preference — a reader who follows it lands nowhere — and the fix is determinate once you know which step now holds the work.
+
+Two limits, stated so the check is not trusted for more than it does. It is an **existence** check: a reference that resolves to the *wrong* existing step (`8.4` where `8.3` was meant) passes, and only a reader catches it. And it deliberately does **not** check renamed template *fields* — a reconcile step still naming a `Ledger:` line after the template renamed it to `Removed:`. That was built and cut: a backticked `Foo:` in a skill's prose is usually a field of some *other* document (a wiki page's `sources:`, a report's `result:`), so the check fired on all fourteen skills in this repo without finding one real defect. Separating a field this skill's own template dropped from a field it never had needs the file's prior state, which a single-file scanner does not have; a git-diff variant is the way to revive it.
 
 ## Severity Rationale
 

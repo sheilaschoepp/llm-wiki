@@ -14,6 +14,15 @@ Format: a `## <skill-name>` section per skill; each bullet lists the slash-separ
 - route / path — the verb "routes to" vs a filesystem path
 - write / persist — "write" (emit to disk) vs "persist" (a finding or state remaining)
 
+## cleanup
+
+- record / entry / item — the durable log/report record vs a memory-journal H2 entry vs a single gated decision
+- save / store / write — "save the report" (Step 5, the output artifact) vs "store" (a log line records a commit id; git's object store) vs "write" the act of emitting to a file
+
+## consistency
+
+- save / write — "save the report" (the output artifact) vs "write" a field or line into it
+
 ## forget
 
 - record / entry — the quarantined paper trail vs a log / Recent-activity entry

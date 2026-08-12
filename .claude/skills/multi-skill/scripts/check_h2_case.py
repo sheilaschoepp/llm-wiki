@@ -57,6 +57,51 @@ TITLE_CASE_STOPWORDS = frozenset(
 H2_RE = re.compile(r'^##\s+(.+?)\s*$')
 
 
+def find_identifier_indices(words: list[str]) -> set[int]:
+    """
+    Return indices of words that are identifiers, not prose.
+
+    A heading may name a literal argument the skill is invoked with
+    (`## Packet: schema-language`). Title-casing such a token would
+    rename the thing it points at, so it carries no case to correct and
+    must be skipped rather than flagged — the same carve-out the
+    checklist already makes for backticked code tokens, extended to the
+    bare slugs this repo writes after a `Label:` word.
+
+    A word qualifies only when BOTH hold:
+
+    - it follows a colon-terminated label earlier in the same heading
+      (`Packet:`, `Mode:`), and
+    - it is entirely lowercase, and either contains a hyphen
+      (`schema-language`) or is the only word after the colon
+      (`naming`).
+
+    The two conditions together keep prose out. `## Note: this is prose`
+    has three unhyphenated words after the colon, so none is treated as
+    an identifier and every one is still checked. A hyphenated compound
+    in ordinary prose (`## Working with well-formed pages`) follows no
+    colon, so it is untouched.
+    """
+    colon_index = next(
+        (i for i, word in enumerate(words) if word.endswith(':')),
+        None,
+    )
+    if colon_index is None:
+        return set()
+    tail = list(range(colon_index + 1, len(words)))
+    if not tail:
+        return set()
+    single = len(tail) == 1
+    identifiers = set()
+    for index in tail:
+        word = words[index]
+        if word != word.lower():
+            continue
+        if '-' in word or single:
+            identifiers.add(index)
+    return identifiers
+
+
 def is_title_case(heading: str) -> bool:
     """
     Return True if `heading` follows the title-case convention.
@@ -68,13 +113,18 @@ def is_title_case(heading: str) -> bool:
       it is in TITLE_CASE_STOPWORDS.
     - Words that start with a non-letter (digits, punctuation,
       backticks) are skipped — they have no case.
+    - Identifier tokens after a `Label:` word are skipped; see
+      find_identifier_indices.
     """
     words = heading.split()
     if not words:
         return True
+    identifier_indices = find_identifier_indices(words=words)
     for index, word in enumerate(words):
         first_char = word[0]
         if not first_char.isalpha():
+            continue
+        if index in identifier_indices:
             continue
         if index == 0:
             if not first_char.isupper():

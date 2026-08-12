@@ -45,7 +45,8 @@ pip install --upgrade pip
 # Runtime dependency for the ingest skill's PDF figure extraction.
 echo 'Installing PyMuPDF (ingest figure extraction).'
 pip install \
-    'PyMuPDF>=1.28.2'
+    'PyMuPDF>=1.28.2'\
+    'pytest>=9.1.1'
 
 # Formatter and linter for the skill scripts. Installed into the env
 # rather than relied on globally: a global ruff sees no pyproject.toml
