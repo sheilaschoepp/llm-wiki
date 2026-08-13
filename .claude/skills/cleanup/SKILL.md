@@ -1,13 +1,13 @@
 ---
 name: cleanup
-description: Two-part housekeeping for the wiki's working files. (1) Memory graduation check — classify each memory-tier entry (MEMORY.md, multi-skill, per-skill) against its permanent home and clear the absorbed, spent, and dropped ones; it never writes a rule into a home, so an un-graduated entry is reported with its home and the text to add, and left resident. (2) Outputs cleanup — prune 2-outputs files (OS junk, superseded check reports, reports orphaned from a deleted source or skill, aged artifacts), gating each deletion and recording every removal in the run's log entry with its last-holding commit. Use when the user wants to clean up, prune, consolidate, or clear memory files or old outputs, asks what is safe to remove, whether a rule has landed in its permanent home, or to clear out old, superseded, orphaned, or junk reports. Different from consistency (which only counts memory entries) and forget (which quarantines wiki pages); cleanup removes only memory-journal entries and 2-outputs artifacts.
+description: Three-part housekeeping for the wiki's working files. (1) Memory graduation check — classify each memory-tier entry (MEMORY.md, multi-skill, per-skill) against its permanent home and clear the absorbed, spent, and dropped ones; it never writes a rule into a home, so an un-graduated entry is reported with its home and the text to add, and left resident. (2) Outputs cleanup — prune 2-outputs files (OS junk, superseded check reports, reports orphaned from a deleted source or skill, aged artifacts), gating each deletion and recording every removal in the run's log entry with its last-holding commit. (3) Hot-thread pruning — strike work already finished from hot.md Open threads and Watchlist, entry by entry, acting on lint's detect-only hot_thread_spent findings. Use when the user wants to clean up, prune, consolidate, or clear memory files, old outputs, or stale open threads, asks what is safe to remove, whether a rule has landed in its permanent home, to clear out old, superseded, orphaned, or junk reports, or to prune finished, stale, or spent threads from hot.md. Different from consistency (which only counts memory entries), lint (which detects spent hot threads but never prunes them), and forget (which quarantines wiki pages); cleanup removes only memory-journal entries, 2-outputs artifacts, and finished hot.md thread text.
 ---
 
 # cleanup
 
-Two-part housekeeping for the wiki's own working files: check-and-clear the memory journals, and prune unneeded artifacts from `2-outputs/`. Both jobs only ever remove with the user's explicit, per-item approval.
+Three-part housekeeping for the wiki's own working files: check-and-clear the memory journals, prune unneeded artifacts from `2-outputs/`, and strike finished work from `hot.md`'s Open threads and Watchlist. Every job only ever removes with the user's explicit, per-item approval.
 
-A run does both jobs by default. The user may scope it to one ("just clean memory", "just clean old outputs").
+A run does all three jobs by default. The user may scope it to one ("just clean memory", "just clean old outputs", "just prune the stale threads").
 
 ## Purpose
 
@@ -19,7 +19,9 @@ The hazard the memory job exists to prevent: clearing a memory file on the assum
 
 `2-outputs/` is uncapped: every skill appends dated reports and artifacts there and nothing is auto-pruned, so check folders fill with superseded reports, reports outlive the source or skill they were about, and old working artifacts accumulate. The outputs job surfaces these as deletion candidates — never deleting on its own, always gating each file on the user's approval (CLAUDE.md → Safety rules: deletions are confirmed file by file, never in bulk). That per-file approval is the "deliberate user action" by which `2-outputs/` is allowed to shrink; nothing here is auto-pruned.
 
-The memory job is the deep, on-demand counterpart to the cheap mechanical entry-counter (the `memory_file_graduation_prompt` check). That counter flags a memory file that has grown past its soft cap; this skill reads each entry and decides whether its content is already somewhere permanent.
+`hot.md`'s Open threads and Watchlist carry only outstanding work, but nothing removes an item once its work is done, so finished threads accumulate and the sections stop describing what is actually open. The hot-thread job is the acting half of a detect-and-act pair: `lint`'s `hot_thread_spent` finds a spent entry and deliberately stops, because an entry usually mixes finished and live sub-items and which part to strike is a judgement, not a mechanical fix.
+
+The memory job is the deep, on-demand counterpart to the cheap mechanical entry-counter (the `memory_file_graduation_prompt` check). That counter flags a memory file that has grown past its soft cap; this skill reads each entry and decides whether its content is already somewhere permanent. The hot-thread job stands in the same relation to `hot_thread_spent`: the check counts what looks finished, this skill reads each flagged entry and decides what actually goes.
 
 ## Scope
 
@@ -56,7 +58,13 @@ The three subject-bearing kinds — `ingest`, `skill-linter`, `skill-llm-council
 
 The two preservation folders hold the only findable copy of removed or replaced wiki content — git history holds the bytes, but recovering from it means knowing what to look for. They are never part of any sweep, including the "everything not protected" threshold. The user may still ask to prune them by naming them exactly, which runs the preservation sub-mode in Step 4.
 
-Do not read or modify `0-raw/`. `MEMORY.md`, `CLAUDE.md`, and the `SKILL.md` files are read-only here — an entry that has not landed in its home is reported, never written there (Step 7). The write boundary is stated once in Limits.
+### Hot thread pruning
+
+Read the `hot_thread_spent` findings `lint`'s script emits, split each flagged entry into its finished and still-live halves, and propose the prune entry by entry (Step 4b). Detect-only on lint's side means a finding is a candidate, never a delete instruction.
+
+Pruning here is safe for one reason: `log.md` already holds the permanent record of every operation, so striking a finished thread from `hot.md` loses nothing. That is also why `log.md` itself is never touched by this job — editing a past entry to match the current state would falsify the record the pruning depends on (CLAUDE.md → Hot, index, and log).
+
+Do not read or modify `0-raw/`. `MEMORY.md`, `CLAUDE.md`, and the `SKILL.md` files are read-only here — an entry that has not landed in its home is reported, never written there (Step 7). Within `1-wiki/`, the only editable file is `hot.md`, and only its Open threads and Watchlist. The write boundary is stated once in Limits.
 
 ## When to invoke
 
@@ -65,14 +73,17 @@ Do not read or modify `0-raw/`. `MEMORY.md`, `CLAUDE.md`, and the `SKILL.md` fil
 - The user asks what is safe to remove from the memory files or from `2-outputs/`.
 - The user asks where an un-absorbed entry should go and what text would graduate it — cleanup reports the target and the text; writing it there is the user's act.
 - The user asks to clear out old, superseded, orphaned, or junk reports under `2-outputs/`.
-- As a periodic consolidation pass when memory files or `2-outputs/` have grown.
+- The user asks to prune stale, spent, finished, or already-done threads from `hot.md`, or to act on `lint`'s `hot_thread_spent` findings.
+- As a periodic consolidation pass when memory files, `2-outputs/`, or `hot.md`'s Open threads have grown.
 
 ## When not to invoke
 
 - The user wants the memory entry count against the soft cap only — that is the mechanical `memory_file_graduation_prompt` check.
 - The user wants to add a new memory entry. Append it directly per CLAUDE.md → Memory tiers.
 - Schema or skill drift unrelated to memory. Use `consistency`.
-- Removing a wiki page, source-support link, or attachment. Use `forget` — it quarantines wiki content to `2-outputs/forget/quarantine/`. This skill removes only memory-journal entries and `2-outputs/` artifacts, which git history alone preserves.
+- Removing a wiki page, source-support link, or attachment. Use `forget` — it quarantines wiki content to `2-outputs/forget/quarantine/`. This skill removes only memory-journal entries, `2-outputs/` artifacts, and finished `hot.md` thread text, all of which git history alone preserves.
+- Only *finding out* which hot threads are spent, with no intention to prune. That is `lint`'s `hot_thread_spent` check on its own.
+- Editing `hot.md` Recent activity (a dated rolling cache `lint` trims to five), Active focus (user-owned), or any `log.md` entry (the permanent record, never rewritten to match current state).
 
 ## Procedure
 
@@ -82,13 +93,14 @@ Cleanup Progress:
 - [ ] Step 2: [Memory] Enumerate every memory entry across the tiers
 - [ ] Step 3: [Memory] Classify each entry against its permanent home (verify against current files)
 - [ ] Step 4: [Outputs] Resolve the age threshold, scan and classify 2-outputs candidates (+ preservation sub-mode, if invoked)
+- [ ] Step 4b: [Hot threads] Collect the spent hot.md Open threads / Watchlist entries
 - [ ] Step 5: Save the combined report
 - [ ] Step 6: Prepend log entry
 - [ ] Step 7: Present the memory findings and cleanup decisions
-- [ ] Step 8: On approval, clear approved entries; delete approved output files; record every removal in the log; reconcile
+- [ ] Step 8: On approval, clear approved entries; delete approved output files; prune approved hot threads; record every removal in the log; reconcile
 ```
 
-1. **Load this skill's memory and the permanent-home targets.** Read `.claude/skills/cleanup/cleanup-memory.md` and `.claude/skills/multi-skill/multi-skill-memory.md` for prior corrections to this skill. Read `MEMORY.md` and `CLAUDE.md` in full — `MEMORY.md` is the home most behavioural journal entries graduate into, and `CLAUDE.md` is where wiki-structure and schema rules land. Have the skill files ready to open as needed; a skill-specific entry graduates into its own `SKILL.md`. All three are opened only to see whether a rule is already present. If the user scoped the run to one job, skip the steps for the other (memory job = Steps 2–3; outputs job = Step 4), but always do Steps 5–8 for whichever job ran.
+1. **Load this skill's memory and the permanent-home targets.** Read `.claude/skills/cleanup/cleanup-memory.md` and `.claude/skills/multi-skill/multi-skill-memory.md` for prior corrections to this skill. Read `MEMORY.md` and `CLAUDE.md` in full — `MEMORY.md` is the home most behavioural journal entries graduate into, and `CLAUDE.md` is where wiki-structure and schema rules land. Have the skill files ready to open as needed; a skill-specific entry graduates into its own `SKILL.md`. All three are opened only to see whether a rule is already present. If the user scoped the run to one job, skip the steps for the others (memory job = Steps 2–3; outputs job = Step 4; hot-threads job = Step 4b), but always do Steps 5–8 for whichever job ran.
 
 2. **[Memory] Enumerate every memory entry across the tiers.** List the memory files:
 
@@ -126,6 +138,12 @@ Cleanup Progress:
 
    **Preservation sub-mode (opt-in only).** `2-outputs/forget/quarantine/` and `2-outputs/supersede/preserve/` are never swept. Run the sub-mode only when the user names one of those two folders exactly, and cover only the folder they named — naming a parent is not naming it, and when the phrasing is ambiguous confirm before listing anything, because the sub-mode's downside is irreversible and the ordinary sweep's is not. No plain invocation and no threshold, including "everything not protected", reaches it. The scope test, the subject-resolution rules, the two folders' differing stakes, and its gating and report slot are in `references/preservation.md`.
 
+4b. **[Hot threads] Collect the spent `hot.md` Open threads / Watchlist entries.** Run `python3 .claude/skills/multi-skill/scripts/check_wiki.py 1-wiki` and keep the `hot_thread_spent` findings — one per entry whose stated work the wiki shows is already finished (an entry asking for `*[unverified]*` markers the named pages no longer carry, or calling a page draft or awaiting `/audit` when every page it names is `verified`). The check is detect-only precisely because the judgement below is not mechanical, so do not treat a finding as a delete instruction.
+
+   For each flagged entry, read it in full and split it into **spent** and **live** halves. Spent is work the wiki shows is done: verification requests against pages now `verified`, marker-clearing requests where no named page carries one, deferred sweeps whose `check_id` the same run reports zero of, and past-tense restatements of finished work. Live is everything else — next-source priorities, deferred reciprocal back-links, unresolved adjudications, candidacy notes, and any sub-item naming a page still `draft`, `needs-update`, or still marked. A sentence often carries both ("verify the 4 new pages *and* add the deferred back-links"): keep the live clause and drop only the spent one, rather than deleting the sentence whole.
+
+   Then propose per entry: strike the spent sub-item, or drop the entry entirely when nothing live remains. Record the proposed post-prune text for a trim, so Step 7 can quote exactly what would change and Step 8 applies that text rather than re-deriving it.
+
 5. **Save the combined report** to `2-outputs/cleanup/cleanup-YYYY-MM-DD-HHMM.md`, creating the folder if needed, following the report shape in `references/report-and-log.md`. Obtain the timestamp at write time with `TZ='UTC' date '+%Y-%m-%d-%H%M'` — the session context gives the date but not the current minute. If a report already exists for this minute, append a disambiguating suffix (`-2`, `-3`, …) rather than overwriting it; the report it would clobber is the one recording the previous run's deletions. Include only the sections for the job(s) that ran, and record the superseded predecessor in the protected list as the reference describes.
 
 6. **Prepend log entry** to `1-wiki/log.md`, using the log entry shape in `references/report-and-log.md`. The `Applied (after approval):` and `Removed:` lines are written as "awaiting user" at this step and filled in at Step 8; the `Removed:` list is this run's permanent deletion record, whose line format Step 8.3 owns. Name only the job(s) that ran in the subject, and drop the preservation slot when the sub-mode did not run.
@@ -148,16 +166,19 @@ Cleanup Progress:
 
    For the outputs job, present the candidates grouped by category with the per-file rationale, and the protected-and-skipped summary so the user sees what was deliberately held back. List any `unrecognized` files separately as a reported-only group, with no gate and no proposal. Say that every approved deletion is recorded in this run's log entry with the commit that last held it, so the sweep stays reversible by lookup.
 
+   For the hot-threads job, present each flagged entry with its spent sub-items quoted and the live remainder named, so the user can see exactly what would be struck and what survives. State plainly whether the entry would be trimmed or dropped whole (nothing live left), and quote the Step-4b post-prune text for a trim.
+
    **Gating — recoverability decides the shape of the call.** CLAUDE.md → Safety rules requires deletions confirmed file by file, with one carve-out it applies to `forget`, `supersede`, and `cleanup` alike: git-recoverable copies may be confirmed as a single `AskUserQuestion` multiSelect batch, because git preserves each and any one can be restored. Apply that split by the Step-4 recoverability finding, not by category:
    - **An output file the Step 4 determination marked git-recoverable** — batch these in one multiSelect per category, each row naming the file and its rationale.
    - **Any other output file** — not git-recoverable by that determination, or a preservation-sub-mode file of either folder. One item per `AskUserQuestion` call, never batched. Preservation files are held to per-file confirmation whatever their git state, because each is the only findable copy of a page's content or prior view.
    - **Every memory entry** — one per call, whatever its git state. The clear-vs-keep-vs-delete decision differs per entry rather than sharing one rationale, so a batch would collapse distinct judgements into a single tick.
+   - **Every flagged `hot.md` entry** — one per call, whatever its git state, offering trim / drop whole / keep. The carve-out covers deletions of whole git-recoverable *files*; a hot-thread prune is an edit to live wiki content, and each entry's spent-versus-live split is its own judgement, so batching would collapse distinct calls into a single tick exactly as it would for memory entries.
 
-   These three are exhaustive and ordered: an output file takes the first bullet only on a positive git-recoverable determination, so anything unresolved or ambiguous falls to the second and is gated individually. When in doubt, do not batch.
-   - Mark each gated choice per CLAUDE.md → Communication style: order the recommended option first and mark it `(Recommended)` — `delete` for a spent entry, `clear` for a graduated one, the proposed action for an output candidate. Two calls are genuine no-lean decisions where you state "no recommendation" rather than fake a pick: the `contradicted` drop-vs-keep call, and every preservation-sub-mode file.
-   - A declined or unticked candidate — memory entry or output file — is simply not removed: it stays resident, is recorded in the report as `kept (user declined)`, and cascades to nothing else. Declining one item never blocks approving another.
+   These four are exhaustive and ordered: an output file takes the first bullet only on a positive git-recoverable determination, so anything unresolved or ambiguous falls to the second and is gated individually. When in doubt, do not batch.
+   - Mark each gated choice per CLAUDE.md → Communication style: order the recommended option first and mark it `(Recommended)` — `delete` for a spent entry, `clear` for a graduated one, the proposed action for an output candidate, the proposed trim or drop for a hot-thread entry. Two calls are genuine no-lean decisions where you state "no recommendation" rather than fake a pick: the `contradicted` drop-vs-keep call, and every preservation-sub-mode file.
+   - A declined or unticked candidate — memory entry, output file, or hot-thread entry — is simply not removed: it stays resident, is recorded in the report as `kept (user declined)`, and cascades to nothing else. Declining one item never blocks approving another.
 
-   Do not remove any memory entry or output file without the user's explicit say-so. No approval offered here unlocks a graduation — an un-absorbed entry has no approve-and-promote option to present (see Limits).
+   Do not remove any memory entry, output file, or hot-thread text without the user's explicit say-so. No approval offered here unlocks a graduation — an un-absorbed entry has no approve-and-promote option to present (see Limits).
 
 8. **On approval, apply — resolve each recovery pointer, then remove, then reconcile.**
 
@@ -177,16 +198,20 @@ Cleanup Progress:
 
    **8.2 — For each output file the user approved for deletion:** read its 8.0 pointer; if it is `uncommitted — not recoverable`, restate the caveat and, per CLAUDE.md Safety rules, offer to commit first. Then remove the file (`rm`). Deleting reports never touches the wiki pages or raw sources they describe — only the `2-outputs/` artifact. A `.gitkeep` keeps each emptied folder present in git, so pruning a folder's last report does not drop the folder from `output_kinds_match_disk`.
 
-   **8.3 — Record every removal in this run's `log.md` entry.** git history preserves what this skill deletes, but only if a reader knows what to look for — a path and a commit. `1-wiki/log.md` is already the permanent, complete record of every operation, so the removal record goes there rather than into a separate file: fill in the `Removed:` sub-list of the Step 6 entry, one line per removal, from both jobs, output files and cleared memory entries alike. No kind is exempt — whether an artifact will be wanted again is not knowable at deletion time, and a line costs nothing against a lost report. The line format, and what keeps a removal findable once the report itself is gone, are in `references/removal-safety.md`.
+   **8.2b — For each `hot.md` entry the user approved:** apply the exact Step-4b text that was presented, editing only that entry's line. Then re-run `check_wiki.py` and confirm that entry's finding is gone — a finding that survives means a spent sub-item was reworded rather than struck, or a named page is not in the state the prune assumed. `updated:` bookkeeping does not apply to `hot.md`.
+
+   **8.3 — Record every removal in this run's `log.md` entry.** git history preserves what this skill deletes, but only if a reader knows what to look for — a path and a commit. `1-wiki/log.md` is already the permanent, complete record of every operation, so the removal record goes there rather than into a separate file: fill in the `Removed:` sub-list of the Step 6 entry, one line per removal, from every job — output files, cleared memory entries, and pruned hot-thread text alike. No kind is exempt — whether an artifact will be wanted again is not knowable at deletion time, and a line costs nothing against a lost report. The line format, and what keeps a removal findable once the report itself is gone, are in `references/removal-safety.md`.
 
    **8.4 — Reconcile the record (done-state).** After all approved clears and deletions are applied, update the durable record to match disk: rewrite the log entry's `Applied (after approval):` and `Removed:` lines from "awaiting user" to what actually happened (entries cleared, files deleted, removal lines written, and anything the user declined or that was left resident as un-absorbed), and update the report's Bottom line, summary counts, and any per-entry finding reclassified at 8.1 the same way. The run is complete only when the log and the report both reflect the applied state — if the user approved nothing, the Applied line reads "none approved — all resident" and the `Removed:` list stays empty.
 
 ## Limits
 
 - Do not read or edit raw sources; do not rewrite historical files under `2-outputs/` (the outputs job deletes whole superseded / orphaned / aged files on approval — it does not edit a kept file's contents).
-- cleanup never writes a rule into a permanent home (the reason is in Purpose). `MEMORY.md`, `CLAUDE.md`, and every `SKILL.md` are read-only to this skill — it opens them only to check whether an entry's rule has already landed. An entry that has not landed is reported with its home and the text that would graduate it, and left resident; promoting it is the user's act. This skill's only writes are the report and the log entry (which carries the removal record), and — on approval — the removal or redaction of a memory entry, or the removal of an output file. The report and log are written without asking.
-- Removing a memory entry or an output file is a deletion, gated on user approval. Verified git-recoverable output files may be confirmed as one multiSelect batch per category, per CLAUDE.md → Safety rules; everything not git-recoverable, every preservation-sub-mode file, and every memory entry is one item per `AskUserQuestion` call.
-- Every removal, of every kind and from both jobs, is recorded in this run's `1-wiki/log.md` entry with the commit that last held it. That record is what makes git history a usable archive rather than a theoretical one, so it is written on the same pass as the removal, never deferred and never selective by kind.
+- cleanup never writes a rule into a permanent home (the reason is in Purpose). `MEMORY.md`, `CLAUDE.md`, and every `SKILL.md` are read-only to this skill — it opens them only to check whether an entry's rule has already landed. An entry that has not landed is reported with its home and the text that would graduate it, and left resident; promoting it is the user's act. This skill's only writes are the report and the log entry (which carries the removal record), and — on approval — the removal or redaction of a memory entry, the removal of an output file, or the prune of a `hot.md` thread. The report and log are written without asking.
+- The only `1-wiki/` file this skill may edit is `hot.md`, and only its Open threads and Watchlist sections. `log.md` is written only as this run's own Step 6 entry and its Step 8 reconciliation; a past entry is never rewritten to match the current state, because that would falsify the history that makes hot-thread pruning safe. Recent activity (a rolling cache `lint` trims) and Active focus (user-owned) are out of scope.
+- A spent hot-thread item is struck, never reworded to keep its place. `hot_thread_spent` reads completion off the pages the entry names, so rewording hides the finding without doing the work; the record already lives in `log.md`.
+- Removing a memory entry, an output file, or hot-thread text is a deletion, gated on user approval. Verified git-recoverable output files may be confirmed as one multiSelect batch per category, per CLAUDE.md → Safety rules; everything not git-recoverable, every preservation-sub-mode file, every memory entry, and every hot-thread entry is one item per `AskUserQuestion` call.
+- Every removal, of every kind and from every job, is recorded in this run's `1-wiki/log.md` entry with the commit that last held it. That record is what makes git history a usable archive rather than a theoretical one, so it is written on the same pass as the removal, never deferred and never selective by kind.
 - The protected set is never deleted: every `.gitkeep`, the most-recent report of each whole-wiki check kind (`lint`, `consistency`, `audit`, `cleanup`) plus the most-recent clean `lint` and `consistency` report, and everything under `forget/quarantine/` and `supersede/preserve/`. No protection is subject-scoped: `ingest`, `skill-linter`, and `skill-llm-council` have no kept-latest, and every report of all three is pruned by the ordinary orphaned-subject and aged rules.
 - The preservation folders are pruned only through the opt-in sub-mode the user invokes by naming them; they are never swept, including under "everything not protected".
 - An `unrecognized` file is reported, never proposed for deletion. cleanup resolves a file's kind from its folder and its date from its filename; where either fails, it cannot judge the file and does not gate it.

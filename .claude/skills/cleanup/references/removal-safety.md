@@ -73,7 +73,7 @@ Where a pointer reads `uncommitted — not recoverable`, say so at the moment of
 
 ## The removal record
 
-git history preserves what this skill deletes, but only if a reader knows what to look for — a path and a commit. `1-wiki/log.md` is already the permanent, complete record of every operation, so the removal record goes there rather than into a separate file: fill in the `Removed:` sub-list of the Step 6 log entry, one line per removal, from both jobs, output files and cleared memory entries alike. No kind is exempt — whether an artifact will be wanted again is not knowable at deletion time, and a line costs nothing against a lost report.
+git history preserves what this skill deletes, but only if a reader knows what to look for — a path and a commit. `1-wiki/log.md` is already the permanent, complete record of every operation, so the removal record goes there rather than into a separate file: fill in the `Removed:` sub-list of the Step 6 log entry, one line per removal, from every job — output files, cleared memory entries, and pruned hot-thread text alike. No kind is exempt — whether an artifact will be wanted again is not knowable at deletion time, and a line costs nothing against a lost report.
 
 ```markdown
 - Removed:

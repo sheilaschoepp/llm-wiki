@@ -2,7 +2,7 @@
 
 The two durable artifacts every cleanup run writes: the combined report saved to `2-outputs/cleanup/`, and the dated entry prepended to `1-wiki/log.md`. SKILL.md Steps 5 and 6 hold the filename, the timestamp rule, and what each run must fill in; this file holds the shapes to copy. Load it at write time — the classification steps do not need it.
 
-Include only the sections for the job(s) that ran, and drop the preservation slot when the sub-mode did not run.
+Include only the sections for the job(s) that ran, and drop the preservation slot when the sub-mode did not run. This is the run's own new log entry; no past entry is ever edited to match the current state.
 
 ## Contents
 
@@ -27,6 +27,7 @@ date: YYYY-MM-DD
 ## Bottom line
 - Memory — safe to clear now: <count> graduated; left resident, awaiting promotion elsewhere: <count> (not-graduated / partial); decisions to confirm: <count> (spent → delete; contradicted → drop / keep)
 - Outputs — deletion candidates: <count> (junk J / superseded-check S / orphaned-subject O / aged A / preservation P, sub-mode only); reported, no action: <count> unrecognized; protected and skipped: <count>
+- Hot threads — spent entries: <count> (Open threads <n> / Watchlist <n>); of these, trim <count>, drop whole <count>
 - Uncommitted and unrecoverable if removed: <count> (memory entries + output files; each gated individually)
 
 ## Memory: summary
@@ -83,6 +84,15 @@ date: YYYY-MM-DD
 - clean-report carve-out: lint `<file>`, consistency `<file>` — list a file here only when it differs from that kind's kept-latest, i.e. the newest report was not `clean`
 - preservation: `forget/quarantine/`, `supersede/preserve/` — name each folder separately, since the sub-mode lifts protection for only the one folder the user named
 
+## Hot threads: spent entries
+- Flagged by `hot_thread_spent`: <N> (Open threads <n>, Watchlist <n>)
+
+### `hot.md` line <N> — <trim | drop whole>
+- Spent: "<quoted sub-item>" — <why: every page it names is now verified / no named page carries a marker / the sweep it defers reports zero>
+- Live (kept): <the named remainder, or "nothing — entry dropped">
+- Proposed text: "<the post-prune entry, omitted when dropped whole>"
+- Outcome: proposed-for-trim | proposed-for-drop | kept (user declined) — filled in at Step 8 with what actually happened
+
 ## Self-report
 - {a specific limitation that bit cleanup this run — a graduation call it couldn't make, a candidate it couldn't classify, a safety gate that slowed it} → upgrade: {how the cleanup skill should change} (or the single line: none noted this run; per `.claude/skills/multi-skill/references/self-report.md`)
 ```
@@ -92,11 +102,12 @@ date: YYYY-MM-DD
 Use the schema's dated-and-timed heading (`## [YYYY-MM-DD HH:MM] verb | subject`, 24-hour UTC from the same `TZ='UTC' date` call as Step 5). Name only the job(s) that ran in the subject and drop the line for the job that did not.
 
 ```markdown
-## [YYYY-MM-DD HH:MM] cleanup | memory graduation check + outputs sweep
+## [YYYY-MM-DD HH:MM] cleanup | memory graduation check + outputs sweep + hot-thread prune
 - Saved: [[2-outputs/cleanup/cleanup-YYYY-MM-DD-HHMM.md|cleanup-YYYY-MM-DD-HHMM]]
 - Memory: graduated/safe-to-clear K; left resident C (not-graduated / partial); contradicted D
 - Outputs: candidates — junk J, superseded-check S, orphaned-subject O, aged A, preservation P (sub-mode); unrecognized U (reported); protected K
-- Applied (after approval): <memory clears / output deletions>, or "awaiting user"
+- Hot threads: spent T (Open threads t1, Watchlist t2) — trim X, drop whole Y
+- Applied (after approval): <memory clears / output deletions / hot-thread prunes>, or "awaiting user"
 - Removed: "awaiting user" — replaced in Step 8.3 by one line per removal (path | what it was | descriptor | verified SHA or `uncommitted — not recoverable`)
 ```
 
