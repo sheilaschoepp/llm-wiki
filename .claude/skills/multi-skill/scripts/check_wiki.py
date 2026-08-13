@@ -591,7 +591,7 @@ CHECKS: dict[str, str | None] = {
     'unlinked_page_mention': 'warning',
     'unverified_claim': 'info',
     'vague_source_referent': 'warning',
-    'verified_anchor_unaudited': 'error',
+    'verified_anchor_unaudited': 'warning',
     'verified_hash_mismatch': 'warning',
     'wikilink_display_uncapitalized': 'warning',
     'wikilink_pipe_spacing': 'warning',
@@ -1496,8 +1496,12 @@ def anchor_change_findings(
     relative to its HEAD version while the page stayed `verified`. A
     section change is a factual claim about where the cited content sits
     — excluded from the verification- neutral allowlist (CLAUDE.md ->
-    Page Status) — so only a raw fact-check (audit) may keep the page
-    verified. A pure RELOCATION (the same anchor + page, repositioned
+    Page Status) — so it holds only if some run opened the raw at that
+    page and confirmed it. The script cannot see whether one did, so
+    this is a WARNING on audit's authored worklist rather than a
+    blocking Critical: the certifying run records the anchor in its own
+    report, and audit re-checks any anchor no run claims to have
+    certified. A pure RELOCATION (the same anchor + page, repositioned
     relative to the link) and any minor typo/format edit are neutral and
     not flagged; a bullet marked `*[unverified]*` is exempt (already
     pending).
@@ -1567,15 +1571,17 @@ def anchor_change_findings(
                         f'`status: verified` page has a locator whose section/'
                         f'figure anchor `{am.group(0)}` (#page={pageN}) was added '
                         f'or changed since the last commit, yet the page is still '
-                        f'`verified`. A section change is grounds for re-'
-                        f'verification — only a raw fact-check (audit) may keep it '
-                        f'verified; self-re-stamping a section change is not '
-                        f'verification.'
+                        f'`verified`. A section change is a claim about where the '
+                        f'cited content sits, so it holds only if the raw was '
+                        f'opened at that page and the anchor confirmed there — '
+                        f'never inferred from the page number or the wiki page.'
                     ),
                     fix_hint=(
-                        'Demote the page to `draft` (strip `verified_hash:`), or '
-                        'mark the changed bullet `*[unverified]*`, and let `audit` '
-                        're-verify the anchor against the raw.'
+                        'Confirm the anchor against the raw (settle it by the '
+                        'nearest heading above the cited text) and keep the page '
+                        '`verified`; or mark the bullet `*[unverified]*`; or '
+                        'demote the page to `draft` (strip `verified_hash:`). '
+                        'Audit carries this on its authored worklist.'
                     ),
                 )
             )

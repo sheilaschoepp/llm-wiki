@@ -1,6 +1,16 @@
 # audit — semantic check catalogue (Step 4)
 
-The full Critical / Warning / Info catalogue audit runs in Step 4, across all pages (these are cross-page and prose-quality checks needing no raw re-read). Critical = support/faithfulness failures; Warning = the authored-worklist items audit carries out in Step 7; Info = candidates and suggestions.
+The full Critical / Warning / Info catalogue audit runs in Step 4, across all pages — certified or not — since these are page-level, cross-page, and prose-quality checks needing no raw re-read. Critical = support/faithfulness failures; Warning = the authored-worklist items audit carries out in Step 7; Info = candidates and suggestions.
+
+The five questions Step 4 exists to answer sit in the Warning tier below, because their disposition is an authored fix rather than a status change. Severity here reflects what audit does about a finding, not how much it matters — these are the pass's centre of gravity, not its afterthoughts. What each one looks for:
+
+- **Is this one idea, or three that should be split?** Atomicity is a property of the page, not of any bullet in it. A page can have every claim certified and still be three ideas sharing a title, because nothing in a claim-level check ever asks what the page as a whole is about.
+- **Does it duplicate a page that already exists?** A near-duplicate is invisible from inside either page — both read as coherent — so only a pass holding the inventory can see it.
+- **Does it contradict something the wiki holds?** Cross-page disagreement not surfaced in `Contradictions` or `Tensions` reads as consensus when it is not, and the two pages are each internally faithful, so no per-claim check fires.
+- **Is it well connected?** A page whose only links are to its own source's pages is the signature of a connection graph never swept: run the relationship taxonomy across functional roles (`.claude/skills/multi-skill/references/relationship-sweep.md`), walking same-role concepts across every framework, not just the page's own neighbourhood.
+- **Does it read like an LLM wrote it?** Puffing openers, elegant variation, fabricated typologies, the broader-context reflex, participial tails. The authoring run's page self-check catches the obvious ones while the sentence is still being written; this is the read that catches what survived, on the finished page.
+
+Two of the Criticals below (the citation-form and claim-faithfulness items) turn on whether a claim is true of its source rather than on how the page is built. Step 4 does no raw re-read, so it does not settle those: it raises them as **cause** for Step 5, naming what would refute the claim, and Step 5 opens the raw. A Critical asserted here and acted on without that check is exactly the false-positive fix `references/apply-fixes.md` forbids.
 
 Critical:
 
@@ -37,6 +47,6 @@ Warning:
 
 Info:
 
-- *Verified candidate* — looks ready for `status: verified` but audit did not fact-check it against its raw source this run; flag for the next audit.
+- *Verified candidate* — a page whose claims no run certified (so it sits `draft`) that looks ready, but which audit did not fact-check against its raw this run; flag for the next audit. Expect this to be rare and to name a legacy or hand-edited page: a page ingest wrote arrives already certified or already carrying its markers, so it needs no candidate flag.
 - *Missing page* — high-value concept/entity page implied by multiple source pages but not yet written.
 - *Next source* — suggested next source to close a gap in support; suggest only a source you are confident genuinely exists (never invent a title, author, or venue), and mark an uncertain one `(verify exists)` — CLAUDE.md's no-fabricated-citations rule, the same guard ingest's Recommended next ingests carries.
