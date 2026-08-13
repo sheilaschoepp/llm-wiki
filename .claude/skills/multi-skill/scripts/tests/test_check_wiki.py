@@ -2760,5 +2760,120 @@ class RawIntegrityBooksTests(unittest.TestCase):
         self.assertNotIn('raw_without_source_page', ids)
 
 
+class HotThreadSpentTests(unittest.TestCase):
+    """
+    hot_thread_spent: an Open threads / Watchlist entry whose stated
+    work the wiki shows is already done (CLAUDE.md -> Hot, Index, And
+    Log).
+    """
+
+    LINK = '[[1-wiki/concepts/c.md|c]]'
+
+    def _run(self, entry, status='verified', body='> - a claim'):
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            _write_page(
+                tmp,
+                'concepts',
+                'c.md',
+                CONCEPT_FM.replace('status: draft', f'status: {status}'),
+                body,
+            )
+            d = _wiki(
+                tmp,
+                hot='# Hot\n\n## Open threads\n\n'
+                + entry
+                + '\n\n## Active focus\n\n- x\n',
+            )
+            return [
+                f
+                for f in cw.check_hot_threads_spent(wiki_root=d)
+                if f['check_id'] == 'hot_thread_spent'
+            ]
+
+    def test_marker_request_with_no_marker_left_is_spent(self):
+        f = self._run(f'- clear the `*[unverified]*` markers on {self.LINK}')
+        self.assertEqual(len(f), 1)
+        self.assertIn('markers to be cleared', f[0]['message'])
+
+    def test_marker_request_still_live_when_page_carries_one(self):
+        self.assertEqual(
+            self._run(
+                f'- clear the `*[unverified]*` markers on {self.LINK}',
+                body='> - *[unverified]* a pending claim',
+            ),
+            [],
+        )
+
+    def test_awaiting_audit_with_verified_page_is_spent(self):
+        f = self._run(f'- Two new draft concepts, awaiting /audit: {self.LINK}')
+        self.assertEqual(len(f), 1)
+        self.assertIn('every page it names is `verified`', f[0]['message'])
+
+    def test_awaiting_audit_still_live_when_page_is_draft(self):
+        self.assertEqual(
+            self._run(f'- awaiting /audit: {self.LINK}', status='draft'), []
+        )
+
+    def test_needs_update_page_keeps_the_thread_live(self):
+        self.assertEqual(
+            self._run(f'- Needs: /audit on {self.LINK}', status='needs-update'), []
+        )
+
+    def test_rewording_does_not_clear_it(self):
+        """
+        Completion is read off the pages, not the entry's wording.
+        """
+        f = self._run(f'- Needs: /audit to verify {self.LINK} and tidy it up')
+        self.assertEqual(len(f), 1)
+
+    def test_entry_naming_no_resolvable_page_is_skipped(self):
+        self.assertEqual(self._run('- awaiting /audit on something unlinked'), [])
+
+    def test_recent_activity_and_active_focus_are_out_of_scope(self):
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            _write_page(
+                tmp,
+                'concepts',
+                'c.md',
+                CONCEPT_FM.replace('status: draft', 'status: verified'),
+                '> - a claim',
+            )
+            d = _wiki(
+                tmp,
+                hot=(
+                    '# Hot\n\n## Recent activity\n\n'
+                    f'- [2026-08-13 10:00] ingest | awaiting /audit {self.LINK}\n\n'
+                    '## Active focus\n\n'
+                    f'- awaiting /audit {self.LINK}\n'
+                ),
+            )
+            self.assertEqual(cw.check_hot_threads_spent(wiki_root=d), [])
+
+    def test_watchlist_is_in_scope(self):
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            _write_page(
+                tmp,
+                'concepts',
+                'c.md',
+                CONCEPT_FM.replace('status: draft', 'status: verified'),
+                '> - a claim',
+            )
+            d = _wiki(
+                tmp,
+                hot=f'# Hot\n\n## Watchlist\n\n- awaiting /audit {self.LINK}\n',
+            )
+            f = cw.check_hot_threads_spent(wiki_root=d)
+            self.assertEqual(len(f), 1)
+            self.assertTrue(f[0]['message'].startswith('Watchlist entry'))
+
+    def test_missing_hot_file_is_not_an_error(self):
+        with tempfile.TemporaryDirectory() as td:
+            d = _wiki(Path(td))
+            self.assertEqual(cw.check_hot_threads_spent(wiki_root=d), [])
+
+
 if __name__ == '__main__':
     unittest.main()

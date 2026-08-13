@@ -557,6 +557,7 @@ CHECKS: dict[str, str | None] = {
     'filename_not_kebab': 'info',
     'frontmatter_missing': 'error',
     'frontmatter_missing_field': 'warning',
+    'hot_thread_spent': 'warning',
     'hyphenated_open_compound': 'warning',
     'hyphenated_open_compound_noun': 'warning',
     'index_missing_entry': 'warning',
@@ -4592,6 +4593,114 @@ def check_chronology(wiki_root: Path) -> list[dict[str, Any]]:
     return findings
 
 
+# Phrases in a hot.md Open threads / Watchlist entry that describe work
+# as still pending. Each pairs with a probe of the pages the entry
+# names: the entry is spent only when the wiki no longer matches it.
+HOT_PENDING_MARKER_RE = re.compile(r'\*\[unverified\]\*')
+HOT_PENDING_DRAFT_RE = re.compile(
+    r'awaiting\s+/audit'
+    r'|new and draft'
+    r'|\bdraft (?:page|concept|synthesis|syntheses|pages|concepts)\b'
+    r'|Needs:\s*/audit',
+    re.IGNORECASE,
+)
+HOT_WIKI_LINK_RE = re.compile(
+    r'\[\[(1-wiki/(?:sources|concepts|entities|syntheses)/[^|\]#]+\.md)'
+)
+
+
+def check_hot_threads_spent(wiki_root: Path) -> list[dict[str, Any]]:
+    """
+    A hot.md Open threads / Watchlist entry whose stated work is already
+    done (CLAUDE.md -> Hot, Index, And Log).
+
+    Both sections carry only outstanding work, so an entry asking for
+    `*[unverified]*` markers to be cleared is spent once the pages it
+    names carry none, and one calling a page draft or awaiting `/audit`
+    is spent once every page it names is `verified`. Completion is read
+    off those pages rather than trusted from the entry's own wording, so
+    rephrasing a finished thread does not clear the finding.
+
+    Detect-only: an entry usually mixes finished and live sub-items, so
+    which part to strike is a judgement lint does not make.
+    """
+    findings: list[dict[str, Any]] = []
+    hot = wiki_root / 'hot.md'
+    if not hot.exists():
+        return findings
+    rel = str(hot.relative_to(wiki_root.parent))
+
+    # (status, carries an unverified marker) per linked page, read once.
+    state: dict[str, tuple[str, bool] | None] = {}
+
+    def page_state(target: str) -> tuple[str, bool] | None:
+        if target not in state:
+            try:
+                text = (wiki_root.parent / target).read_text(encoding='utf-8')
+            except OSError:
+                # Dangling link — a separate check's business.
+                state[target] = None
+            else:
+                m = re.search(r'^status:\s*(\S+)', text, re.MULTILINE)
+                state[target] = (
+                    m.group(1).strip() if m else '',
+                    bool(HOT_PENDING_MARKER_RE.search(text)),
+                )
+        return state[target]
+
+    section = ''
+    for n, ln in enumerate(hot.read_text(encoding='utf-8').split('\n'), start=1):
+        if ln.startswith('## '):
+            section = ln[3:].strip()
+            continue
+        if section not in ('Open threads', 'Watchlist') or not ln.startswith('- '):
+            continue
+
+        named = [
+            s
+            for s in (
+                page_state(t) for t in dict.fromkeys(HOT_WIKI_LINK_RE.findall(ln))
+            )
+            if s is not None
+        ]
+        # Names no resolvable page — no completion state to check.
+        if not named:
+            continue
+
+        spent: list[str] = []
+        if HOT_PENDING_MARKER_RE.search(ln) and not any(marked for _, marked in named):
+            spent.append(
+                'asks for `*[unverified]*` markers to be cleared, but no page '
+                'it names carries one'
+            )
+        if HOT_PENDING_DRAFT_RE.search(ln) and all(st == 'verified' for st, _ in named):
+            spent.append(
+                'calls a page draft or awaiting `/audit`, but every page it '
+                'names is `verified`'
+            )
+        if not spent:
+            continue
+
+        findings.append(
+            finding(
+                check='hot_thread_spent',
+                file=rel,
+                message=(
+                    f'{section} entry (line {n}) describes work that is '
+                    f'already done: it {"; it ".join(spent)}.'
+                ),
+                fix_hint=(
+                    'Strike the finished sub-item from the entry, and drop the whole '
+                    'entry once nothing live remains. The work stays on record in '
+                    'log.md, which is never edited to match current state, so pruning '
+                    'hot.md loses nothing. Detect-only: an entry usually mixes finished '
+                    'and live items, so lint does not prune it for you.'
+                ),
+            )
+        )
+    return findings
+
+
 def check_pagination_registration(wiki_root: Path) -> list[dict[str, Any]]:
     """
     A raw cited somewhere with a `#page=N` deep-link but absent from the
@@ -4670,6 +4779,7 @@ def main() -> int:
 
     findings.extend(check_index_drift(wiki_root=wiki_root))
     findings.extend(check_chronology(wiki_root=wiki_root))
+    findings.extend(check_hot_threads_spent(wiki_root=wiki_root))
     findings.extend(check_attachments(wiki_root=wiki_root))
     findings.extend(check_raw_integrity(wiki_root=wiki_root))
     findings.extend(check_orphan_pages(wiki_root=wiki_root))
