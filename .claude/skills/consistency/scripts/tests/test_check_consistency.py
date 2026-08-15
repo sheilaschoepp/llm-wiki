@@ -434,6 +434,47 @@ class TestCheckConsistency(unittest.TestCase):
         assert out[0]['check_id'] == 'identity_term_leakage'
         assert 'INACTIVE' in out[0]['message']
 
+    # --- legal-attribution exemption ---
+
+    @staticmethod
+    def _identity_vault(root: Path, name: str) -> None:
+        about = root / 'a-archive' / 'about-me'
+        about.mkdir(parents=True, exist_ok=True)
+        (about / 'about-me.md').write_text(
+            f'# About\n\n## Identity\n\n**Name**: {name}\n',
+            encoding='utf-8',
+        )
+
+    def test_identity_leakage_exempts_legal_attribution_files(self) -> None:
+        # A licence must name its copyright holder to be binding, so the
+        # identity term there is required text and NEITHER fix hint (move
+        # to about-me, or remove) is available. All spellings of the stem
+        # are exempt, extensionless included.
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            name = 'Ada Lovelace'
+            self._identity_vault(root, name)
+            for fn in ('LICENSE', 'LICENCE.md', 'COPYING', 'NOTICE.txt', 'AUTHORS.md'):
+                (root / fn).write_text(f'Copyright (c) 2026 {name}\n', encoding='utf-8')
+            assert cc.check_identity_term_leakage(root) == []
+
+    def test_identity_leakage_still_fires_outside_legal_files(self) -> None:
+        # The exemption is scoped to the attribution files by stem — it
+        # must not blanket the repo, and a file merely MENTIONING a
+        # licence is not one.
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            name = 'Ada Lovelace'
+            self._identity_vault(root, name)
+            (root / 'README.md').write_text(
+                f'Maintained by {name}. See LICENSE for terms.\n',
+                encoding='utf-8',
+            )
+            out = cc.check_identity_term_leakage(root)
+        assert len(out) == 1
+        assert out[0]['file'] == 'README.md'
+        assert out[0]['check_id'] == 'identity_term_leakage'
+
     # --- personal-info email regex: alphabetic-TLD guard ---
 
     def test_email_re_matches_real_addresses(self) -> None:

@@ -387,7 +387,8 @@ CHECK_MANIFEST = [
             'CLAUDE.md + .claude/skills/** text files including scripts; the '
             'structural exemptions are *-memory.md journals, the agent-writable '
             'curated data files in AGENT_DATA_FILES (hyphenation-lists / '
-            'unlinked-mention-ignore / pagination-map — data, not logic, whose content '
+            'unlinked-mention-ignore / alias-detect-exempt / pagination-map — data, '
+            'not logic, whose content '
             "is by construction the vault's own), and the STANDALONE_SKILL_NAMES "
             'folders. Flags bibkey-pattern paper citations not in the placeholder '
             "allowlist (PLACEHOLDER_BIBKEYS); these leak a vault's research-corpus "
@@ -1333,6 +1334,14 @@ def check_personal_info_leakage(root: Path) -> list[dict[str, Any]]:
 # about-me/about-me.md. Terms are auto-extracted from the Identity
 # section of about-me/about-me.md so the check stays in sync as that
 # file evolves.
+#
+# Legal-attribution files are exempt: naming the copyright holder is
+# what makes them binding, so the identity term there is required text,
+# not leakage. Compared against the uppercased STEM, so both the
+# extensionless and the `.md` / `.txt` spellings match.
+LEGAL_ATTRIBUTION_FILES = frozenset(
+    {'LICENSE', 'LICENCE', 'COPYING', 'NOTICE', 'AUTHORS'}
+)
 URL_RE = re.compile(r'https?://[^\s)\]]+')
 GENERIC_URL_TOKENS = {
     'www',
@@ -1495,6 +1504,18 @@ def check_identity_term_leakage(root: Path) -> list[dict[str, Any]]:
             continue
         if f.name == '.gitkeep':
             continue
+        if f.stem.upper() in LEGAL_ATTRIBUTION_FILES:
+            # A licence, copyright notice, or attribution file must name
+            # its copyright holder to do its job, so a hit here is
+            # required text rather than leakage -- and NEITHER of this
+            # check's two fix hints is available: the name cannot move
+            # to about-me/ and cannot be removed. Left unexempted it is a
+            # permanent finding every run must re-diagnose and sanction
+            # by hand. The check's purpose is keeping the vault owner's
+            # identity out of REUSABLE GENERIC INFRA; a legally-required
+            # attribution is not that. Matched on the stem so LICENSE,
+            # LICENSE.md, and LICENSE.txt all qualify.
+            continue
         try:
             content = f.read_text(encoding='utf-8')
         except (
@@ -1587,6 +1608,7 @@ AGENT_DATA_FILES = frozenset(
     {
         'hyphenation-lists.md',  # hyphenated_open_compound_noun (lint)
         'unlinked-mention-ignore.md',  # unlinked_page_mention suppressions (lint)
+        'alias-detect-exempt.md',  # unlinked_page_mention detect-exemptions (lint)
         'pagination-map.md',  # locator_page_mismatch / locator exemption (lint)
     }
 )
