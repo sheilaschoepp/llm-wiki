@@ -580,6 +580,7 @@ CHECKS: dict[str, str | None] = {
     'source_locator_incomplete': 'warning',
     'source_stem_mismatch': 'info',
     'sources_callout_desync': 'warning',
+    'stale_alias_exempt': 'warning',
     'stale_draft': 'info',
     'stale_mention_ignore': 'warning',
     'stale_needs_update': 'warning',
@@ -591,7 +592,7 @@ CHECKS: dict[str, str | None] = {
     'unlinked_page_mention': 'warning',
     'unverified_claim': 'info',
     'vague_source_referent': 'warning',
-    'verified_anchor_unaudited': 'warning',
+    'verified_anchor_unaudited': 'error',
     'verified_hash_mismatch': 'warning',
     'wikilink_display_uncapitalized': 'warning',
     'wikilink_pipe_spacing': 'warning',
@@ -1003,6 +1004,72 @@ def _load_unlinked_mention_ignore(
 
 
 UNLINKED_MENTION_IGNORE = _load_unlinked_mention_ignore()
+
+
+# A *detect-exemption* removes one display form of one page from this
+# check's matching vocabulary while leaving it in the page's `aliases:`
+# for Obsidian search and `[[` autocomplete. It exists for the form whose
+# precision is so low that suppressing its hits one at a time is the
+# larger error: `interaction-effect`'s bare alias `interaction` fired 40
+# times for 7 genuine references and accumulated 113 verified-ignore
+# entries, a quarter of that whole file, and every future ingest re-fires
+# it. Dropping such an alias from the YAML is the wrong fix, because the
+# genuine references are written in the bare form too, so the page would
+# lose its retrieval handle as well as its detection.
+#
+# The trade is deliberate and per-form: an exempted form stops being
+# detected anywhere, so its genuine unlinked references stop being
+# flagged too. Exempt only a form whose measured precision does not repay
+# the judgement cost, and prefer exempting one form of a page over
+# exempting the page (a multi-word form usually keeps earning its place
+# — `interaction effect` stays detected when bare `interaction` does
+# not). The failure mode is a missed link, never a wrong one.
+#
+# Data file: .claude/skills/multi-skill/alias-detect-exempt.md.
+ALIAS_DETECT_EXEMPT_FILE = (
+    Path(__file__).resolve().parent.parent / 'alias-detect-exempt.md'
+)
+
+
+def _load_alias_detect_exempt(
+    path: Path = ALIAS_DETECT_EXEMPT_FILE,
+) -> list[dict[str, Any]]:
+    """
+    Parse the detect-exemption entries, one dict per line: the page
+    `stem` whose form is exempted, the lowercased `form`, and the
+    1-based `line` in the data file (so a stale entry reports at its own
+    line).
+
+    Tolerant by design, like the verified-ignore loader: a missing or
+    unreadable file returns no entries — the check then runs fully
+    unexempted, which is the safe direction — and a malformed line is
+    skipped, never raised. Never crashes lint.
+    """
+    entries: list[dict[str, Any]] = []
+    try:
+        text = path.read_text(encoding='utf-8')
+    except OSError:
+        return entries
+    section: str | None = None
+    for lineno, raw in enumerate(text.splitlines(), 1):
+        line = raw.strip()
+        if line.startswith('## '):
+            section = line[3:].strip().lower()
+            continue
+        if section != 'detect-exempt' or not line.startswith('- '):
+            continue
+        item = line[2:].strip()
+        if not item or item.startswith('<!--'):
+            continue
+        parts = [p.strip() for p in item.split('::')]
+        if len(parts) != 2 or not all(parts):
+            continue
+        stem, form = parts
+        entries.append({'stem': stem, 'form': form.lower(), 'line': lineno})
+    return entries
+
+
+ALIAS_DETECT_EXEMPT = _load_alias_detect_exempt()
 
 
 # What each physical page of each raw PDF actually PRINTS. A locator
@@ -1496,12 +1563,8 @@ def anchor_change_findings(
     relative to its HEAD version while the page stayed `verified`. A
     section change is a factual claim about where the cited content sits
     — excluded from the verification- neutral allowlist (CLAUDE.md ->
-    Page Status) — so it holds only if some run opened the raw at that
-    page and confirmed it. The script cannot see whether one did, so
-    this is a WARNING on audit's authored worklist rather than a
-    blocking Critical: the certifying run records the anchor in its own
-    report, and audit re-checks any anchor no run claims to have
-    certified. A pure RELOCATION (the same anchor + page, repositioned
+    Page Status) — so only a raw fact-check (audit) may keep the page
+    verified. A pure RELOCATION (the same anchor + page, repositioned
     relative to the link) and any minor typo/format edit are neutral and
     not flagged; a bullet marked `*[unverified]*` is exempt (already
     pending).
@@ -1571,17 +1634,15 @@ def anchor_change_findings(
                         f'`status: verified` page has a locator whose section/'
                         f'figure anchor `{am.group(0)}` (#page={pageN}) was added '
                         f'or changed since the last commit, yet the page is still '
-                        f'`verified`. A section change is a claim about where the '
-                        f'cited content sits, so it holds only if the raw was '
-                        f'opened at that page and the anchor confirmed there — '
-                        f'never inferred from the page number or the wiki page.'
+                        f'`verified`. A section change is grounds for re-'
+                        f'verification — only a raw fact-check (audit) may keep it '
+                        f'verified; self-re-stamping a section change is not '
+                        f'verification.'
                     ),
                     fix_hint=(
-                        'Confirm the anchor against the raw (settle it by the '
-                        'nearest heading above the cited text) and keep the page '
-                        '`verified`; or mark the bullet `*[unverified]*`; or '
-                        'demote the page to `draft` (strip `verified_hash:`). '
-                        'Audit carries this on its authored worklist.'
+                        'Demote the page to `draft` (strip `verified_hash:`), or '
+                        'mark the changed bullet `*[unverified]*`, and let `audit` '
+                        're-verify the anchor against the raw.'
                     ),
                 )
             )
@@ -1638,9 +1699,7 @@ def check_verified_hash(
     try:
         actual = body_hash(path=str(path))
     except OSError:
-        # Unreadable mid-run (TOCTOU); check_page's own read already
-        # surfaces a real absence.
-        return []
+        return []  # unreadable mid-run (TOCTOU); check_page's own read already surfaces a real absence
     except ValueError:
         # body_hash refuses a frontmatter block it cannot cleanly close:
         # it needs an exact `---` delimiter line, but
@@ -1818,17 +1877,15 @@ def check_page(path: Path, wiki_root: Path) -> list[dict[str, Any]]:
         # Zero-source pages (check_id: zero_source_page).
         if actual == 0 and kind in {'entity', 'concept', 'synthesis'}:
             sev = 'error' if kind == 'synthesis' else 'warning'
-            reason = (
-                'syntheses are structurally invalid without sources'
-                if kind == 'synthesis'
-                else 'fragile'
-            )
             findings.append(
                 finding(
                     severity=sev,
                     check='zero_source_page',
                     file=rel,
-                    message=(f'{kind.capitalize()} page has no sources ({reason}).'),
+                    message=(
+                        f'{kind.capitalize()} page has no sources '
+                        f'({"syntheses are structurally invalid without sources" if kind == "synthesis" else "fragile"}).'
+                    ),
                     fix_hint='Add source support or quarantine the page via /forget.',
                 )
             )
@@ -4295,6 +4352,17 @@ def check_unlinked_page_mentions(wiki_root: Path) -> list[dict[str, Any]]:
         ignore_by_key.setdefault((e['page'], e['target']), []).append(idx)
     used_entries: set[int] = set()
 
+    # Detect-exemptions, indexed by the page whose form they exempt. An
+    # exemption is recorded per (stem, form), so exempting `interaction`
+    # for `interaction-effect` leaves any *other* page's identical form
+    # detecting normally.
+    exempt_by_stem: dict[str, set[str]] = {}
+    exempt_lines: dict[tuple[str, str], int] = {}
+    for e in ALIAS_DETECT_EXEMPT:
+        exempt_by_stem.setdefault(e['stem'], set()).add(e['form'])
+        exempt_lines.setdefault((e['stem'], e['form']), e['line'])
+    exempt_used: set[tuple[str, str]] = set()
+
     form_to_stem: dict[str, str] = {}
     own_forms: dict[str, set[str]] = {}
     page_paths: dict[str, Path] = {}
@@ -4305,9 +4373,20 @@ def check_unlinked_page_mentions(wiki_root: Path) -> list[dict[str, Any]]:
         for page in folder_path.glob('*.md'):
             fm, _ = parse_frontmatter(text=page.read_text(encoding='utf-8'))
             forms = _display_forms_for(stem=page.stem, fm=fm or {})
+            # own_forms keeps the *unexempted* set. Self-exclusion is
+            # about a page not being asked to link to itself, which is
+            # true of an exempted form too — and if another page also
+            # carries that form, dropping it here would make this page's
+            # own use of its own name read as a mention of that one.
             own_forms[page.stem] = forms
             page_paths[page.stem] = page
+            exempted = exempt_by_stem.get(page.stem, set())
             for f in forms:
+                if f in exempted:
+                    # Stays in `aliases:` for search and autocomplete;
+                    # only this check's vocabulary drops it.
+                    exempt_used.add((page.stem, f))
+                    continue
                 # On an alias collision (a separate check), keep the
                 # first seen and leave the ambiguous form to that check,
                 # not this one.
@@ -4318,6 +4397,9 @@ def check_unlinked_page_mentions(wiki_root: Path) -> list[dict[str, Any]]:
             _stale_mention_ignore_findings(
                 used=used_entries, page_paths=page_paths, repo_root=repo_root
             )
+        )
+        findings.extend(
+            _stale_alias_exempt_findings(used=exempt_used, page_paths=page_paths)
         )
         return findings
 
@@ -4429,6 +4511,58 @@ def check_unlinked_page_mentions(wiki_root: Path) -> list[dict[str, Any]]:
             used=used_entries, page_paths=page_paths, repo_root=repo_root
         )
     )
+    findings.extend(
+        _stale_alias_exempt_findings(used=exempt_used, page_paths=page_paths)
+    )
+    return findings
+
+
+def _stale_alias_exempt_findings(
+    used: set[tuple[str, str]], page_paths: dict[str, Path]
+) -> list[dict[str, Any]]:
+    """
+    Report a detect-exemption that exempts nothing, so the data file
+    does not rot silently (the same hygiene pass the verified-ignore
+    list gets). An entry goes stale two ways, and the message names
+    which: the page it names no longer exists, or that page no longer
+    carries the form — the alias was renamed or removed, or the stem
+    changed.
+
+    Warning tier, matching `stale_mention_ignore`: it is audit's data
+    file and audit's worklist to clean up, and an Info finding would be
+    one no skill is allowed to action. A stale exemption is inert — it
+    can only fail to exempt, never wrongly suppress a mention — so this
+    is hygiene, not a defect.
+    """
+    findings: list[dict[str, Any]] = []
+    rel = '.claude/skills/multi-skill/alias-detect-exempt.md'
+    for e in ALIAS_DETECT_EXEMPT:
+        key = (e['stem'], e['form'])
+        if key in used:
+            continue
+        if e['stem'] not in page_paths:
+            why = f'page `{e["stem"]}` no longer exists'
+        else:
+            why = (
+                f'page `{e["stem"]}` no longer carries the display form '
+                f'`{e["form"]}` (the alias was renamed or removed, or the '
+                f'stem changed)'
+            )
+        findings.append(
+            finding(
+                check='stale_alias_exempt',
+                file=rel,
+                message=(
+                    f'Detect-exemption on line {e["line"]} exempts nothing: '
+                    f'{why}. The entry is inert, so this is hygiene, not a '
+                    f'defect.'
+                ),
+                fix_hint=(
+                    f'Delete the entry (`{e["stem"]} :: {e["form"]}`) from '
+                    f'`{rel}`, or correct it to the form the page now carries.'
+                ),
+            )
+        )
     return findings
 
 
@@ -4599,9 +4733,9 @@ def check_chronology(wiki_root: Path) -> list[dict[str, Any]]:
     return findings
 
 
-# Phrases in a hot.md Open threads / Watchlist entry that describe work
-# as still pending. Each pairs with a probe of the pages the entry
-# names: the entry is spent only when the wiki no longer matches it.
+# Phrases in a hot.md Open threads / Watchlist entry that describe work as
+# still pending. Each pairs with a probe of the pages the entry names: the
+# entry counts as spent only when the wiki no longer matches the phrase.
 HOT_PENDING_MARKER_RE = re.compile(r'\*\[unverified\]\*')
 HOT_PENDING_DRAFT_RE = re.compile(
     r'awaiting\s+/audit'
@@ -4644,8 +4778,7 @@ def check_hot_threads_spent(wiki_root: Path) -> list[dict[str, Any]]:
             try:
                 text = (wiki_root.parent / target).read_text(encoding='utf-8')
             except OSError:
-                # Dangling link — a separate check's business.
-                state[target] = None
+                state[target] = None  # dangling link — a separate check's business
             else:
                 m = re.search(r'^status:\s*(\S+)', text, re.MULTILINE)
                 state[target] = (
@@ -4669,20 +4802,17 @@ def check_hot_threads_spent(wiki_root: Path) -> list[dict[str, Any]]:
             )
             if s is not None
         ]
-        # Names no resolvable page — no completion state to check.
         if not named:
-            continue
+            continue  # names no resolvable page — nothing to check completion against
 
         spent: list[str] = []
         if HOT_PENDING_MARKER_RE.search(ln) and not any(marked for _, marked in named):
             spent.append(
-                'asks for `*[unverified]*` markers to be cleared, but no page '
-                'it names carries one'
+                'asks for `*[unverified]*` markers to be cleared, but no page it names carries one'
             )
         if HOT_PENDING_DRAFT_RE.search(ln) and all(st == 'verified' for st, _ in named):
             spent.append(
-                'calls a page draft or awaiting `/audit`, but every page it '
-                'names is `verified`'
+                'calls a page draft or awaiting `/audit`, but every page it names is `verified`'
             )
         if not spent:
             continue
@@ -4692,8 +4822,8 @@ def check_hot_threads_spent(wiki_root: Path) -> list[dict[str, Any]]:
                 check='hot_thread_spent',
                 file=rel,
                 message=(
-                    f'{section} entry (line {n}) describes work that is '
-                    f'already done: it {"; it ".join(spent)}.'
+                    f'{section} entry (line {n}) describes work that is already done: '
+                    f'it {"; it ".join(spent)}.'
                 ),
                 fix_hint=(
                     'Strike the finished sub-item from the entry, and drop the whole '

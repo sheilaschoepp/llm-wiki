@@ -504,6 +504,110 @@ class TestCheckWiki(unittest.TestCase):
         ids = {f['check_id'] for f in cw.check_page(path=p, wiki_root=wiki)}
         assert 'citation_bracket_style' not in ids
 
+    # --- alias detect-exemption ------------------------------------
+
+    def _exempt_fixture(self) -> None:
+        # Two concept pages sharing the alias `widget`, and a third page
+        # mentioning it unlinked once.
+        for stem in ('alpha-thing', 'beta-thing'):
+            _write_page(
+                self.tmp,
+                'concepts',
+                f'{stem}.md',
+                _CON_FM.replace('aliases: []', 'aliases: ["widget"]'),
+                '> [!idea] Idea\n> - x.\n> ^idea',
+            )
+        _write_page(
+            self.tmp,
+            'concepts',
+            'user-page.md',
+            _CON_FM,
+            '> [!idea] Idea\n> - a widget appears here.\n> ^idea',
+        )
+
+    def test_alias_detect_exemption_removes_form_from_detection(self) -> None:
+        # An exempted form drops out of the matching vocabulary. The
+        # alias stays in the page's frontmatter — this check simply
+        # stops looking for it.
+        self._exempt_fixture()
+        wiki = self.tmp / '1-wiki'
+        exempt = [
+            {'stem': 'alpha-thing', 'form': 'widget', 'line': 1},
+            {'stem': 'beta-thing', 'form': 'widget', 'line': 2},
+        ]
+        with mock.patch.object(cw, 'ALIAS_DETECT_EXEMPT', exempt):
+            finds = cw.check_unlinked_page_mentions(wiki_root=wiki)
+        assert not [f for f in finds if f['check_id'] == 'unlinked_page_mention']
+
+    def test_alias_detect_exemption_is_scoped_to_one_page(self) -> None:
+        # The load-bearing property: exempting `widget` for alpha-thing
+        # must not blind the check to beta-thing, which carries the same
+        # form. Otherwise one page's exemption silently suppresses
+        # another page's genuine references.
+        self._exempt_fixture()
+        wiki = self.tmp / '1-wiki'
+        exempt = [{'stem': 'alpha-thing', 'form': 'widget', 'line': 1}]
+        with mock.patch.object(cw, 'ALIAS_DETECT_EXEMPT', exempt):
+            finds = cw.check_unlinked_page_mentions(wiki_root=wiki)
+        mentions = [f for f in finds if f['check_id'] == 'unlinked_page_mention']
+        assert len(mentions) == 1
+        assert 'beta-thing' in mentions[0]['message']
+
+    def test_alias_detect_exemption_absent_by_default(self) -> None:
+        # With no exemptions the form is detected as before, so the
+        # mechanism is opt-in and the default behaviour is unchanged.
+        self._exempt_fixture()
+        wiki = self.tmp / '1-wiki'
+        with mock.patch.object(cw, 'ALIAS_DETECT_EXEMPT', []):
+            finds = cw.check_unlinked_page_mentions(wiki_root=wiki)
+        assert [f for f in finds if f['check_id'] == 'unlinked_page_mention']
+
+    def test_stale_alias_exempt_reports_missing_page(self) -> None:
+        self._exempt_fixture()
+        wiki = self.tmp / '1-wiki'
+        exempt = [{'stem': 'ghost-page', 'form': 'widget', 'line': 9}]
+        with mock.patch.object(cw, 'ALIAS_DETECT_EXEMPT', exempt):
+            finds = cw.check_unlinked_page_mentions(wiki_root=wiki)
+        stale = [f for f in finds if f['check_id'] == 'stale_alias_exempt']
+        assert len(stale) == 1
+        assert 'ghost-page' in stale[0]['message']
+
+    def test_stale_alias_exempt_reports_form_page_no_longer_carries(
+        self,
+    ) -> None:
+        # The alias was renamed or removed, so the entry exempts nothing.
+        self._exempt_fixture()
+        wiki = self.tmp / '1-wiki'
+        exempt = [{'stem': 'alpha-thing', 'form': 'nosuchalias', 'line': 10}]
+        with mock.patch.object(cw, 'ALIAS_DETECT_EXEMPT', exempt):
+            finds = cw.check_unlinked_page_mentions(wiki_root=wiki)
+        stale = [f for f in finds if f['check_id'] == 'stale_alias_exempt']
+        assert len(stale) == 1
+        assert 'nosuchalias' in stale[0]['message']
+
+    def test_alias_exempt_loader_skips_malformed_lines(self) -> None:
+        # Tolerant like the verified-ignore loader: a malformed line is
+        # skipped, never raised, so a hand edit cannot crash lint.
+        f = self.tmp / 'alias-detect-exempt.md'
+        f.write_text(
+            '# x\n\n## detect-exempt\n\n'
+            '- alpha-thing :: widget\n'
+            '- malformed-no-separator\n'
+            '- too :: many :: parts\n'
+            '-  :: \n'
+            '- beta-thing :: Widget\n',
+            encoding='utf-8',
+        )
+        got = cw._load_alias_detect_exempt(path=f)
+        assert [(e['stem'], e['form']) for e in got] == [
+            ('alpha-thing', 'widget'),
+            ('beta-thing', 'widget'),
+        ]
+
+    def test_alias_exempt_loader_missing_file_is_empty(self) -> None:
+        got = cw._load_alias_detect_exempt(path=self.tmp / 'nope.md')
+        assert got == []
+
     # --- unlinked_page_mention scans source pages, own topic included
     # -----------
 
@@ -1635,7 +1739,7 @@ class TestCheckWiki(unittest.TestCase):
         )
 
     def test_diffguard_registered_and_exposed(self) -> None:
-        assert cw.CHECKS.get('verified_anchor_unaudited') == 'warning'
+        assert cw.CHECKS.get('verified_anchor_unaudited') == 'error'
 
     # --- verified_hash_mismatch (committed-state backstop, Mechanism 2)
     # -----------
@@ -1735,7 +1839,7 @@ class TestCheckWiki(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        assert json.loads(r.stdout).get('verified_anchor_unaudited') == 'warning'
+        assert json.loads(r.stdout).get('verified_anchor_unaudited') == 'error'
 
     def test_verified_hash_malformed_delimiter_is_flagged(self) -> None:
         # A whitespace-padded closing `---` is accepted by
