@@ -136,3 +136,110 @@ class TestFindRepoRoot(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestReferenceDepthCollectsInlineCode(unittest.TestCase):
+    """
+    `check_reference_depth_and_toc` originally collected references by
+    Markdown-hyperlink regex only. Every SKILL.md in this repo cites its
+    references as inline-code paths and none uses a Markdown link, so
+    `direct_refs` came back empty on all 14 skills and `nested_reference`
+    / `missing_toc` / the reference-file `check_html_tags` pass could
+    never fire — a silent all-clear rather than a clean bill.
+
+    These pin the fix and both of its exemptions.
+    """
+
+    def _scan(self, body: str) -> list[dict]:
+        return cs.check_reference_depth_and_toc(
+            skill_dir=SKILL_DIR,
+            body_text=body,
+            repo_root=REPO,
+        )
+
+    def test_collects_inline_code_reference(self) -> None:
+        # verification.md cites relationship-sweep.md, which is shared
+        # multi-skill material -> exempt, so this is clean. The point is
+        # that the reference was collected at all: before the fix an
+        # empty direct_refs made every downstream check vacuous.
+        targets = cs._iter_ref_targets(
+            text='the spec in `references/verification.md` governs'
+        )
+        assert ('references/verification.md', False) in targets, targets
+
+    def test_markdown_links_still_collected(self) -> None:
+        targets = cs._iter_ref_targets(text='see [spec](references/verification.md)')
+        assert ('references/verification.md', True) in targets, targets
+
+    def test_fenced_path_is_not_a_reference(self) -> None:
+        targets = cs._iter_ref_targets(
+            text='```\nsee `references/verification.md`\n```'
+        )
+        assert targets == [], targets
+
+    def test_templated_path_is_not_a_reference(self) -> None:
+        targets = cs._iter_ref_targets(text='write `references/{stem}.md` here')
+        assert targets == [], targets
+
+    def test_wiki_path_is_not_a_reference(self) -> None:
+        # Wiki/raw/output paths carry template examples, not references.
+        targets = cs._iter_ref_targets(text='the page `1-wiki/sources/X.md` exists')
+        assert targets == [], targets
+
+    def test_broken_inline_ref_not_double_reported(self) -> None:
+        # An unresolvable inline-code path is `check_inline_code_refs`'s
+        # to report as broken_inline_ref; this check must not also emit
+        # broken_md_link for it.
+        found = self._scan('cite `references/does-not-exist.md` here')
+        ids = [f['check_id'] for f in found]
+        assert 'broken_md_link' not in ids, found
+
+    def test_broken_markdown_link_still_reported(self) -> None:
+        found = self._scan('see [x](references/does-not-exist.md)')
+        ids = [f['check_id'] for f in found]
+        assert 'broken_md_link' in ids, found
+
+
+class TestNestedReferenceExemptions(unittest.TestCase):
+    """
+    Two exemptions keep the now-live depth check off architecture the
+    schema prescribes. Without them the fix fired ~15 findings across 5
+    skills, nearly all of them sanctioned patterns.
+    """
+
+    def test_shared_multi_skill_target_is_exempt(self) -> None:
+        # CLAUDE.md -> Skill authoring sanctions reaching shared
+        # material through multi-skill/, so it is not a depth-2 smell.
+        marker = cs._SHARED_REF_MARKER
+        target = '.claude/skills/multi-skill/references/relationship-sweep.md'
+        assert marker in f'/{target}'
+
+    def test_sibling_reference_is_exempt_in_practice(self) -> None:
+        # audit's verification-spec.md cites apply-fixes.md, which
+        # audit's own SKILL.md also cites directly -> reachable in one
+        # hop, so no nested_reference. Guards the real repo state.
+        audit_dir = REPO / '.claude' / 'skills' / 'audit'
+        body = (audit_dir / 'SKILL.md').read_text(encoding='utf-8')
+        found = cs.check_reference_depth_and_toc(
+            skill_dir=audit_dir,
+            body_text=body,
+            repo_root=REPO,
+        )
+        nested = [f for f in found if f['check_id'] == 'nested_reference']
+        assert nested == [], nested
+
+    def test_every_skill_is_clean_under_the_live_check(self) -> None:
+        # The fix must not turn 14 passing skills into a wall of
+        # findings; if a genuine depth-2 hop is added later this is the
+        # test that will fail, which is the point.
+        skills_root = REPO / '.claude' / 'skills'
+        offenders: list[tuple[str, str]] = []
+        for skill_md in sorted(skills_root.glob('*/SKILL.md')):
+            found = cs.check_reference_depth_and_toc(
+                skill_dir=skill_md.parent,
+                body_text=skill_md.read_text(encoding='utf-8'),
+                repo_root=REPO,
+            )
+            for f in found:
+                offenders.append((skill_md.parent.name, f['message']))
+        assert offenders == [], offenders

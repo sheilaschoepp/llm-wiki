@@ -593,43 +593,114 @@ def check_paths(
     return findings
 
 
+# A reference under `multi-skill/` is shared material several skills
+# cite on purpose (CLAUDE.md -> Skill authoring: "Skills may share files
+# through multi-skill/; that is the sanctioned way to avoid duplicating
+# common logic"). Reaching one from a reference file is therefore not
+# the depth-2 smell `nested_reference` hunts, so it is exempt — the
+# direct-reference collection below already skips shared targets for the
+# same reason. Without the exemption, teaching this check to read
+# inline-code paths would make it fire on the architecture the schema
+# prescribes, which trains readers to ignore it.
+_SHARED_REF_MARKER = '/multi-skill/'
+
+
+def _iter_ref_targets(text: str) -> list[tuple[str, bool]]:
+    """
+    Reference targets cited from `text`, as (target, is_md_link) pairs.
+
+    Collects Markdown hyperlinks `[text](path.md)` AND the inline-code
+    paths (`references/foo.md`, `.claude/skills/x/references/foo.md`)
+    that this repo's skills actually use. Every SKILL.md here cites its
+    references as inline code and none uses a Markdown link, so a
+    link-only scan collected nothing and every check downstream of it
+    passed vacuously on all 14 skills.
+
+    `is_md_link` is carried so only genuine Markdown links raise
+    `broken_md_link`; an unresolvable inline-code path is already
+    reported as `broken_inline_ref` by `check_inline_code_refs`, and
+    reporting it twice would be noise.
+
+    Fenced blocks are skipped: a path inside a bash example is
+    illustrative, not a reference.
+    """
+    targets: list[tuple[str, bool]] = []
+    in_code_fence = False
+    for line in text.splitlines():
+        if line.strip().startswith('```'):
+            in_code_fence = not in_code_fence
+            continue
+        if in_code_fence:
+            continue
+        for m in MD_LINK_RE.finditer(line):
+            targets.append((m.group(1), True))
+        for span in INLINE_CODE_RE.findall(line):
+            for raw in span.split():
+                token = raw.split('#', 1)[0].lstrip('([').rstrip('.,;:)]')
+                if not token.endswith('.md') or '/' not in token:
+                    continue
+                if any(c in token for c in _SKILL_REF_TEMPLATE_CHARS):
+                    continue
+                if token.startswith(_SKILL_REF_EXCLUDE_PREFIXES):
+                    continue
+                targets.append((token, False))
+    return targets
+
+
 def check_reference_depth_and_toc(
     skill_dir: Path,
     body_text: str,
+    repo_root: Path | None = None,
 ) -> list[dict[str, Any]]:
     """
-    For each reference file linked from SKILL.md, check it's one level
+    For each reference file cited from SKILL.md, check it's one level
     deep AND has a table of contents if longer than the threshold.
+
+    `repo_root`, when given, lets repo-qualified inline-code paths
+    (`.claude/skills/<skill>/references/foo.md`) resolve; without it
+    only skill-relative targets do.
     """
     findings: list[dict[str, Any]] = []
 
-    # Collect references linked directly from SKILL.md.
+    def _resolve(target: str) -> Path | None:
+        bases = [skill_dir]
+        if repo_root is not None:
+            bases += [repo_root, repo_root / '.claude' / 'skills']
+        for base in bases:
+            candidate = base / target
+            if candidate.exists():
+                return candidate.resolve()
+        return None
+
+    # Collect references cited directly from SKILL.md.
     direct_refs: list[Path] = []
-    for m in MD_LINK_RE.finditer(body_text):
-        target = m.group(1).split('#', 1)[0]  # strip anchors
+    seen: set[Path] = set()
+    for target, is_md_link in _iter_ref_targets(text=body_text):
+        target = target.split('#', 1)[0]  # strip anchors
         if not target or target.startswith(('http://', 'https://', 'mailto:')):
             continue
         # Only check .md targets (we don't follow into scripts/).
         if not target.endswith('.md'):
             continue
-        ref_path = (skill_dir / target).resolve()
-        if not ref_path.exists():
-            findings.append(
-                {
-                    'severity': 'warning',
-                    'check_id': 'broken_md_link',
-                    'file': 'SKILL.md',
-                    'line': None,
-                    'message': (
-                        f"SKILL.md links to '{target}' but the file "
-                        "doesn't exist in the skill directory."
-                    ),
-                    'fix_hint': (
-                        f"Either create '{target}' or update the link to "
-                        'point to an existing file.'
-                    ),
-                }
-            )
+        ref_path = _resolve(target=target)
+        if ref_path is None:
+            if is_md_link:
+                findings.append(
+                    {
+                        'severity': 'warning',
+                        'check_id': 'broken_md_link',
+                        'file': 'SKILL.md',
+                        'line': None,
+                        'message': (
+                            f"SKILL.md links to '{target}' but the file "
+                            "doesn't exist in the skill directory."
+                        ),
+                        'fix_hint': (
+                            f"Either create '{target}' or update the link to "
+                            'point to an existing file.'
+                        ),
+                    }
+                )
             continue
         if not ref_path.is_relative_to(skill_dir):
             # A reference resolving outside the skill folder (e.g. a
@@ -638,9 +709,12 @@ def check_reference_depth_and_toc(
             # it. This also avoids a relative_to() crash on the line
             # below.
             continue
+        if ref_path in seen:
+            continue
+        seen.add(ref_path)
         direct_refs.append(ref_path)
 
-    # For each reference file: check that IT does not link out to other
+    # For each reference file: check that IT does not cite other
     # markdown files (depth-2 problem), and that long ones have a TOC.
     for ref in direct_refs:
         rel = ref.relative_to(skill_dir).as_posix()
@@ -654,31 +728,46 @@ def check_reference_depth_and_toc(
             file_rel=rel,
         )
 
-        # Depth check: links from a reference file to another markdown
-        # file are problematic.
-        for m in MD_LINK_RE.finditer(content):
-            target = m.group(1).split('#', 1)[0]
+        # Depth check: a reference file citing another markdown file is
+        # a depth-2 hop only when the target is not already reachable in
+        # one hop. Two exemptions, both about what "one level deep from
+        # SKILL.md" actually means:
+        #   - shared multi-skill material (see _SHARED_REF_MARKER);
+        #   - a SIBLING, i.e. a target SKILL.md itself cites directly.
+        #     A pointer from one direct reference to another adds no
+        #     depth — the reader can already reach it in one hop — so
+        #     flagging it would report every cross-link inside a
+        #     well-factored reference set.
+        for target, _is_md_link in _iter_ref_targets(text=content):
+            target = target.split('#', 1)[0]
             if not target or target.startswith(('http://', 'https://', 'mailto:')):
                 continue
-            if target.endswith('.md'):
-                findings.append(
-                    {
-                        'severity': 'warning',
-                        'check_id': 'nested_reference',
-                        'file': rel,
-                        'line': None,
-                        'message': (
-                            f'Reference file links to another markdown file '
-                            f"('{target}'); references should be one level "
-                            'deep from SKILL.md.'
-                        ),
-                        'fix_hint': (
-                            f"Move '{target}' so it's linked directly from "
-                            'SKILL.md, or inline the relevant content.'
-                        ),
-                    }
-                )
-                break  # one finding per file is enough
+            if not target.endswith('.md'):
+                continue
+            if _SHARED_REF_MARKER in f'/{target}':
+                continue
+            nested = _resolve(target=target)
+            if nested is not None and (nested == ref or nested in seen):
+                continue  # self-reference or sibling: not a hop
+            findings.append(
+                {
+                    'severity': 'warning',
+                    'check_id': 'nested_reference',
+                    'file': rel,
+                    'line': None,
+                    'message': (
+                        f'Reference file cites another markdown file '
+                        f"('{target}'); references should be one level "
+                        'deep from SKILL.md.'
+                    ),
+                    'fix_hint': (
+                        f"Cite '{target}' directly from SKILL.md, inline the "
+                        'relevant content, or move it under multi-skill/ if '
+                        'it is genuinely shared.'
+                    ),
+                }
+            )
+            break  # one finding per file is enough
 
         # TOC check on long files.
         line_count = len(content.splitlines())
@@ -926,15 +1015,18 @@ def main() -> int:
     # siblings on disk.
     if not single_file:
         body_text = '\n'.join(body_lines)
+        # Needs the repo root to resolve `.claude/…` and abbreviated
+        # `<skill>/references/…` paths; both the depth/TOC check and the
+        # inline-code resolver below use it, so find it once.
+        repo_root = find_repo_root(skill_dir=skill_dir)
         findings += check_reference_depth_and_toc(
             skill_dir=skill_dir,
             body_text=body_text,
+            repo_root=repo_root,
         )
         # Inline-code path references (the syntax this repo's skills use
         # to cite refs/scripts) — resolve them across SKILL.md and every
-        # reference file. Needs the repo root to resolve `.claude/…` and
-        # abbreviated `<skill>/references/…` paths; skip if not found.
-        repo_root = find_repo_root(skill_dir=skill_dir)
+        # reference file.
         if repo_root is not None:
             scan_files: list[tuple[str, list[str], int]] = [
                 ('SKILL.md', body_lines, fm_end),
