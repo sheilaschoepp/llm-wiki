@@ -2,7 +2,13 @@
 
 The context-post catalogue and the per-decision question types for `ingest` Step 3. Post the context message first, then ask each decision through its own `AskUserQuestion` call — one decision per call, never batched, recommended option first and marked `(Recommended)`. Step 3 is complete only when every decision type with at least one candidate has fired its question(s).
 
-**Context post (chat text, no questions yet):**
+## Contents
+
+- Context post (chat text, no questions yet)
+- The questions (one AskUserQuestion call each)
+
+## Context post (chat text, no questions yet)
+
 - Frame/purpose echo: state the frames or deep purpose back in one line. In existing mode, state whether the reingest is unscoped, reusing the saved frames, appending a new lens, or clearing to unscoped (quote the frame texts).
 - Takeaways, scoped to the frames/purpose. New + normal: 3–6 takeaways, each anchored to a section/figure/page locator (a whole-paper digest flattens and invents; a section-anchored one cannot, and the Evidence pointers fall out for free), plus the contribution in one sentence. Deep: as many as the scope earns (typically 5–12 for a paper; defer to the purpose, not a number) plus an evidence map of the figures/tables/equations/sections the purpose will revisit. Existing: a summary of intended source-page changes and of affected dependents, plus existing attachments with proposed disposition. Anything outside the frames/purpose is not listed.
 - **Supporting-source attachment sweep** — a positive sweep of Step 1's `index.md` inventory for existing concept/entity pages this source *genuinely supports*: a page whose idea this source provides evidence for, a claim it backs, or a non-obvious point it contributes. This is the cross-source accumulation that is the point of the wiki — a concept page earns its value by gathering support across sources — so it is its own first-class pass, distinct from the relationship-edge sweep below (which draws graph links, not support) and from creating new pages. For each genuinely-supported existing page, propose attaching this source (add it to `sources:` + the `Sources` callout) and writing the 1–3 claim bullets it contributes. Attaching genuine support is not "bloating" — bloat is source-summary detail; support is registering that this source backs the page. Each proposed attachment becomes a gated question 1 below. List the existing pages this source supports but does *not* warrant attaching to (purely topical overlap, no real support) as "no attach" so the decision is visible, not silently skipped.
@@ -15,7 +21,7 @@ The context-post catalogue and the per-decision question types for `ingest` Step
 - Partial coverage, if Step 2 flagged it: state what is and is not covered. This becomes gated question 9 below.
 - Ambiguities, missing metadata, weak inferences, or contradictions.
 
-**Then the questions (one `AskUserQuestion` call each):**
+## The questions (one `AskUserQuestion` call each)
 - **Emphasis (asked before the membership questions 1–10; new + normal):** one `AskUserQuestion` confirming the takeaway ordering — does what the `TL;DR` and `Key Claims` will foreground match what the user needs from this source, or should something else lead? The answer steers Step 5's emphasis. The membership questions below decide *what goes on the page*; this one decides *what leads* — a faithful page can still foreground the wrong thing, and nothing downstream catches mis-prioritization.
 1. One per **concept/entity page the source touches** — covering both directions, one `AskUserQuestion` call per candidate:
    - **Create-new:** a reusable idea this source introduces that has no page yet. Name it and give a one-sentence reason it is one reusable idea. Options: include / drop / other. Recommend `Drop` only for a genuinely marginal idea; recommend `Include` when the idea is clearly reusable.

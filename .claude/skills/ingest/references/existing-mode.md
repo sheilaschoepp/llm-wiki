@@ -21,7 +21,7 @@ Confirm one of: `schema refresh` (to the current source-page template), `missed 
 
 ## `needs-update` check
 
-If the source page is `status: needs-update`, read its `needs_update_reason:` and any `Contradictions`/`Tensions` entries — that is the precise statement of what an earlier `audit` flagged. Fold resolving it into scope; clear the status back to `draft` once addressed (a later `audit` re-verifies). Same for any `needs-update` dependent the reingest repairs.
+If the source page is `status: needs-update`, read its `needs_update_reason:` and any `Contradictions`/`Tensions` entries — that is the precise statement of what an earlier `audit` flagged. Fold resolving it into scope; Step 8 then sets the status by Setting Status — `verified` when its four conditions hold, not an automatic `draft`. Same for any `needs-update` dependent the reingest repairs.
 
 ## `*[unverified]*` resolution check
 
@@ -29,7 +29,7 @@ A reingest re-reads the whole raw, so every `*[unverified]*` claim on the source
 
 ## `*[tentative]*` resolution check
 
-A reingest that attaches a genuinely-supporting source walks each `*[tentative]*` claim on the touched pages — the source page and every dependent concept/entity/synthesis page the attached source now supports. Where the attached source covers the *marked claim* (confirmed against the raw this pass — Step 2 re-read plus the Step 8 claim check), drop the `*[tentative]*` marker and cite the claim to it: the marker flags thin support or a needs-a-second-source gap, and resolving that gap is exactly what the attach does, so ingest — the operation adding the support — owns the update. Where the source supports only an adjacent fact and not the marked claim, leave the marker (judge that honestly; do not stretch "supports an adjacent fact" into "supports the claim"). `*[tentative]*` marks epistemic uncertainty, distinct from `*[unverified]*`: its "persists even after verification" property means `audit`'s *checking* a claim does not auto-clear it, not that only `audit` may touch it — adding the resolving evidence is a distinct event that retires it (`CLAUDE.md` → Bullet markers).
+A reingest that attaches a genuinely-supporting source walks each `*[tentative]*` claim on the touched pages — the source page and every dependent concept/entity/synthesis page the attached source now supports. Where the attached source covers the *marked claim* (confirmed against the raw this pass — Step 2 re-read plus the Step 8 claim check), drop the `*[tentative]*` marker and cite the claim to it: the marker flags thin support or a needs-a-second-source gap, and resolving that gap is exactly what the attach does, so ingest — the operation adding the support — owns the update. Where the source supports only an adjacent fact and not the marked claim, leave the marker (judge that honestly; do not stretch "supports an adjacent fact" into "supports the claim"). `*[tentative]*` marks epistemic uncertainty, distinct from `*[unverified]*`: its "persists even after verification" property means `audit`'s *checking* a claim does not auto-clear it, not that only `audit` may touch it — adding the resolving evidence is a distinct event that retires it (`CLAUDE.md` → Bullet markers). On a `verified` page that removal moves the hash — `body_hash.py` masks only `*[unverified]*`, so a `*[tentative]*` line sits inside the hashed body — and the run has just certified the claim against the raw, so Step 8 re-stamps on that certification; where it could not certify, the page demotes to `draft`.
 
 ## Schema-migration check
 

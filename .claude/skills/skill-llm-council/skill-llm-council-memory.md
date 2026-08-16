@@ -12,6 +12,18 @@ Cross-skill rules live in `.claude/skills/multi-skill/multi-skill-memory.md` —
 
 Newest entry on top, one entry per heading.
 
+## 2026-08-16 — refuters refuted 6 of 15, and the mode inverted again: false claims about neighbours, not over-deletion
+
+Run: `skill-llm-council-2026-08-16-2023-ingest`. Third consecutive run where the refuters killed a large share of the load-bearing edits, so the documented trigger has now fired three times running. But the shape inverted from the 2026-08-15 entry a second time, and the fix that entry implies did not apply here.
+
+That run's councils over-**deleted**. This run's deletions were the safest edits in the set: the refuter given the "is this the only statement of this rule anywhere?" hunt cleared **all four**, each with a quoted alternate location. The kills were concentrated in **additions**, and three of the six shared one shape — the edit asserted something factually false about a *neighbouring file*: that quarantining preserves nothing (the convention verifies a byte-identical copy before unlinking), that `audit` re-verifies without rewriting (its own description says it applies splits, merges, and rewrites), and that the shared spec defines no terminal state for a stalled run (it does, twice). Each read plausibly, survived both chairs, and survived two rounds of peer review; only opening the neighbour caught it.
+
+Three things to carry:
+
+- **Additions need a symmetric hunt to the deletion one.** The deletion prompt asks "is this the only copy?" and it works. Nothing asks an addition "does the file this edit describes actually say what the edit claims about it?" — which is the exact question that killed three of six here. Add it to the refuter prompt for any edit that characterizes another file.
+- **A same-day edit is a live conflict surface.** Two kills were collisions with rules landed earlier the same session, not with old text. When a run briefs its councils on "current state", the refuter should be pointed at that state as the *first* thing to check the edit against, since the councils were told it is settled and will not re-examine it.
+- **Refuter coverage is not enforced.** Two load-bearing edits were bundled into a prompt scoped to two others and briefly had no verdict; the omission was caught by hand, not by the skill. Step 6 has no count-reconciliation, so coverage rests on the orchestrator remembering.
+
 ## 2026-08-15 — refuters refuted 5 of 10, and the mode inverted: over-deletion, not over-duplication
 
 Run: `skill-llm-council-2026-08-15-1617-audit`. Second consecutive run where the refuters killed half or more of the load-bearing edits. The rate is now a pattern rather than an incident, but the *shape* inverted, so the fix is not the one the 2026-08-13 entry implies.

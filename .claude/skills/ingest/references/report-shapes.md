@@ -2,7 +2,7 @@
 
 The two report bodies `ingest` writes to `2-outputs/ingest/ingest-YYYY-MM-DD-HHMM-{stem}.md`, one per mode. They live here rather than in the shared verification spec because only `ingest` writes them: `query`, `synthesis`, and `supersede` record their verification results in their own outputs, so carrying these templates in the shared file made four callers load ~780 words they never use.
 
-The rules the shapes serve — what the claim check and page self-check must record, the `Recommended next ingests` honesty guard, and the Setting Status conditions — stay in `.claude/skills/multi-skill/references/verification.md`. This file is the layout only.
+The rules the shapes serve — what the claim check and page self-check must record, and the Setting Status conditions — stay in `.claude/skills/multi-skill/references/verification.md`; the `Recommended next ingests` honesty guard is stated in full in `SKILL.md` Step 9. This file is the layout only.
 
 ## Contents
 
@@ -71,7 +71,7 @@ purpose: "{deep purpose, or empty — carry the prior report's value forward on 
 
 # Reingest report: {stem}
 
-### Claim check
+## Claim check
 - Result: pass | fail
 - Coverage: {full-text confirmed — the probe used; for a book, the range read in full}
 - Late-section detail re-located (proof of raw re-read): {final section/last figure/appendix + the fact checked}
@@ -84,7 +84,7 @@ purpose: "{deep purpose, or empty — carry the prior report's value forward on 
 - Findings: {short list, or "none"}
 - Fixes applied: {short list, or "none"}
 
-### Page self-check
+## Page self-check
 - Result: run | run with findings
 - Pages read:
   - [[1-wiki/concepts/self-attention.md|self-attention]]
@@ -93,12 +93,12 @@ purpose: "{deep purpose, or empty — carry the prior report's value forward on 
 - Handed to audit: {page-level findings needing the whole page or the wiki in view, or "none"}
 - Repeated-literal sweep (after any citation fix): the literal(s) searched and the occurrences re-checked and fixed across the wiki (or "no citation fix this run").
 
-### Status set
+## Status set
 - One line per touched page: page - verified | draft | needs-update {+ reason when not verified}.
 
-### Recommended next ingests
+## Recommended next ingests
 - {author year — "Title" — the gap this reingest surfaced that it fills; "(verify exists)" if unsure; "none" when none}. Only papers you are confident exist.
 
-### Self-report
+## Self-report
 - {a specific limitation that bit ingest this run — a rule it lacked, a case it handled wrong (e.g. over-demoting a page on a single added claim), a step it couldn't complete} → upgrade: {how the ingest skill should change} (or the single line: none noted this run; per `.claude/skills/multi-skill/references/self-report.md`)
 ```
