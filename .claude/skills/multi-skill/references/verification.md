@@ -29,16 +29,20 @@ Tiers, set per non-obvious claim (a whole-page check takes the highest tier any 
 - **Tier 1 — one refuter.** A low-stakes non-obvious claim with a single, clearly-locatable citation (a specific fact at a specific page). One independent refuter opens the raw at the cited page and tries to refute it.
 - **Tier 3 — three refuters, must agree.** Every other non-obvious wiki claim — the broad default, so in practice most claims: a summary / aggregate / generalization claim, a cross-source or contrast citation, a number / metric / result, or any claim that will be trusted downstream once stamped. Three independent refuters each attempt to refute the claim against the raw; it is certified only when all three fail to refute it. For a summary or generalization claim each refuter **recomputes the whole set cold** — every row, task, or condition the claim ranges over — not the single cell the claim cites (the cited cell is the evidence the author selected because it fits, so confirming it certifies the distortion).
 
+**Where the tiers overlap, the higher governs.** Tier 3 reads as "every other" claim, so a claim already matching Tier 1 would otherwise stop there — but a number at a specific page matches both Tier 1's "a specific fact at a specific page" and Tier 3's "a number / metric / result", and the only thing holding it at Tier 1 is the self-graded word "low-stakes". A claim matching both is Tier 3. Tier 1 is the narrow exception it is written as, not the default a tie falls into.
+
 Refuter mechanics — the cross-skill subagent rule:
 
 - Refuters **read and reason only.** Spawn each with read-only tools (Read, Glob, Grep; no Edit / Write / shell-write), from the **top-level orchestrating agent**, never nested inside another subagent. Every status change and fix is applied by the orchestrator, so all writes pass through one place and one set of safety rules, and concurrent writes never collide.
+- **No refuters, no stamp.** Where refuters cannot be spawned at all — the mechanism is unavailable, or this run is itself a subagent and so may not nest them — the run still writes the page and marks what it could not certify, but nothing above Tier 0 is certified and the page finishes at `draft`. Falling back to a second pass by the same assistant is not a substitute: it buys independence from self-circularity, not from a shared blind spot, and it would let one agent's read stamp a whole corpus.
 - Give each refuter the claim and the raw, **not the page's framing**, and prompt it to refute — default to "refuted" unless the raw plainly supports the claim. A refuter that cannot reach the cited raw region (missing, unreadable, image-only, OCR-garbled, truncated) returns "cannot confirm", which counts as a non-pass, not a pass.
 - **Batch the claims, and batch the refuters.** Group claims into batches of roughly 25 and give the whole batch to **each refuter in the claim's tier** — three at the Tier-3 default — rather than spawning one subagent per claim, so the quorum holds per claim in three calls rather than 3×N; independence comes from the reader being separate, not from the unit being small. **Never split a batch across the tier's refuters** — that silently drops every claim in it to a single judgement. Keep each batch within one raw where possible, so a refuter opens a source once and settles everything tracing to it in that pass.
 - **Name the defect shape you want hunted.** A refuter told "check this claim" finds materially less than one told which failure mode to look for, and the difference is not marginal — a generic read can clear a page that a shape-directed read then breaks twice, including under an existing `verified` stamp. Give each refuter the specific shapes: a claim attributed to the wrong source, a locator pointing at a page the content is not on, a hedge or restriction the source stated and the claim dropped, a position transplanted from a neighbouring subject in the same list, a figure described as showing something it does not, and a repair that broke what it touched. Where a tier runs several refuters, vary the shape across them rather than issuing one prompt three times — independence of *angle* buys more than independence of *reader* alone.
 - **Exhaust the other reading route before returning "cannot confirm" on a figure.** A "cannot confirm" is a statement about one reading method, not about the claim, and the costly case is a figure: a `/Subtype /Image` with no text layer defeats `pdftotext` while the wiki itself already holds a legible crop of that same figure at `1-wiki/attachments/{stem}/` (`ingest` extracts figures there precisely so they can be read). Before reporting a figure claim unreadable, open the attachment folder for the cited source and read the crop — printed data labels, axis values, and legend percentages are usually right there. Pulling back a true, supported claim on an "unreadable" verdict is a real loss, the same kind of damage as leaving a false one, and it is the harder one to notice afterwards because the page simply gets quieter.
 - **Agreement certifies; a split does not.** When a tier's refuters do not all hold — any refuter refutes or cannot confirm — the claim is not certified: mark it `*[unverified]*` (or `*[tentative]*` where support is thin) and, for a page being promoted, set the page `needs-update` with the disagreement recorded, never certify on a split.
 - **A split is an explicit disagreement, not a coverage gap.** A refuter's silence on a claim is silence, not dissent — only an explicit holds-versus-refuted on the *same* claim is a split. Reading silence as disagreement manufactures unresolvable splits out of nothing and strands pages that were in fact fully checked. Where a claim went unread by part of the quorum, the fix is to have it read, not to record a dispute. **Silence is not assent either, and that is the half that decides certification:** an omitted claim is unread, so it has no hold from that refuter and cannot be certified until it is re-issued and answered. Where several claims go to one refuter together, require an explicit per-claim verdict — holds / refuted / cannot confirm — for every claim in the set rather than a selective list of what it happened to check, or a quorum that must agree unanimously silently degrades to whichever claims each reader got to. And when a genuine split cannot be closed, the page ends `needs-update` with a `needs_update_reason:` naming the unresolved claim — never left at `draft`, which is indistinguishable from a page nobody opened and loses the record of everything the run did settle.
-- **Every refuter finding carries its evidence, or it is discarded.** A refuter reporting a claim refuted (or "cannot confirm") returns the **verbatim quote** it read plus the **physical page** it read it on; a finding with no verbatim quote is not actionable and is dropped, never applied. The orchestrator **re-greps each returned quote against the raw** before acting on the finding — a subagent can fabricate a plausible quote, and a fabricated refutation that reverses a raw-supported claim is the costliest failure (it overwrites correct content and re-stamps it). Re-checking the quote is one grep, and it is the only thing between a fabricated finding and a fabricated fix. Treat a refuter's findings as claims to check, not instructions to apply — most of all a finding that would flip a conclusion the raw already supports.
+- **A holds verdict owes a proof-of-read, once per batch.** The evidence duty in the next bullet is scoped to refutations, so a batch where every claim holds returns nothing showing any refuter ever opened the raw — and the cheapest compliant output that certifies a page is a bare list of holds. Each refuter therefore returns one **proof-of-read** per batch: a verbatim quote plus the physical page it read it on, for any one claim it held. The orchestrator re-greps that one quote and re-issues the batch if it does not match. Do **not** require a quote per held claim: at the Tier-3 default the honest artifact of a cold recompute is the recomputed set, not a cell, so demanding a cell invites exactly the cited-cell confirmation that certifies a distortion.
+- **Every refuter finding carries its evidence, or it is discarded.** A refuter reporting a claim refuted (or "cannot confirm") returns the **verbatim quote** it read plus the **physical page** it read it on; a finding with no verbatim quote is not actionable and is dropped, never applied. A quote read off a figure crop under `1-wiki/attachments/{stem}/` is not evidence-less — a grep cannot reach a PNG — so the orchestrator opens that crop instead of discarding the finding, and where the quote still cannot be confirmed there the claim is marked, not certified: the finding is not applied, but the claim does not quietly certify either. The orchestrator **re-greps each returned quote against the raw** before acting on the finding — a subagent can fabricate a plausible quote, and a fabricated refutation that reverses a raw-supported claim is the costliest failure (it overwrites correct content and re-stamps it). Re-checking the quote is one grep, and it is the only thing between a fabricated finding and a fabricated fix. Treat a refuter's findings as claims to check, not instructions to apply — most of all a finding that would flip a conclusion the raw already supports.
 
 Where the tiers run:
 
@@ -117,7 +121,7 @@ Cross-page support and honesty: the source page's `Concepts and Entities` callou
 **A run may set a page `verified` only when all four hold.** Any one failing means the page is not stamped:
 
 1. **Coverage held.** The raw was fully readable this run — not truncated, image-only, OCR-garbled, encrypted, or paywalled to an abstract. For a book, the chosen chapter or page range was read in full (the other chapters being unread is the intended scope, not a coverage gap).
-2. **Every non-obvious claim on the finished page is accounted for**, in one of three ways: certified by this run's claim check; already certified by a prior run *and* untouched by this one (the page entered the run `verified` with a `verified_hash:` matching its body — confirm that before relying on it); or marked `*[unverified]*` / `*[tentative]*` as an honest pending delta, which the hash excludes.
+2. **Every non-obvious claim on the finished page is accounted for**, in one of three ways: certified by this run's claim check; already certified by a prior run *and* untouched by this one (the page entered the run `verified` with a `verified_hash:` matching its body — confirm that before relying on it); or marked `*[unverified]*` / `*[tentative]*` as an honest pending delta, which the hash excludes. On a page entering the run **non-`verified`** the second route is unavailable — nothing on it was ever certified — so a pre-existing unmarked claim cited to the raw this run read is this run's to certify or fix, exactly as a claim it wrote would be, while one cited to another raw is marked. This is what lets a reingest of a `draft` page reach `verified` at all; without it the claim check's "claims this run wrote or changed" scope would leave those bullets in no route and strand the common path at `draft` forever.
 3. **The page is structurally clean** — `python3 .claude/skills/multi-skill/scripts/check_wiki.py "1-wiki"` returns no finding against it with `"severity": "error"` — what a report renders as Critical; `warning` and `info` do not block. The script prints one JSON list for the whole tree and findings only, so `[]` means clean and an absent page is a clean page — confirm the page was on disk when the script ran before reading its absence that way. A faithfulness-clean but structurally-broken page is not stamped.
 4. **Nothing the run surfaced leaves the page misleading** — an unreadable evidence region a claim rests on, a contradiction the run surfaced but could not settle, support the run removed and did not replace. Those set `needs-update` with a `needs_update_reason:` naming exactly what must be resolved.
 
@@ -145,7 +149,7 @@ Three shapes account for most correction failures:
 
 One report per operation, in the calling skill's own output folder — never a second file, and never another skill's folder.
 
-- `ingest` (Step 8) writes a dedicated report to `2-outputs/ingest/ingest-YYYY-MM-DD-HHMM-{stem}.md` (`HHMM` is the 24-hour UTC from `TZ='UTC' date '+%Y-%m-%d-%H%M'` at write time). The body differs by mode — new-source vs reingest, the two shapes below — but the folder and filename pattern are the same. This report is ingest's single operation output.
+- `ingest` (Step 8) writes a dedicated report to `2-outputs/ingest/ingest-YYYY-MM-DD-HHMM-{stem}.md` (`HHMM` is the 24-hour UTC from `TZ='UTC' date '+%Y-%m-%d-%H%M'` at write time). The body differs by mode — new-source vs reingest — but the folder and filename pattern are the same. This report is ingest's single operation output. The two layouts are in `.claude/skills/ingest/references/report-shapes.md`, kept in the ingest folder because no other caller writes them.
 - `query`'s page-authoring path writes no separate report. It records both checks' results — the late-section detail and `#page=N` spot-check, the claim tally, plus any fixes — as a short `Promotion verification` section inside the query output it already saved at `2-outputs/query/query-YYYY-MM-DD-HHMM-{topic}.md`. One file per query, even when the query promotes a page; nothing is written under `2-outputs/ingest/`.
 - `synthesis` (Step 8) records both check results (late-section detail, `#page=N` spot-check, claim tally, fixes) in its own `2-outputs/synthesis/` report and its `1-wiki/log.md` entry (Step 10). Nothing is written under `2-outputs/ingest/`.
 - `supersede` (Step 7) records both check results in its own log entry (Step 8) alongside the supersession's landed-cleanly checks; no separate ingest report.
@@ -154,97 +158,5 @@ Record both check results, the per-claim certification tally, and the status eac
 
 **Recommended next ingests.** Every report carries a `Recommended next ingests` section, second-to-last before the closing `## Self-report`: the papers that would fill a gap *this ingest surfaced* — a single-source page this ingest created or left wanting its primary, a watch item it added, a dangling concept that now warrants its own source, or uningested prior work this source cites and leans on. One entry per paper: author and year, the title, and one line on the gap it fills. This is ingest-derived, not a generic literature dump: list only what this source's gaps actually point to. **Honesty guard (the academic-integrity rule applies):** list only papers you are confident genuinely exist — never fabricate a title, author, or venue, and mark any whose existence you are unsure of `(verify exists)` rather than asserting it. The section is `none` when the ingest surfaced no specific next-source — it is not a quota, so do not pad it.
 
-New-source report shape:
-
-```markdown
----
-type: ingest-report
-date: YYYY-MM-DD
-stem: "{stem}"
-frames: []  # one or more frame texts, or empty if unscoped
-purpose: "{non-frame depth purpose, or empty}"
----
-
-# Ingest report: {stem}
-
-Touched:
-
-- [[1-wiki/sources/{stem}.md|{stem}]]
-- [[1-wiki/concepts/scaled-dot-product-attention.md|Scaled Dot-Product Attention]]
-
-## Claim check
-Result: pass | fail
-- Coverage: {full-text confirmed — the probe used; for a book, the range read in full}
-- Late-section detail re-located (proof of raw re-read): {final section/last figure/appendix + the fact checked}
-- #page=N link spot-checked: {physical page N + printed page seen there + content confirmed, or n/a (non-PDF raw)}
-- Claims written this run: {N}. Certified: {N} ({tier breakdown — e.g. 3 at Tier 0, 2 at Tier 1, 9 at Tier 3}). Marked `*[unverified]*`: {N + why each}. Marked `*[tentative]*`: {N + why each}.
-- Refuter outcomes: {claims where a refuter refuted or could not confirm, the verbatim quote it returned, and what the orchestrator did — fixed, marked, or discarded the finding after re-grepping the quote; "all held" when none}.
-- Notes on metadata, TL;DR, contribution, key claims, evidence pointers, image fidelity.
-
-## Page self-check
-Result: run | run with findings
-- Fixed now: {cheap local corrections applied — AI tells re-voiced, vague referents named, repeated bullets dropped, missing wikilinks added; or "none"}
-- Handed to audit: {page-level findings needing the whole page or the wiki in view — a possible two-idea page, a suspected near-duplicate, an incomplete connection sweep; specific enough to act on without rediscovery; or "none"}
-- Notes on one-idea clarity, simple language, standalone read, image discipline, intra-page redundancy.
-
-## Status set
-- [[1-wiki/sources/{stem}.md|{stem}]] - verified | draft | needs-update {+ the reason, when not verified}
-- One line per touched page. A page left non-`verified` names which of the four Setting Status conditions it failed.
-
-## Fixes applied
-- Short bullet per fix made before finalizing (or "none").
-- Repeated-literal sweep (after any citation fix): the literal(s) searched and the occurrences re-checked and fixed across the wiki (or "no citation fix this run").
-
-## Recommended next ingests
-- {author year — "Title" — the gap this ingest surfaced that it fills; "(verify exists)" if unsure}, grouped if several. Only papers you are confident exist. "none" when the ingest surfaced no specific next-source.
-
-## Self-report
-- {a specific limitation that bit ingest this run — a rule it lacked, a case it handled wrong (e.g. over-demoting a page on a single added claim), a step it couldn't complete} → upgrade: {how the ingest skill should change} (or the single line: none noted this run; per `.claude/skills/multi-skill/references/self-report.md`)
-```
-
-Existing-source (reingest) report shape:
-
-```markdown
----
-type: ingest-report
-date: YYYY-MM-DD
-stem: "{stem}"
-frames: []   # the page's frames after this run, or empty if unscoped
-purpose: "{deep purpose, or empty — carry the prior report's value forward on a normal reingest rather than blanking it}"
----
-
-# Reingest report: {stem}
-
-### Claim check
-- Result: pass | fail
-- Coverage: {full-text confirmed — the probe used; for a book, the range read in full}
-- Late-section detail re-located (proof of raw re-read): {final section/last figure/appendix + the fact checked}
-- #page=N link spot-checked: {physical page N + printed page seen there + content confirmed, or n/a (non-PDF raw)}
-- Claims written or changed this run: {N}. Certified: {N} ({tier breakdown}). Marked `*[unverified]*`: {N + why each}. Marked `*[tentative]*`: {N + why each}.
-- Refuter outcomes: {refutations and "cannot confirm" verdicts with the verbatim quote returned and what was done; "all held" when none}
-- Pages checked:
-  - [[1-wiki/sources/{stem}.md|{stem}]]
-  - ...
-- Findings: {short list, or "none"}
-- Fixes applied: {short list, or "none"}
-
-### Page self-check
-- Result: run | run with findings
-- Pages read:
-  - [[1-wiki/concepts/self-attention.md|self-attention]]
-  - ...
-- Fixed now: {cheap local corrections applied, or "none"}
-- Handed to audit: {page-level findings needing the whole page or the wiki in view, or "none"}
-- Repeated-literal sweep (after any citation fix): the literal(s) searched and the occurrences re-checked and fixed across the wiki (or "no citation fix this run").
-
-### Status set
-- One line per touched page: page - verified | draft | needs-update {+ reason when not verified}.
-
-### Recommended next ingests
-- {author year — "Title" — the gap this reingest surfaced that it fills; "(verify exists)" if unsure; "none" when none}. Only papers you are confident exist.
-
-### Self-report
-- {a specific limitation that bit ingest this run — a rule it lacked, a case it handled wrong (e.g. over-demoting a page on a single added claim), a step it couldn't complete} → upgrade: {how the ingest skill should change} (or the single line: none noted this run; per `.claude/skills/multi-skill/references/self-report.md`)
-```
 
 Set each touched page's status by the Setting Status rule above — `verified` when all four conditions hold, `draft` when a claim on the page is neither certified nor honestly marked, `needs-update` when the run leaves an unresolved problem. Do not stamp on a hunch and do not stamp around a claim you did not check: an honest `draft` costs one later run, while a wrong `verified` is trusted by every reader and every downstream skill until something else contradicts it. A page whose status this operation does not touch keeps it.
