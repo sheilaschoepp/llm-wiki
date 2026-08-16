@@ -2,6 +2,15 @@
 
 Reverse-chronological event log. Newest entry on top.
 
+## [2026-08-16 21:29] skill-llm-council | consistency
+
+- Saved: [[2-outputs/skill-llm-council/skill-llm-council-2026-08-16-2129-consistency.md|skill-llm-council-2026-08-16-2129-consistency]]
+- Full protocol: 10 advisors across two councils, 10 anonymized peer reviews, 2 chair syntheses, meta-chair reconciliation, 8 adversarial refuters. Three of nine load-bearing proposals held; six were refuted, including both chair disagreements.
+- Applied 10 edits to `.claude/skills/consistency/`. The run's motivating finding: `result:` — the field gating whether `audit` may run — was underivable three ways. A `2-outputs/` rename the skill may not perform fell outside every non-blocking class and bounded the loop out to `blocked`; one line made `clean` conditional on the judgment-drift attestation while another said "Exit 0 ⇒ clean" flatly; and the report demanded three severity counts that no finding carries and no skill reads.
+- Fixes: a sixth non-blocking class keyed on fix-permission with a mandatory named-rule citation; the exit code made necessary-but-not-sufficient on both branches; the three fabricated counts deleted and the dangling severity pointer repaired from `AI_TELL_PATTERNS`; a freeze on schema-derived fixes while the roster is in dispute; a restated Limits rule removed; Scope widened to the trees the battery actually reads; the description given the action posture every sibling states (947 -> 984 chars); and `placeholder_consistency` fixed to use the page kind it had been discarding.
+- Five cross-file proposals raised, not applied — chief among them hoisting one canonical section roster shared by `check_consistency.py` and `check_wiki.py`.
+- Verification: battery clean but for the standing handoff-doc finding, 33 consistency tests (up from 30), 296 multi-skill tests, ruff clean, scanner sweep clean across all 14 skills.
+
 ## [2026-08-16 21:04] skill-llm-council | ingest cross-file proposals
 
 - Put the ingest council's cross-file proposals through the refuter gate before applying, per the user's decision to apply only the verified ones.

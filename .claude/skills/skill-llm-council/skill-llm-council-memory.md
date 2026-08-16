@@ -12,6 +12,30 @@ Cross-skill rules live in `.claude/skills/multi-skill/multi-skill-memory.md` —
 
 Newest entry on top, one entry per heading.
 
+## 2026-08-16 — A measurable claim is applied by a script that asserts it, never by an agent that states it
+
+Five character-count errors across three councils today, and the last one was made by a *refuter* — the mechanism that had just caught the previous four.
+
+- Two `lint` advisors and two peer reviewers reported "11 lines exceed the 79-char limit"; `pyproject.toml` sets 88 and the longest line was 87.
+- A `consistency` advisor proposed a description rewrite "at 1015 chars"; a peer reconstructed it at 1054, over the hard 1024 cap.
+- The refuter that caught that then certified its own replacement at 1018. Measured: 1029. It would have breached the cap had it been applied on the refuter's word.
+- Three separate agents reported three different word counts for the same `checks.md` (1343 / 1469 / 1503).
+
+The pattern is not carelessness in one agent; it is that a number stated in prose carries no more evidence than a guess, however many agents restate it. So: when an edit's correctness IS a measurable quantity, apply it with a script that asserts the quantity and fails loudly, and never accept a count — from an advisor, a peer, or a refuter — as grounds to apply.
+
+## 2026-08-16 — Put every measurement in a task brief in the unit the finding will be argued in
+
+I told the `consistency` structure reviewer that `references/checks.md` was "49 lines vs lint's 111 lines / ~6900 words", which reads as a 4x density gap. Both files are one-line-per-bullet, so lines measure nothing; per-check the real ratio is ~56 vs ~110 words. The advisor caught it and corrected the brief rather than inheriting it — but a brief carrying a wrong premise can manufacture a finding that then survives peer review because everyone downstream shares the premise.
+
+Compute every number that goes into a brief, and state it in the unit the resulting finding will actually be argued in.
+
+## 2026-08-16 — The refutation rate is a tuning signal, not a cost of doing business
+
+Three full councils today: `ingest` (9 of 15 held), `lint` (8 of 13, twelve distinct claims refuted), `consistency` (3 of 9 held). Roughly half to two-thirds of load-bearing proposals do not survive an adversarial read, and several fell to facts a single grep would have surfaced *before* the proposal was written.
+
+Two things follow. First, treat chair change-sets as candidate lists and never apply a load-bearing edit that skipped the gate. Second — the actual fix — require each advisor to name, for its strongest finding, the one check that would falsify it, and to report the result of running that check. The gate is currently doing work the advisors should have done.
+
+
 ## 2026-08-16 — Shared-premise convergence is not evidence; verify the one fact a cluster rests on
 
 The `lint` council produced two false findings that multiple independent agents agreed on, and each fell to a single dissenter who opened a config file.

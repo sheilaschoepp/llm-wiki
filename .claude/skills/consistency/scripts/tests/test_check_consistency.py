@@ -447,8 +447,8 @@ class TestCheckConsistency(unittest.TestCase):
 
     def test_identity_leakage_exempts_legal_attribution_files(self) -> None:
         # A licence must name its copyright holder to be binding, so the
-        # identity term there is required text and NEITHER fix hint (move
-        # to about-me, or remove) is available. All spellings of the stem
+        # identity term there is required text and NEITHER fix hint
+        # (move to about-me, or remove) works. All spellings of the stem
         # are exempt, extensionless included.
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
@@ -525,3 +525,53 @@ class TestCheckConsistency(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+class TestPlaceholderConsistency(unittest.TestCase):
+    """Per-kind placeholder correctness, not just uniformity."""
+
+    def _page(self, root, rel, body):
+        f = root / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(body, encoding='utf-8')
+
+    def test_uniformly_wrong_placeholder_for_kind_is_flagged(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self._page(
+                root,
+                '1-wiki/concepts/c.md',
+                '# C\n> [!not-this] Not This\n> - None noted\n> ^not-this\n',
+            )
+            out = cc.check_placeholder_consistency(root=root)
+            assert len(out) == 1
+            assert 'None yet' in out[0]['message']
+
+    def test_correct_placeholder_and_none_prose_are_clean(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self._page(
+                root,
+                '1-wiki/concepts/c.md',
+                '# C\n> [!not-this] Not This\n> - None yet\n> ^not-this\n'
+                '> [!examples] Examples\n'
+                '> - None of the three trials reported latency\n> ^examples\n',
+            )
+            self._page(
+                root,
+                '1-wiki/sources/S.md',
+                '# S\n> [!appraisal] Appraisal\n> - None noted\n> ^appraisal\n',
+            )
+            assert cc.check_placeholder_consistency(root=root) == []
+
+    def test_mixed_placeholders_still_flagged(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self._page(
+                root,
+                '1-wiki/concepts/c.md',
+                '# C\n> [!not-this] Not This\n> - None yet\n> ^not-this\n'
+                '> [!examples] Examples\n> - None noted\n> ^examples\n',
+            )
+            out = cc.check_placeholder_consistency(root=root)
+            assert len(out) == 1
+            assert 'Mixed' in out[0]['message']

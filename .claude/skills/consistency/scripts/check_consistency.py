@@ -756,8 +756,34 @@ def check_old_schema_wording(root: Path) -> list[dict[str, Any]]:
     return findings
 
 
-# placeholder_consistency: per-page placeholder uniformity.
+# CLAUDE.md -> Body sections as callouts prescribes exactly two empty
+# placeholders: source pages take `None noted`, concept/entity/synthesis
+# pages take `None yet`. No page kind takes a third.
+EXPECTED_PLACEHOLDER = {
+    'source': 'None noted',
+    'entity': 'None yet',
+    'concept': 'None yet',
+    'synthesis': 'None yet',
+}
+CANONICAL_PLACEHOLDERS = frozenset(EXPECTED_PLACEHOLDER.values())
+
+
+# placeholder_consistency: per-page placeholder correctness.
 def check_placeholder_consistency(root: Path) -> list[dict[str, Any]]:
+    """
+    Flag empty-section placeholders that are mixed within a page, or
+    wrong for the page's kind.
+
+    Parameters
+    ----------
+    root
+        Repository root to scan.
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        One finding per offending page.
+    """
     findings = []
     folders = [
         (root / '1-wiki/sources', 'source'),
@@ -765,16 +791,22 @@ def check_placeholder_consistency(root: Path) -> list[dict[str, Any]]:
         (root / '1-wiki/concepts', 'concept'),
         (root / '1-wiki/syntheses', 'synthesis'),
     ]
-    for folder, _kind in folders:
+    for folder, kind in folders:
         if not folder.exists():
             continue
+        expected = EXPECTED_PLACEHOLDER[kind]
         for page in folder.glob('*.md'):
             text = page.read_text(encoding='utf-8')
             placeholders = set()
             for line in text.splitlines():
-                m = re.match(r'^> - (None [^.*]+?)(\.|$)', line.strip())
-                if m:
-                    placeholders.add(m.group(1).strip())
+                stripped = line.strip()
+                # Match only the two canonical phrases, never an open
+                # `None ...` capture: a content bullet such as
+                # `> - None of the three trials reported latency` is
+                # prose, not a placeholder.
+                for phrase in CANONICAL_PLACEHOLDERS:
+                    if re.match(rf'^> - {re.escape(phrase)}\.?$', stripped):
+                        placeholders.add(phrase)
             if len(placeholders) > 1:
                 findings.append(
                     finding(
@@ -782,7 +814,18 @@ def check_placeholder_consistency(root: Path) -> list[dict[str, Any]]:
                         file=str(page.relative_to(root)),
                         message=f'Mixed empty-section placeholders on one page: '
                         f'{sorted(placeholders)}.',
-                        fix_hint='Pick one canonical placeholder phrase and use it consistently.',
+                        fix_hint=f'Use `{expected}` throughout on a {kind} page.',
+                    )
+                )
+            elif placeholders and expected not in placeholders:
+                wrong = sorted(placeholders)[0]
+                findings.append(
+                    finding(
+                        check_id='placeholder_consistency',
+                        file=str(page.relative_to(root)),
+                        message=f'A {kind} page uses the placeholder `{wrong}`, '
+                        f'but the schema prescribes `{expected}`.',
+                        fix_hint=f'Replace `{wrong}` with `{expected}`.',
                     )
                 )
     return findings
@@ -1509,7 +1552,7 @@ def check_identity_term_leakage(root: Path) -> list[dict[str, Any]]:
             # its copyright holder to do its job, so a hit here is
             # required text rather than leakage -- and NEITHER of this
             # check's two fix hints is available: the name cannot move
-            # to about-me/ and cannot be removed. Left unexempted it is a
+            # to about-me/ and cannot be removed. Unexempted it is a
             # permanent finding every run must re-diagnose and sanction
             # by hand. The check's purpose is keeping the vault owner's
             # identity out of REUSABLE GENERIC INFRA; a legally-required

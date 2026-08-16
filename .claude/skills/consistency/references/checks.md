@@ -18,7 +18,7 @@ A check tagged **Root-level proposals.** below targets `CLAUDE.md`, a skill file
 
 ## Packet: wiki-pages
 
-- `placeholder_consistency` — flags a wiki page that mixes more than one empty-section placeholder phrase.
+- `placeholder_consistency` — flags a wiki page whose empty-section placeholders are mixed, or are the wrong phrase for the page's kind. `CLAUDE.md` → Body sections as callouts prescribes exactly two: `None noted` on source pages, `None yet` on concept, entity and synthesis pages (`EXPECTED_PLACEHOLDER` in the script). Matching is on those two exact phrases only, never an open `None …` capture, so a content bullet such as `> - None of the three trials reported latency` is prose and is not flagged. Note the check catches per-kind correctness that `lint` does not: `check_wiki.py` holds both strings in one interchangeable `PLACEHOLDER_BULLETS` set.
 - `body_section_order` — checks that each source, concept/entity, and synthesis page carries its required callouts in the schema order (per `EXPECTED_SECTIONS`).
 - `source_venue_year_split` — flags a source-page `venue:` field that embeds a year; the year belongs in the separate `year:` field.
 - `index_vs_files_drift` — compares the page lists in `1-wiki/index.md` against the files on disk in each wiki folder, both directions. A missing wiki subfolder no longer crashes the run; the folder simply contributes no files.
@@ -40,6 +40,21 @@ A check tagged **Root-level proposals.** below targets `CLAUDE.md`, a skill file
 - `unbackticked_paths_resolve` — finds path-shaped tokens with a known schema prefix in `CLAUDE.md` prose outside backticks and fences, and verifies each resolves. Pairs with `filename_references_resolve` to catch path drift regardless of backtick convention. Root-level proposals.
 
 ## Packet: ai-writing-tells
+
+**`ai_writing_tells` severity mapping.** This is the one check whose findings carry a severity, held per pattern in `AI_TELL_PATTERNS` and rendered in the finding's message. It uses this skill's skill-facing vocabulary (`CLAUDE.md` → Severity vocabulary): `error` / `warning` / `suggestion`, never the wiki-facing `critical` / `warning` / `info`. No other check carries a severity, and the report frontmatter carries no per-severity totals.
+
+| pattern | severity |
+| --- | --- |
+| citation-markup leakage | error |
+| placeholder leakage | error |
+| high-density AI vocabulary | warning |
+| significance-puffing phrase | warning |
+| hedging / knowledge-cutoff tell | warning |
+| UTM parameter leakage | warning |
+| Subject: header in body | warning |
+| footnote-arrow leakage | warning |
+| negative-parallelism cliche | suggestion |
+| 'Despite challenges' conclusion template | suggestion |
 
 - `ai_writing_tells` — mechanical regex tells from `ai-writing-tells.md`: high-density vocabulary, puffery, hedging, citation-markup leakage, placeholder leakage, UTM parameters, leftover subject headers, footnote arrows, negative parallelism, and the "Despite challenges" conclusion template. Scans project docs only (`CLAUDE.md`, `README.md`, `MEMORY.md`, the style folder, and skill `SKILL.md` and reference files). Self-skips the documents that quote the patterns. Wiki pages are scanned by `lint`, not here.
 
