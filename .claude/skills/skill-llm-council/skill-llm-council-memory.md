@@ -1,7 +1,7 @@
 ---
 type: memory
 skill: skill-llm-council
-updated: 2026-08-15
+updated: 2026-08-16
 ---
 
 # Skill-llm-council memory
@@ -11,6 +11,27 @@ Corrections, rewrites, and scope adjustments specific to the `skill-llm-council`
 Cross-skill rules live in `.claude/skills/multi-skill/multi-skill-memory.md` — read that file too.
 
 Newest entry on top, one entry per heading.
+
+## 2026-08-16 — Shared-premise convergence is not evidence; verify the one fact a cluster rests on
+
+The `lint` council produced two false findings that multiple independent agents agreed on, and each fell to a single dissenter who opened a config file.
+
+- Four agents (two advisors, two peer reviewers) reported "11 lines exceed the 79-char limit". `pyproject.toml` sets `line-length = 88`; the longest line is 87. The peer reviewers "verified" it by re-counting the same eleven line numbers — nobody checked the limit. The premise came from `coding-best-practices.md` *recommending* 79.
+- Three of five C1 peers agreed a `checks.md` severity misfiling "drops findings off audit's worklist". Report tiers render from the script's JSON severity, not from where `checks.md` files the bullet, so nothing was dropped. Only the fifth reviewer traced the rendering path.
+
+Both clusters shared one unchecked premise. Agreement across agents that inherited the same premise carries no independent information. When a convergent cluster forms, identify the single checkable fact underneath it and check that, rather than counting agreement.
+
+## 2026-08-16 — Anything injected into a chair prompt as SETTLED needs a verified evidence line
+
+In the `lint` run the orchestrator rated a peer reviewer's finding highly and passed it into Council 2's chair prompt as settled context: that the `checks.md` "Warning is audit's authored-tier worklist" sentence was false and must be narrowed. The refuter later showed the sentence restates the project's own cross-file definition (`audit/SKILL.md:29`), and deleting it would have desynced two files.
+
+A SETTLED item shapes every downstream agent's reasoning and is by construction not re-litigated, so it needs the same evidence bar as a refuter verdict — an orchestrator-checked file and line — or it must be labelled provisional. The refuter gate caught this one, but only because the edit happened to be load-bearing.
+
+## 2026-08-16 — The councils over-propose; budget for a high refutation rate
+
+Thirteen load-bearing edits reached the refuter gate on `lint`; twelve distinct claims were refuted in whole or part, eight edits held (several multi-part). This matches the `ingest` run earlier the same day and the three prior consecutive majority refutations already recorded below.
+
+The pattern is consistent enough to plan around: treat the chair change-sets as candidate lists, not conclusions, and never apply a load-bearing edit that skipped the gate. Consider asking each advisor for a disconfirming check they ran on their own strongest finding before it reaches peer review.
 
 ## 2026-08-16 — refuters refuted 6 of 15, and the mode inverted again: false claims about neighbours, not over-deletion
 

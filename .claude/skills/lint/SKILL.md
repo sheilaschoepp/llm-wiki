@@ -35,7 +35,7 @@ Lint Progress:
 - [ ] Step 5: Log the run
 ```
 
-Two base terms are used as givens throughout, defined once here: `verified_hash:` is the SHA-256 of a page's body with `*[unverified]*`-marked claim lines excluded (computed by `.claude/skills/multi-skill/scripts/body_hash.py`), which `audit` writes when it fact-checks a page `verified` (CLAUDE.md → Page status). An `*[unverified]*` marker tags a non-obvious claim added since the last fact-check (a changed claim demotes the page instead); `body_hash.py` masks those lines, so a marked claim rides a `verified` page without tripping the hash (CLAUDE.md → Bullet markers).
+Two base terms are used as givens throughout, defined once here: `verified_hash:` is the SHA-256 of a page's body with `*[unverified]*`-marked claim lines excluded (computed by `.claude/skills/multi-skill/scripts/body_hash.py`), written by whichever run certifies the page's claims — `ingest` normally stamps `verified` itself, `audit` stamps on cause, and `lint` re-stamps an allowlisted verification-neutral fix on a baseline-matched page (never on a fact-check, which lint does not perform) (CLAUDE.md → Page status). An `*[unverified]*` marker tags a non-obvious claim added since the last fact-check (a changed claim demotes the page instead); `body_hash.py` masks those lines, so a marked claim rides a `verified` page without tripping the hash (CLAUDE.md → Bullet markers).
 
 Four run-state terms recur below and carry the verification logic. They cross-define and are *applied* in Step 3 — read them now for orientation, each used at the step noted:
 
@@ -44,7 +44,7 @@ Four run-state terms recur below and carry the verification logic. They cross-de
 - Re-stamp vs demote — on a `verified` page lint mutated, the choice between rewriting `verified_hash:` in the same edit (an allowlisted format fix — `callout_block_id`, `wikilink_pipe_spacing`, `citation_bracket_style`, `embed_not_isolated` — on a baseline-matched page, keeping `status: verified`) and resetting to `draft` (any other unmarked body change). The full rule is applied at Step 3's `verified_hash_mismatch` fix; membership, the lint/audit partition, the text-content exclusion, and the re-stamp/demote rule are the shared operational spec `.claude/skills/multi-skill/references/verification-neutral-fixes.md`.
 - Owned-drift — a `check_id` whose fix the Step 3 auto-fix list owns; the loop's clean-test keys on this set.
 
-The script also emits `verified_anchor_unaudited` (Warning, on audit's authored worklist) when a `verified` page's locator anchor (the `sec.`/`fig.`/`tab.`/`app.` structural label inside a citation's `#page=N` deep-link) changed vs git HEAD — not auto-fixed; report it (remedy: confirm the anchor against the raw and keep the page verified, mark the bullet `*[unverified]*`, or demote). It likewise emits `locator_page_mismatch` (Critical) when a `p. M` locator contradicts what the pagination map says its physical page prints, and `pagination_map_unregistered` (Info) for a raw cited but unregistered — both report-only (the fix edits citation body prose, or registers the raw, neither a mechanical lint fix): `audit` or the user resolves them.
+The script also emits `verified_anchor_unaudited` (Warning, on audit's authored worklist) when a `verified` page's locator anchor (the `sec.`/`fig.`/`tab.`/`app.` structural label inside a citation's `#page=N` deep-link) changed vs git HEAD — not auto-fixed; report it (remedy: confirm the anchor against the raw and keep the page verified, mark the bullet `*[unverified]*`, or demote). It likewise emits `locator_page_mismatch` (Critical) when a `p. M` locator contradicts what the pagination map says its physical page prints, and `pagination_map_unregistered` (Info) for a raw cited but unregistered — both report-only (the fix edits citation body prose, or registers the raw, neither a mechanical lint fix). `audit` or the user resolves `locator_page_mismatch`, opening the raw to correct the citation or the map. `pagination_map_unregistered` is different: the map is registered on ingest via `pagination_map.py` with a human confirming each line, and is never grown by `audit` (CLAUDE.md → Stay in your lane), so that one is the user's, on the next ingest of the raw.
 
 1. **Load memory, then run the deterministic script.** First read `.claude/skills/lint/lint-memory.md` and `.claude/skills/multi-skill/multi-skill-memory.md` to apply prior corrections about which findings the user has tuned, what counts as auto-fixable here, and any project-specific rules layered onto the script's defaults. Then run the script:
 
@@ -74,7 +74,7 @@ Parse the JSON findings. Guard the parse: `check_wiki.py` prints its findings JS
 
 3. **Apply every determinate fix, then loop until clean.** Apply every fix that is mechanically determined (one correct fix, no content authorship) at every severity level. A fix is lint's to make only when both hold: (a) the corrective edit is uniquely determined with no wording choice, and (b) it touches frontmatter, block-ID / section-callout *structure*, or determinate `index.md` / `hot.md` bookkeeping — never callout body prose. A finding whose fix would split, merge, reword, compose, or restructure page content (or `hot.md`/`log.md` body text) is not lint's: lint records it and `audit` carries it out.
 
-   The common determinate fixes — `source_count`, `updated:`, `index.md` drift (`index_missing_entry` / `index_stale_entry`), missing-callout insertion (the deterministic anchor walk), `callout_block_id`, `hot.md` Open-threads pruning / Recent-activity five-entry trim / missing-page removal, chronology re-sort (`.claude/skills/lint/scripts/sort_chronology.py`), `wikilink_pipe_spacing`, `citation_bracket_style`, `embed_not_isolated`, and the `verified_hash_mismatch` re-stamp-vs-demote branch — with their exact transforms, the convergence loop (re-run `check_wiki.py`; the regression guard diffing against the pinned Step 1 `(check_id, file)` baseline; the clean test over the owned-drift set; the non-convergence guard, max 3 iterations), and **Step 3b — the verified-hash sweep** (re-hash with `body_hash.py` every verified page lint mutated and confirm each was re-stamped or reset), are in `references/fixes.md`. Two load-bearing anchors: the verified-hash re-stamp requires a *baseline-matched* page and an allowlisted format fix, else demote to `draft` (the safe fallback, CLAUDE.md → Page status); and both the regression baseline and the hash baseline are pinned from the pre-fix Step 1 pass and never re-derived after a fix.
+   The common determinate fixes — `source_count`, `updated:`, `index.md` drift (`index_missing_entry` / `index_stale_entry`), missing-callout insertion (the deterministic anchor walk), `callout_block_id`, `hot.md` Open-threads pruning (dead-target entries only — every wiki-page link in the entry must resolve to no file) / Recent-activity five-entry trim / missing-page removal, chronology re-sort (`.claude/skills/lint/scripts/sort_chronology.py`), `wikilink_pipe_spacing`, `citation_bracket_style`, `embed_not_isolated`, and the `verified_hash_mismatch` re-stamp-vs-demote branch — with their exact transforms, the convergence loop (re-run `check_wiki.py`; the regression guard diffing against the pinned Step 1 `(check_id, file)` baseline; the clean test over the owned-drift set; the non-convergence guard, max 3 iterations), and **Step 3b — the verified-hash sweep** (re-hash with `body_hash.py` every verified page lint mutated and confirm each was re-stamped or reset), are in `references/fixes.md`. Two load-bearing anchors: the verified-hash re-stamp requires a *baseline-matched* page and an allowlisted format fix, else demote to `draft` (the safe fallback, CLAUDE.md → Page status); and both the regression baseline and the hash baseline are pinned from the pre-fix Step 1 pass and never re-derived after a fix.
 
 4. **Compile the report** at `2-outputs/lint/lint-YYYY-MM-DD-HHMM.md`. Obtain the timestamp at write time by running `TZ='UTC' date '+%Y-%m-%d-%H%M'` (the session context provides the date but not the current minute). If a lint report already exists for the same minute, do not overwrite it; append one of these suffixes: `-rerun` (re-run with no changes since the prior report), `-after-fixes` (after applying fixes from the prior report), or an ordinal `-2`/`-3`/... for further runs. Cite the `check_id` and short name from `references/checks.md` in each finding row so the user can refer to checks by their canonical ID (`source_count_mismatch`, `verified_hash_mismatch`, etc.).
 
@@ -89,7 +89,6 @@ date: YYYY-MM-DD
 result: <clean|blocking>   # compute per Step 4 from the final post-loop pass — do not leave the literal `clean`
 audit_blocking: <N>        # count of unresolved audit-blocking findings
 critical: N            # all Criticals, incl. standing (matches the script's error count)
-critical_blocking: N   # critical minus the STANDING_NONBLOCKING set — equals audit_blocking by construction (every standing item is error-severity); keep the two in sync
 warning: N
 info: N
 ---
@@ -99,7 +98,7 @@ info: N
 > Severity: the script emits `error|warning|info`; rendered here as Critical/Warning/Info.
 
 ## Summary
-- Critical: N total — {critical_blocking} blocking, {N − critical_blocking} standing (expected)
+- Critical: N total — {audit_blocking} blocking, {N − audit_blocking} standing (expected)
 - Warning: N
 - Info: N
 - Auto-fixed this run: N
@@ -112,6 +111,7 @@ info: N
 
 ## Auto-Fixed
 - ...
+- Status changes: demoted `verified` → `draft` (`verified_hash` stripped) — page - triggering `check_id` (or "none"); re-stamped, kept `verified` — page - allowlisted fix (or "none"). Both sets come from the Step 3b sweep, which already tracks them. A demotion costs a later run a full re-verification to undo, so it is named here rather than left inside the generic list above.
 
 ## Critical
 - Page - `check_id` (short-name) - description - proposed fix
@@ -132,8 +132,10 @@ info: N
 ```markdown
 ## [YYYY-MM-DD HH:MM] lint | {N} findings ({C} critical, {W} warning, {I} info)
 - Saved: [[2-outputs/lint/lint-YYYY-MM-DD-HHMM.md|lint-YYYY-MM-DD-HHMM]]
-- Auto-fixed: [[1-wiki/concepts/self-attention.md|self-attention]], [[1-wiki/concepts/positional-encoding.md|positional encoding]] (or "none")
+- Auto-fixed: [[1-wiki/concepts/self-attention.md|self-attention]], [[1-wiki/concepts/positional-encoding.md|positional encoding]] (or "none"); demoted verified → draft: [[1-wiki/concepts/positional-encoding.md|positional encoding]] (or "none")
 ```
+
+Mirror each `## Self-report` item, one line per item, in the chat summary as well as the report (`.claude/skills/multi-skill/references/self-report.md`).
 
 ## Checks
 

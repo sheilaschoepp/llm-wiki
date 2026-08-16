@@ -22,8 +22,12 @@ entry with no recoverable link still surfaces as the
 (sorting on an unknown key would misplace it) and that time must be
 added by hand first.
 
-Idempotent: an already-sorted, fully-timed file is rewritten byte-
-identically.
+Idempotent, in the strict sense f(f(x)) == f(x): the output is
+canonicalized (one blank line between entries, trailing blanks
+trimmed), so a file already in canonical form is rewritten
+byte-identically and any other file stabilizes after one pass. A first
+pass over a non-canonical file therefore changes bytes without
+re-ordering anything.
 
 python3 .claude/skills/lint/scripts/sort_chronology.py [wiki-path]
 
@@ -48,6 +52,14 @@ HOT_ENTRY_RE = re.compile(r'^- \[(\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))?\]')
 # check_wiki.py, points its fix_hint here.)
 REPORT_TIME_RE = re.compile(r'2-outputs/[^\s\]|)]*-(\d{4}-\d{2}-\d{2})-(\d{2})(\d{2})')
 
+# The bullet naming the entry's OWN report. Skills label it either
+# `- Saved:` (audit, brief, compare, consistency, lint, query, reflect)
+# or `- Report:` (ingest, forget, supersede, synthesis); `query` indents
+# it, so leading whitespace is tolerated. Scoping recovery to this line
+# stops a foreign link elsewhere in the body (a `cleanup` entry's list
+# of removed reports, say) from timing the entry.
+OWN_REPORT_LINE_RE = re.compile(r'^\s*- (?:Saved|Report):')
+
 
 def recover_time(entry_text: str, entry_date: str) -> str | None:
     """
@@ -60,8 +72,15 @@ def recover_time(entry_text: str, entry_date: str) -> str | None:
     Never invents a time and never consults git (commit time is an
     unreliable sort key).
     """
+    own = [
+        ln for ln in entry_text.split('\n') if OWN_REPORT_LINE_RE.match(ln)
+    ]
+    # Prefer the entry's own saved-report bullet; fall back to the whole
+    # entry only when it carries no labelled bullet at all, so an entry
+    # that names its own report is never timed from a foreign link.
+    scope = '\n'.join(own) if own else entry_text
     times = set()
-    for m in REPORT_TIME_RE.finditer(entry_text):
+    for m in REPORT_TIME_RE.finditer(scope):
         date, hh, mm = m.group(1), m.group(2), m.group(3)
         if date == entry_date and int(hh) < 24 and int(mm) < 60:
             times.add(f'{hh}:{mm}')
