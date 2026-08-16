@@ -33,6 +33,7 @@ Refuter mechanics — the cross-skill subagent rule:
 
 - Refuters **read and reason only.** Spawn each with read-only tools (Read, Glob, Grep; no Edit / Write / shell-write), from the **top-level orchestrating agent**, never nested inside another subagent. Every status change and fix is applied by the orchestrator, so all writes pass through one place and one set of safety rules, and concurrent writes never collide.
 - Give each refuter the claim and the raw, **not the page's framing**, and prompt it to refute — default to "refuted" unless the raw plainly supports the claim. A refuter that cannot reach the cited raw region (missing, unreadable, image-only, OCR-garbled, truncated) returns "cannot confirm", which counts as a non-pass, not a pass.
+- **Batch the claims, and batch the refuters.** Group claims into batches of roughly 25 and give the whole batch to **each refuter in the claim's tier** — three at the Tier-3 default — rather than spawning one subagent per claim, so the quorum holds per claim in three calls rather than 3×N; independence comes from the reader being separate, not from the unit being small. **Never split a batch across the tier's refuters** — that silently drops every claim in it to a single judgement. Keep each batch within one raw where possible, so a refuter opens a source once and settles everything tracing to it in that pass.
 - **Name the defect shape you want hunted.** A refuter told "check this claim" finds materially less than one told which failure mode to look for, and the difference is not marginal — a generic read can clear a page that a shape-directed read then breaks twice, including under an existing `verified` stamp. Give each refuter the specific shapes: a claim attributed to the wrong source, a locator pointing at a page the content is not on, a hedge or restriction the source stated and the claim dropped, a position transplanted from a neighbouring subject in the same list, a figure described as showing something it does not, and a repair that broke what it touched. Where a tier runs several refuters, vary the shape across them rather than issuing one prompt three times — independence of *angle* buys more than independence of *reader* alone.
 - **Exhaust the other reading route before returning "cannot confirm" on a figure.** A "cannot confirm" is a statement about one reading method, not about the claim, and the costly case is a figure: a `/Subtype /Image` with no text layer defeats `pdftotext` while the wiki itself already holds a legible crop of that same figure at `1-wiki/attachments/{stem}/` (`ingest` extracts figures there precisely so they can be read). Before reporting a figure claim unreadable, open the attachment folder for the cited source and read the crop — printed data labels, axis values, and legend percentages are usually right there. Pulling back a true, supported claim on an "unreadable" verdict is a real loss, the same kind of damage as leaving a false one, and it is the harder one to notice afterwards because the page simply gets quieter.
 - **Agreement certifies; a split does not.** When a tier's refuters do not all hold — any refuter refutes or cannot confirm — the claim is not certified: mark it `*[unverified]*` (or `*[tentative]*` where support is thin) and, for a page being promoted, set the page `needs-update` with the disagreement recorded, never certify on a split.
@@ -117,7 +118,7 @@ Cross-page support and honesty: the source page's `Concepts and Entities` callou
 
 1. **Coverage held.** The raw was fully readable this run — not truncated, image-only, OCR-garbled, encrypted, or paywalled to an abstract. For a book, the chosen chapter or page range was read in full (the other chapters being unread is the intended scope, not a coverage gap).
 2. **Every non-obvious claim on the finished page is accounted for**, in one of three ways: certified by this run's claim check; already certified by a prior run *and* untouched by this one (the page entered the run `verified` with a `verified_hash:` matching its body — confirm that before relying on it); or marked `*[unverified]*` / `*[tentative]*` as an honest pending delta, which the hash excludes.
-3. **The page is structurally clean** — `python3 .claude/skills/multi-skill/scripts/check_wiki.py "1-wiki"` raises no Critical against it. A faithfulness-clean but structurally-broken page is not stamped.
+3. **The page is structurally clean** — `python3 .claude/skills/multi-skill/scripts/check_wiki.py "1-wiki"` returns no finding against it with `"severity": "error"` — what a report renders as Critical; `warning` and `info` do not block. The script prints one JSON list for the whole tree and findings only, so `[]` means clean and an absent page is a clean page — confirm the page was on disk when the script ran before reading its absence that way. A faithfulness-clean but structurally-broken page is not stamped.
 4. **Nothing the run surfaced leaves the page misleading** — an unreadable evidence region a claim rests on, a contradiction the run surfaced but could not settle, support the run removed and did not replace. Those set `needs-update` with a `needs_update_reason:` naming exactly what must be resolved.
 
 **Certification reaches only as far as the raw the run read.** A run certifies a claim cited to the source it opened this pass. On a multi-source concept or synthesis page, a claim cited to a *different* source is out of this run's reach: leave it as it stands if it was already certified on an entering-`verified` page, otherwise mark it `*[unverified]*` and let it ride as the pending delta. That marking is legitimate and expected — it is what lets a page carrying claims from four sources reach `verified` one source at a time. What is not legitimate is marking a claim cited to *this* run's raw to avoid checking it.
@@ -146,7 +147,7 @@ One report per operation, in the calling skill's own output folder — never a s
 
 - `ingest` (Step 8) writes a dedicated report to `2-outputs/ingest/ingest-YYYY-MM-DD-HHMM-{stem}.md` (`HHMM` is the 24-hour UTC from `TZ='UTC' date '+%Y-%m-%d-%H%M'` at write time). The body differs by mode — new-source vs reingest, the two shapes below — but the folder and filename pattern are the same. This report is ingest's single operation output.
 - `query`'s page-authoring path writes no separate report. It records both checks' results — the late-section detail and `#page=N` spot-check, the claim tally, plus any fixes — as a short `Promotion verification` section inside the query output it already saved at `2-outputs/query/query-YYYY-MM-DD-HHMM-{topic}.md`. One file per query, even when the query promotes a page; nothing is written under `2-outputs/ingest/`.
-- `synthesis` (Step 8) writes no separate report; it records both check results (late-section detail, `#page=N` spot-check, claim tally, fixes) in its `1-wiki/log.md` entry (Step 10). Nothing is written under `2-outputs/ingest/`.
+- `synthesis` (Step 8) records both check results (late-section detail, `#page=N` spot-check, claim tally, fixes) in its own `2-outputs/synthesis/` report and its `1-wiki/log.md` entry (Step 10). Nothing is written under `2-outputs/ingest/`.
 - `supersede` (Step 7) records both check results in its own log entry (Step 8) alongside the supersession's landed-cleanly checks; no separate ingest report.
 
 Record both check results, the per-claim certification tally, and the status each touched page ended at. If frames or a non-frame depth purpose were used, include them in the report — not on the source page — so the framing/scope decision is recoverable later.
@@ -204,6 +205,16 @@ Result: run | run with findings
 Existing-source (reingest) report shape:
 
 ```markdown
+---
+type: ingest-report
+date: YYYY-MM-DD
+stem: "{stem}"
+frames: []   # the page's frames after this run, or empty if unscoped
+purpose: "{deep purpose, or empty — carry the prior report's value forward on a normal reingest rather than blanking it}"
+---
+
+# Reingest report: {stem}
+
 ### Claim check
 - Result: pass | fail
 - Coverage: {full-text confirmed — the probe used; for a book, the range read in full}

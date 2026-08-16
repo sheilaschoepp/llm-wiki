@@ -8,6 +8,7 @@ The always-on checks a reingest runs once Step 1 has detected existing-source mo
 
 - Confirm the reason
 - `needs-update` check
+- `*[unverified]*` resolution check
 - `*[tentative]*` resolution check
 - Schema-migration check
 - Frames check
@@ -21,6 +22,10 @@ Confirm one of: `schema refresh` (to the current source-page template), `missed 
 ## `needs-update` check
 
 If the source page is `status: needs-update`, read its `needs_update_reason:` and any `Contradictions`/`Tensions` entries — that is the precise statement of what an earlier `audit` flagged. Fold resolving it into scope; clear the status back to `draft` once addressed (a later `audit` re-verifies). Same for any `needs-update` dependent the reingest repairs.
+
+## `*[unverified]*` resolution check
+
+A reingest re-reads the whole raw, so every `*[unverified]*` claim on the source page or on a dependent that is cited to *this* raw is inside this run's reach — it is this run's to certify or fix, never to stamp around (`CLAUDE.md` → Bullet markers names a reingest of the cited source as a run that clears the marker). Walk each one, put it through its tier in Step 8, and drop the marker on certification; a claim that fails instead is fixed, or the page goes `needs-update` naming it. Leave marked only a claim cited to a source this run did not open. This check exists because nothing downstream can do it for you: `body_hash.py` masks marked lines, so a page stamped `verified` around an in-reach marked claim looks clean to every structural check there is.
 
 ## `*[tentative]*` resolution check
 
