@@ -16,7 +16,7 @@ Format: a `## <skill-name>` section per skill; each bullet lists the slash-separ
 
 ## brief
 
-- save / write — "save the brief" (the output artifact) vs "write" the act of emitting, and the compound "AI-writing tells", which the scanner counts as the verb
+- save / write — "save the brief" (emitting the artifact) vs "write each section" / "write 'None in the wiki yet'" (putting text into a section) and "at write time" (the moment). The file-emission sense was unified to "save" rather than suppressed; only these distinct senses remain.
 
 ## cleanup
 
@@ -52,13 +52,13 @@ Format: a `## <skill-name>` section per skill; each bullet lists the slash-separ
 ## query
 
 - record / entry — "record" the verb, and "the corrected output is the record", vs a hot/log entry, a per-paper list entry, or a topic entry point
-- route / path — the verb ("routes a query's verification into its own output") vs a wikilink or filesystem path
-- save / write — "save the query output" (the artifact) vs "at write time" (the moment of emitting) and the compound "AI-writing tells"
+- save / write — "save the query output" (emitting the artifact) vs "at write time" (the moment). The file-emission sense was unified to "save" rather than suppressed.
+- route / path — the verb ("routes a query's verification into its own output") vs a path in the procedural sense ("the answer path", "the promotion path") and a wikilink path
 
 ## reflect
 
 - record / entry — "the objective record" (evidence a claim is grounded in) vs a log entry or synthesis entry point
-- save / write — "save the reflect note" (the artifact) vs "write" the act of emitting, and the compound "AI-writing tells"
+- save / write — "save the reflect note" (emitting the artifact) vs "write '- None notable this pass'" (putting text into a section) and "at write time" (the moment)
 
 ## supersede
 
