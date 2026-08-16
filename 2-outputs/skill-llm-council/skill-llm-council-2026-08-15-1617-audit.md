@@ -152,6 +152,24 @@ Semantic — re-read of each applied judgement edit in context. One defect caugh
 
 Also recorded, not proposed: advisor E's `references/preconditions.md` extraction (~537 words) and its sub-heading split of the 898-word Coverage gate paragraph — both real and anchorable, both excluded as over-correction once the budget closed without them.
 
+## Follow-up pass — all proposals resolved
+
+On the user's instruction to fix everything outstanding, the seven proposals above and the two defects were all applied in a follow-up commit. Three needed a determination rather than a transcription:
+
+**`verified_anchor_unaudited` severity — the code was wrong, not the prose.** Determined from the functional consequence rather than by counting sources. The check is registered `'error'` (Critical) and sits outside `STANDING_NONBLOCKING`, so it counts toward `audit_blocking`. But audit's Step 1 says a blocking finding lint cannot mechanically fix means "stop there and put them to the user" — and `verified_anchor_unaudited` is explicitly *not* auto-fixable, sits on **audit's** authored worklist, and is named a Step 5 cause audit settles by opening the raw. As a blocking Critical it deadlocks: audit stops at Step 1 over a finding it is the designated resolver for and can never reach Step 7 to resolve it. The legitimate paths are already exempt in code (`test_diffguard_unverified_marker_is_exempt` proves a `*[unverified]*`-marked claim does not fire it; the head-status gate exempts a page audit is promoting this run), so nothing is lost by the Warning tier. Changed to `'warning'` with the reasoning in a code comment; the two tests that pinned `'error'` updated. Four prose files (`lint/SKILL.md`, `lint/references/checks.md`, `audit/references/verify-and-set-status.md`, `multi-skill/references/verification-neutral-fixes.md`) now agree with the code, and the sibling `stale_mention_ignore` carries the same tier on the same "the tier says who acts" reasoning.
+
+**The shared spec's split rule.** `multi-skill/references/verification.md` still carried the half that enabled audit's Tier-3 collapse — "Refuters return findings plus a selective list of what they positively checked". `ingest` and `query` run that file. Reconciled: silence is neither dissent **nor assent**, an omitted claim is unread and cannot be certified until re-issued, and where several claims go to one refuter an explicit per-claim verdict is required rather than a selective list.
+
+**`skill-linter`'s description.** The advisor measured it at 995 chars and judged the boundary addition would fit; it measured 1026 after the edit — over the 1024 hard ceiling, which `check_structure.py` grades an error. Trimmed ("page or note" → "page") to 1018. A reminder that an advisor's measurement is a claim to check, not a fact.
+
+Also repaired while verifying: `lint/references/checks.md` referenced `scripts/pagination_map.py` and `scripts/cited_figure_check.py` as bare paths that resolve nowhere from lint's own folder (both live in `multi-skill/scripts/`), tripping `broken_inline_ref` twice. Pre-existing, and a stale-path repair, which `CLAUDE.md` → Stay in your lane permits in any file.
+
+Audit's description was rewritten to 983 chars (from 1016, so headroom went 8 → 41): added the `verify` / `promote pages to verified` / `clear a needs-update backlog` triggers and the `skill-linter` boundary, paid for by cutting "Claims arrive certified, so it re-opens a raw only on cause." and "preserving the prior version". "Commits as it goes" was deliberately **not** added — that behaviour was reverted.
+
+**Pre-existing findings recorded, not fixed** (confirmed identical at HEAD, on skills this run did not touch): `ingest` and `cleanup` `check_structure`; `query`, `brief`, `compare`, `reflect` `check_synonyms`. Per the protocol, pre-existing findings on untouched files are recorded rather than repaired in this run.
+
+Final state: 316 tests pass, `check_consistency.py` 0 findings, `check_wiki.py` 0 findings, and all four scanners clean on every skill this work touched.
+
 ## Preserved dissent
 
 **Ranked above the majority and adopted:** the Contrarian's minority branch that the commit rule should be *dropped* rather than carved out. Four of five Council-1 advisors assumed it stays and wrote prose to contain it; peer review supplied the reason the minority was right — the deterministic backstop is script-resident and unreachable from audit's own files, so every carve-out was a non-fix.

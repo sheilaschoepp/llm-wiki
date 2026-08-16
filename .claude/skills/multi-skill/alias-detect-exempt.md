@@ -11,8 +11,11 @@ Display forms excluded from `unlinked_page_mention`'s matching vocabulary while 
 Read at import by `check_wiki.py` (`_load_alias_detect_exempt`). One entry per line under `## detect-exempt`:
 
 ```text
+<!-- 2 genuine / 41 generic, measured YYYY-MM-DD by reading each in context -->
 - <page-stem> :: <display form>
 ```
+
+The measurement comment goes on its own line above the entry, never trailing the entry itself — see Adding an entry.
 
 The form is matched lowercased, and the entry is scoped to that one page: exempting `interaction` for `interaction-effect` leaves an identical form on any other page detecting normally.
 
@@ -32,7 +35,7 @@ The failure mode is a missed link, never a wrong one. A stale entry — the page
 
 ## Adding an entry
 
-Measure first. An entry needs a genuine-versus-generic count over the form's actual occurrences, produced the same way the verified-ignore judgements are: read every occurrence in context. Record the count in the comment beside the entry so a later reader can re-litigate it against evidence rather than taste.
+Measure first. An entry needs a genuine-versus-generic count over the form's actual occurrences, produced the same way the verified-ignore judgements are: read every occurrence in context. Record the count in a comment on **its own line directly above the entry**, so a later reader can re-litigate it against evidence rather than taste — never on the entry's own line. `_load_alias_detect_exempt` splits the entry line on `::` and strips nothing further, so a trailing `<!-- … -->` becomes part of the exempted form: the entry then matches nothing, the noisy form keeps firing, and the entry immediately reports itself as `stale_alias_exempt`. A comment on its own line is skipped by the loader, which is why that is the safe placement.
 
 Removing an entry re-surfaces every occurrence of that form, which is the intended way to reverse the decision.
 

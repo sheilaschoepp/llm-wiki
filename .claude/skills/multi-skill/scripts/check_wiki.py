@@ -592,7 +592,14 @@ CHECKS: dict[str, str | None] = {
     'unlinked_page_mention': 'warning',
     'unverified_claim': 'info',
     'vague_source_referent': 'warning',
-    'verified_anchor_unaudited': 'error',
+    # Warning, not error: the tier says WHO ACTS. This lands on audit's
+    # authored worklist (Step 1) and is named a Step 5 fact-check cause
+    # audit settles by opening the raw. As a blocking Critical it would
+    # deadlock -- audit's Step 1 stops and hands a blocking finding to
+    # the user, so audit could never reach the step that resolves it.
+    # Legitimate paths are already exempt: a *[unverified]*-marked claim
+    # and a page audit is promoting this run (the head-status gate).
+    'verified_anchor_unaudited': 'warning',
     'verified_hash_mismatch': 'warning',
     'wikilink_display_uncapitalized': 'warning',
     'wikilink_pipe_spacing': 'warning',

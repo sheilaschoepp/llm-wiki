@@ -1739,7 +1739,7 @@ class TestCheckWiki(unittest.TestCase):
         )
 
     def test_diffguard_registered_and_exposed(self) -> None:
-        assert cw.CHECKS.get('verified_anchor_unaudited') == 'error'
+        assert cw.CHECKS.get('verified_anchor_unaudited') == 'warning'
 
     # --- verified_hash_mismatch (committed-state backstop, Mechanism 2)
     # -----------
@@ -1839,7 +1839,7 @@ class TestCheckWiki(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        assert json.loads(r.stdout).get('verified_anchor_unaudited') == 'error'
+        assert json.loads(r.stdout).get('verified_anchor_unaudited') == 'warning'
 
     def test_verified_hash_malformed_delimiter_is_flagged(self) -> None:
         # A whitespace-padded closing `---` is accepted by
