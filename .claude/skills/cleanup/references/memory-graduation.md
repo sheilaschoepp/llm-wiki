@@ -9,8 +9,9 @@ Every category below is a report verdict, never an instruction to edit. cleanup 
 - Categories
 - Tie-break when two categories fit
 - Sensitive-content screen
-- Keep, graduate, or delete is A judgement, not A count
-- Age is A hint, not A trigger
+- Keep, graduate, or delete is a judgement, not a count
+- Age is a hint, not a trigger
+- Struck-through headings are a claim, not a receipt
 
 ## Categories
 
@@ -31,15 +32,19 @@ Apply the first that matches: (1) `contradicted`, if the home states a rule that
 
 Before reporting any entry's text for promotion into `MEMORY.md` or `CLAUDE.md`, screen the entry against CLAUDE.md → Memory hygiene (no medical, family, relationship, financial, or legal specifics about anyone). If the entry carries such content, do not report its text for promotion — promoting it would push the violation into a more permanent, more-read home, and a shared file propagated across sibling repos would carry it further still. Instead route it to the Step 7 per-item gate as a hygiene-flagged entry, whose own gated decision offers redact-in-place, remove, or defer — so a hygiene-violating entry is acted on, not just flagged and left resident. Redaction is the one case where cleanup rewrites an entry's text rather than removing it (SKILL.md → Step 8.1, and the write it is permitted in Limits); it is a flag carried alongside the entry's category, not a category of its own, so the entry keeps its classification for a later run.
 
-## Keep, graduate, or delete is A judgement, not A count
+## Keep, graduate, or delete is a judgement, not a count
 
 The keep / graduate / delete call is a common-sense judgement about the content, not a frequency count. An entry is written to memory once — it does not need to recur, be re-confirmed across sessions, or appear N times before it can graduate. Read what the entry actually says and ask two questions:
 
 1. **Is there a stable, general rule in it?** A rule that would apply across future operations and is not bound to a single source, frame, or one-time incident belongs in its permanent home (MEMORY.md, CLAUDE.md, or the skill) → not-graduated; report its home and the exact text now, and leave the entry resident until it lands there.
 2. **If not general — will its situation recur?** A lesson tied to a class of situations that will happen again → keep-in-memory. A lesson tied to one past operation that will not happen again, with nothing reusable left → spent, propose deletion.
 
-## Age is A hint, not A trigger
+## Age is a hint, not a trigger
 
 Age is a hint for this judgement, not a trigger. Journal entries (the per-skill and multi-skill files) carry their date in the `## YYYY-MM-DD` heading, so the audit can compute their age. `MEMORY.md` entries use topic headings with no date, so age is not available there. Where age is available, use it only to sharpen the spent-vs-keep call: an old, never-graduated, one-off-looking journal entry is a strong spent candidate worth proposing for deletion. Never expire an entry on age alone — a long-dormant situational entry is still valuable the moment its class of situation recurs, so recurrence, not the clock, decides.
 
 CLAUDE.md's graduation-path phrase "held up across multiple operations" means the rule has proven durable (it was not later contradicted or revised), not that it was recorded repeatedly. Durability and generality are the test; repetition is not.
+
+## Struck-through headings are a claim, not a receipt
+
+A struck-through heading (`## ~~...~~`) is a breadcrumb left by a prior Step 8 claiming the rule graduated. Do not blindly trust the claim — it is a self-claim like any other, and the home may have moved on since. Do a lightweight presence check against the named home (the same direction-aware check as Step 3 — graduated only if the home states the entry's do/never, not merely that the subject exists): if the rule is still present, record it `already-cleared (pointer)` and do not re-report it for promotion or deletion; if the rule is absent from the named home, widen the grep across `MEMORY.md` and `CLAUDE.md` before concluding it is lost, since the schema may have relocated it. If it is genuinely gone, flag it `regressed/lost` — the home dropped a rule that had graduated — and report the rule and its home so the user can restore it there; do not clear it. This is distinct from `contradicted` (active disagreement, whose remedy may be to drop the entry). If the pointer's own text carries an explicit drop-when-consolidating signal ("safe to drop", "remove in a later consolidation pass"), surface it in Step 7 as a low-priority "pointer the entry marks droppable" note rather than suppressing it.

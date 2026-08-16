@@ -1,0 +1,11 @@
+# ingest — depth purpose and book read range (Step 1)
+
+Two Step-1 scope decisions in full: what a stated depth purpose has to be before a deep run starts, and how a book's read range is settled before any reading happens. SKILL.md Step 1 carries the branch logic and points here for the detail; mode detection itself (new vs. existing) stays in the step, and the existing-mode checks are in `references/existing-mode.md`.
+
+## Deep requires a stated depth purpose
+
+**Deep requires a stated depth purpose** — what the depth is for (a frame, a paper section the page will support, a specific question, a paper being written). A frame is the purpose only when it is a genuine scope — a section, a question, or a concrete future use; echo it back. A bare topic word (e.g. "transformers") is not a scope — treat it like "thorough" and ask for the non-frame purpose. Without a frame, ask for the non-frame purpose before reading. Do not accept "thorough" or "long-term reference." If the user can't give a purpose after one focused ask, fall back to normal and proceed. Capture it: a frame goes in the `frames:` list at write time; a non-frame purpose goes in the report's `purpose:` field (not on the page).
+
+## Books — settle the read range before reading
+
+**Books — settle the read range before reading (books only).** A book (`type: book`, a raw under `0-raw/books/`) is the one source not read cover to cover, because it is large and usually only a single chapter is wanted. Before the Step 2 read, ask via `AskUserQuestion` which chapter or page range to ingest — offer the specific range and "the whole book" as options; the range itself is free-form (`ch. 3`, `pp. 40–72`, `sec. 2.1–2.4`). The chosen range is the read unit: Step 2 reads it *in full* (the range replaces "the whole file" — not a licence to skim), and Step 8 coverage-checks against that range, not the whole book. The book's source page is the usual `{stem}.md` (the stem matching the raw, as for any source), scoped to that range; name the chapter or section in `title:` (`CLAUDE.md` → Source pages). A frame, if also given, still scopes what gets *written* within that range — the range and the frame are different axes. In existing-source mode, reuse the page's recorded range (named in `title:`), re-asking only to change it.

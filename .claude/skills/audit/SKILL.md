@@ -108,6 +108,17 @@ Audit Progress:
 Report:
 
 ```markdown
+---
+type: audit-report
+date: YYYY-MM-DD
+mode: <partial|full>
+result: <settled|interim|blocked>   # compute in Step 10 — do not leave the literal `settled`
+pages_pending: <N>                  # pages a further audit pass could still close; 0 when settled
+critical: N
+warning: N
+info: N
+---
+
 # Audit - YYYY-MM-DD-HHMM
 
 ## Summary
@@ -172,7 +183,7 @@ Report:
 
 9. **Run a confirming lint.** Only when Steps 7–8 mutated at least one page — a content fix (split, merge, rewrite), a status change, or a verification-neutral re-stamp. Audit's own edits leave touched pages in a state the Step 1 lint no longer covers, so re-run `lint` in full to confirm the edits introduced no structural drift (broken links, malformed pipes, hash mismatches, index drift) and to let lint apply the mechanical fixes it owns. This is composition, not a new check: it is the same `lint` skill, run again over a wiki audit has since changed. Fold any finding it raises about a page this run touched back into Step 7's fix list and resolve it before finalizing; a finding lint cannot mechanically fix goes to the user with the rest of Step 10's decisions. Skip this step entirely when audit changed no page — there is nothing new for lint to see.
 
-10. **Finalize the report; update index, hot, and log.** First reconcile the draft report to what Steps 7–8 actually did: for each page audit set out to promote or demote, record the actual outcome (promoted / aborted-promotion / downgraded-to-Warning / needs-update) in **Status changes applied**, and drop any page from **Verification proof** that ended non-`verified` — a page that failed the post-rewrite re-check and became `needs-update` must not be left certified as promoted. Then, when Steps 7–8 created or removed a page (a split adds one, a merge removes one, a support-link removal can orphan one), update `1-wiki/index.md` to match. When a merge or support-link removal changed any page's `sources:` list, apply the shared bookkeeping in `.claude/skills/multi-skill/references/dependent-cascade.md`: sync `sources:`, recompute `source_count:` as the resulting list length (never a blind ±1), and keep the `Sources` callout in step. Do **not** autonomously set `single_source_stub: true` on a synthesis a removal leaves at one source — that flag records a deliberate user decision (`CLAUDE.md` → Synthesis pages); set the page `needs-update` naming the lost support instead. Finally update `hot.md` (a Recent-activity entry, newest-first) and prepend the log entry. Record which sub-runs this invocation performed — lint and consistency at Steps 1–2, the confirming lint at Step 9 — so the report shows whether each precondition was reused or freshly produced.
+10. **Finalize the report; update index, hot, and log.** Set the report's `result:` and `pages_pending:` from what Steps 7–8 actually left behind, per the definitions in `CLAUDE.md` → Audit preconditions — computed, never left at the placeholder, since a successor pass and `cleanup` gate on it the way audit gates on lint's and consistency's. Then reconcile the draft report to what Steps 7–8 actually did: for each page audit set out to promote or demote, record the actual outcome (promoted / aborted-promotion / downgraded-to-Warning / needs-update) in **Status changes applied**, and drop any page from **Verification proof** that ended non-`verified` — a page that failed the post-rewrite re-check and became `needs-update` must not be left certified as promoted. Then, when Steps 7–8 created or removed a page (a split adds one, a merge removes one, a support-link removal can orphan one), update `1-wiki/index.md` to match. When a merge or support-link removal changed any page's `sources:` list, apply the shared bookkeeping in `.claude/skills/multi-skill/references/dependent-cascade.md`: sync `sources:`, recompute `source_count:` as the resulting list length (never a blind ±1), and keep the `Sources` callout in step. Do **not** autonomously set `single_source_stub: true` on a synthesis a removal leaves at one source — that flag records a deliberate user decision (`CLAUDE.md` → Synthesis pages); set the page `needs-update` naming the lost support instead. Finally update `hot.md` (a Recent-activity entry, newest-first) and prepend the log entry. Record which sub-runs this invocation performed — lint and consistency at Steps 1–2, the confirming lint at Step 9 — so the report shows whether each precondition was reused or freshly produced.
 
 ```markdown
 ## [YYYY-MM-DD HH:MM] audit | {N} findings ({C} critical, {W} warning, {I} info)

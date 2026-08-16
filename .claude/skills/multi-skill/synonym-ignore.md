@@ -14,10 +14,18 @@ Format: a `## <skill-name>` section per skill; each bullet lists the slash-separ
 - route / path — the verb "routes to" vs a filesystem path
 - write / persist — "write" (emit to disk) vs "persist" (a finding or state remaining)
 
+## brief
+
+- save / write — "save the brief" (the output artifact) vs "write" the act of emitting, and the compound "AI-writing tells", which the scanner counts as the verb
+
 ## cleanup
 
 - record / entry / item — the durable log/report record vs a memory-journal H2 entry vs a single gated decision
 - save / store / write — "save the report" (Step 5, the output artifact) vs "store" (a log line records a commit id; git's object store) vs "write" the act of emitting to a file
+
+## compare
+
+- record / row / entry — "record" the verb (record the target type, record which bullets are marked) vs the table's Support row vs a log entry or topic entry point
 
 ## consistency
 
@@ -40,6 +48,17 @@ Format: a `## <skill-name>` section per skill; each bullet lists the slash-separ
 - document / file — "document" the verb vs "file" the artifact
 - record / row / entry / item — four distinct referents
 - save / write / persist — emit to disk vs a finding/run-state remaining
+
+## query
+
+- record / entry — "record" the verb, and "the corrected output is the record", vs a hot/log entry, a per-paper list entry, or a topic entry point
+- route / path — the verb ("routes a query's verification into its own output") vs a wikilink or filesystem path
+- save / write — "save the query output" (the artifact) vs "at write time" (the moment of emitting) and the compound "AI-writing tells"
+
+## reflect
+
+- record / entry — "the objective record" (evidence a claim is grounded in) vs a log entry or synthesis entry point
+- save / write — "save the reflect note" (the artifact) vs "write" the act of emitting, and the compound "AI-writing tells"
 
 ## supersede
 
