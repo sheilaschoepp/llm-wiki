@@ -170,7 +170,20 @@ The reviewer ran the committed regression suite as its falsifying check — 14 t
 
 The Script reviewer confirmed by execution rather than reading: every invoked script exists, every documented flag is accepted (`--single-file`, `--verify`, `--list-checks`), and the five data files the scripts load match `CLAUDE.md:803`. The Contrarian likewise reported the lint→cleanup `hot_thread_spent` seam holds, because `cleanup` runs `check_wiki.py` itself rather than depending on a lint report that may not exist — which matters, since `2-outputs/lint/` and `2-outputs/consistency/` are both empty right now, so a report-reading design would have silently no-opped.
 
-### 11. Any description fix must trade characters out, not append
+### 11. The schema is behind the skills in four places — and the fix direction is the opposite of the obvious one
+
+Council 2's Best-Practices-Compliance member returned the run's most consequential framing: **all four of its cross-file findings are schema staleness, not skill drift. The skills are right; `CLAUDE.md` is behind.** Anyone who "fixed" the skills to match these paragraphs would delete working behaviour — a severity mapping, two re-stamp paths, two verification bindings, and four read-only memory reads.
+
+Verified by the orchestrator:
+
+- **`CLAUDE.md:762` contradicts `CLAUDE.md:666`.** `:762` says multi-skill memory is "Read by every write skill at the start of every operation"; `:666` says "Read-only skills are included because scope and framing corrections to those skills also need somewhere to live". All four read-only skills implement the broader rule. The schema disagrees with itself and the skills follow the correct half.
+- **`CLAUDE.md:803` enumerates five shared references; nine exist.** Omitted: `self-report.md` (cited by 13 skills), `relationship-sweep.md`, `skill-authoring-checklist.md`, `skill-authoring-checks.md`. The same sentence calls `verification.md` "the ingest-family verification spec run by `ingest` (Step 8) and `query`", but `CLAUDE.md:670` itself binds four skills, adding `synthesis` Step 8 and `supersede` Step 7.
+- **`CLAUDE.md:510` misattributes a severity vocabulary.** It credits skill-facing `error / warning / suggestion` to "`consistency`'s judgment-drift packet", which emits no severity at all; consistency's canonical statement is that the sole carrier is the `ai_writing_tells` check. The reviewer ran the falsifying grep and found two hits, both saying the opposite.
+- **`CLAUDE.md:544` under-enumerates the stamp writers** — "`lint`, `ingest`, `audit`" — while `:559` itself assigns re-stamping to `supersede` and `forget`. Two re-stamping skills sit outside the "never hand-compute a hash" rule that is supposed to bind them.
+
+This member also re-checked the audit `result:` contract the brief flagged as worth re-verifying and reported it **currently correct** across `CLAUDE.md:682-684`, `lint`, `consistency`, `audit`, and `cleanup` — the negative result the brief asked for.
+
+### 12. Any description fix must trade characters out, not append
 
 `skill-linter`'s description sits at 1018/1024 chars and `ingest` at 1010/1024. Several members proposed appending disclaimers to descriptions; on those two skills an append silently breaks frontmatter validation. Recorded as a constraint on the whole proposal set.
 
