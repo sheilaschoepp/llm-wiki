@@ -155,7 +155,7 @@ info: N
 - *verified candidate* — [[1-wiki/concepts/residual-connection.md|residual connection]] - looks ready but not raw-fact-checked this run
 
 ## Verification Candidates
-- Pages that look ready for `verified` but were not fact-checked against their raw source this run, and pages whose content edit landed this run but whose Tier-3 re-verification was staged to a later run (the staged valve) — flag for the next audit so the backlog burn-down stays visible. (or "none")
+- Pages that look ready for `verified` but were not fact-checked against their raw source this run, and pages whose content edit landed this run but whose Tier-3 re-verification was staged to a later run (the staged valve) — flag for the next audit so the backlog burn-down stays visible. Each staged page carries the mechanical reason it staged and its stage count (`stage 1 of 1`), since a page may stage once and is due first next run (`references/apply-fixes.md`). (or "none")
 
 ## Self-report
 - {a specific limitation that bit audit this run — a rule it lacked, a case it mishandled, a check it couldn't run} → upgrade: {how the audit skill should change} (or the single line: none noted this run; per `.claude/skills/multi-skill/references/self-report.md`)
