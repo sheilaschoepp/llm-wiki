@@ -329,6 +329,45 @@ Every item traces to a chair line or is flagged as a meta-chair addition. **Noth
 
 **Open, unowned:** concurrent writes by `skill-linter` and `skill-llm-council` into one folder; whether `cleanup`'s preserve-folder sub-mode can prune the copy audit's merge depends on; whether the unvalidated `pagination-map.md` trust root warrants a validator; and that `cleanup` protects no `query`/`brief`/`compare`/`reflect`/`synthesis` output.
 
+## Application pass (user directed: "fix these")
+
+Auto-apply was disabled for the review; the user then directed the proposals be applied. Order followed this session's own lesson — determinate fixes first (a script or a missing file is ground truth, verified before and after), refuters on the judgement-laden ones **before** they land rather than after.
+
+### Applied
+
+| # | What landed |
+|---|---|
+| 1 | Stdout guard added to `cleanup` (both call sites), `forget:122`, `ingest:124`. |
+| 2 | `cmp -s` byte-identity check at `apply-fixes.md:99`, before unlinking. |
+| 3 | h2 inversion corrected in **six** places, not the four the council found — the TOC entry and the scanner heading carried it too. Phantom `TITLE_CASE_STOPWORDS` replaced with `PROPER_NOUNS` and `TITLE_CASE_WORD_RE`, both confirmed at `check_h2_case.py:38,63`. |
+| 4 | `synonym-ignore.md` added to `AGENT_DATA_FILES` and audit's Step 2 pathspec; the note restated as a principle — the test is how content arrives, not who maintains it. `pagination-map.md` deliberately still trips the gate. |
+| 8 | Step 9 fold-back bounded at three rounds terminating at `blocked`, the rule placed in `verify-and-set-status.md` with a pointer in the body; same-minute report suffix added. |
+| 9 | Three broken inline refs now resolve; scanner count corrected five to six in three places. |
+| 10 | Four `CLAUDE.md` staleness items, per item; `audit` named in the per-file deletion rule as a discoverability fix. |
+
+All six touched skills pass the scanners; the consistency battery returns one finding, a pre-existing handoff filename.
+
+### Rejected on verification — including the item both chairs ranked highest
+
+**Proposal 5 is refuted.** Chair 2 called it "the most valuable item in the entire council". `check_shared_reference_integrity` scans `multi-skill/references/*.md` (`check_consistency.py:2862`); `synonym-ignore.md` is not there. It sits in `multi-skill/` with the other four curated **data** files, at a path `CLAUDE.md` names explicitly. The check correctly does not scan it, so there was nothing to catch. The Structure reviewer's "single-skill material in the shared folder" fails the same way — it treats a data file as a reference file.
+
+**Proposal 6 is dropped.** A refuter found `lint:47` already names both actors ("`audit` **or the user** resolves"), so the sentence was never wrong; `audit:82`'s stop-and-escalate is the designed path for every non-mechanical Critical; and audit does reach that work, since its coverage gate opens the raw at the cited page. Applying it would have contradicted `verification-spec.md:11` and `lint/references/checks.md:27` to delete one true sentence. **Left as a user proposal:** one token, `check_wiki.py:566` `error` to `warning`, after which `audit:29` absorbs it as Warning-tier work with no further edit. Not applied autonomously because `lint/references/checks.md` calls that severity deliberately conservative, making it a judgement call.
+
+**Proposal 8 was reshaped, not applied as proposed.** Two rounds was wrong (every counter in audit is three) and `interim` was the wrong terminal (`CLAUDE.md` defines a bounded-rounds valve reached without approval as `blocked`).
+
+### Two regressions I caused and fixed rather than shipped
+
+The guard wording pushed `cleanup` to 6612 words against a 6500 budget; the fold-back text pushed `audit` to 6684. `audit` had only 42 words of headroom at session start, so its rule moved into a reference and the body kept a pointer. Final: `cleanup` 6489, `audit` 6493.
+
+### Not applied — outstanding
+
+- **Proposal 7** — tests for `check_musts.py` and `check_kwargs.py`. This is the mechanism by which the h2 inversion survived undetected, so it is the highest-value outstanding item.
+- **Proposal 11** — description disclaimers for the query/brief and consistency/skill-linter collisions, within the 1018/1024 and 1012/1024 character ceilings.
+
+### The run's main result
+
+Four claims died on verification after surviving council, peer review, and chair synthesis: the exit-code claim, the safety finding, the h2 "active corruption" framing, and the most-valuable-item designation. The ones that travelled furthest were the ones that sounded most structural.
+
 ## Self-report
 
 - **The brief carried a false count into all ten prompts.** It said 15 skills; the repo's own tooling says 14. → upgrade: compute every quantity in a brief from the repo before writing it, and state the command used.
@@ -337,6 +376,3 @@ Every item traces to a chair line or is flagged as a meta-chair addition. **Noth
 - **Six independent agents propagated an unmeasured premise.** Two chairs and five peer reviewers all ranked the h2 inversion first on "active corruption", which one command disproved. Nobody ran it. → upgrade: any severity claim resting on a measurable blast radius must carry the measurement, exactly as this skill's own memory already requires for counts.
 - **The run was scaled down for cost and the user had to override it.** That reduction would have skipped peer review, which killed two findings, refuted the headline, and produced the run's most valuable item. → upgrade: when cost pressure and protocol integrity conflict, surface the trade-off as a decision rather than resolving it silently toward the cheaper option.
 
-## Self-report
-
-*Pending — written after the run completes.*
