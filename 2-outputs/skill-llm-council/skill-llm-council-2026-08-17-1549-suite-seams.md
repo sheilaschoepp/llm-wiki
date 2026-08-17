@@ -151,7 +151,26 @@ Three aggravating factors, each verified:
 
 The reviewer ran its own falsifying check — grepping all of `audit/` for `AskUserQuestion|approval|gate|delete|forget|auto-remove` — and found the sole `AskUserQuestion` in audit is a scope question at `SKILL.md:53`. Zero deletion gates. Orchestrator re-verified `apply-fixes.md:101`, `SKILL.md:186`, `SKILL.md:214`, and `CLAUDE.md:744` directly.
 
-### 8. Any description fix must trade characters out, not append
+### 8. A skill instructs the inverse of what its own scanner enforces, breaking its convergence loop
+
+`check_h2_case.py:178-183` emits "uses title case; project convention is sentence case" with fix hint "Rewrite as sentence case". `skill-linter/SKILL.md:92` states the exact inverse: "flags sentence-case H2 headings (`## Worked example`) and proposes the title-case rewrite (`## Worked Example`)", calling it "The H2 title-case rule".
+
+This is load-bearing, not cosmetic. `skill-linter/SKILL.md:201` auto-applies `h2_heading_case` as a mechanical fix, and `:221-224` iterates until two consecutive passes find nothing. An agent following line 92 title-cases headings the scanner immediately re-flags — **the loop cannot converge.**
+
+The same file states the correct direction at `:226` ("title case is the defect… that check was inverted once"), and `skill-authoring-checklist.md:62` warns "Do not run the conversion in reverse". So the skill contradicts itself and the shared reference already anticipated this exact regression.
+
+The reviewer ran the committed regression suite as its falsifying check — 14 tests, OK, with `test_flags_title_case_h2_in_a_file` asserting `## When To Invoke` yields a finding. The script is right; line 92 is the stale claim. **Do not "fix" the scanner.**
+
+### 9. Two documentation claims about the scripts are false
+
+- **A named constant that does not exist.** `skill-authoring-checks.md:78` says stopwords "are defined once in `TITLE_CASE_STOPWORDS` (`scripts/check_h2_case.py`)". Grep across `.claude/` returns only that doc line. The script has `PROPER_NOUNS` and `TITLE_CASE_WORD_RE` and no stopword list. A maintainer told to extend it edits nothing.
+- **A scanner count that is one short.** `skill-llm-council/SKILL.md:137` says "`skill-linter`'s five deterministic scripts" and lists five; skill-linter runs six. The omitted one is `check_internal_refs.py`, which emits `stale_step_reference` — the only scanner that catches a cross-reference orphaned by step renumbering, which is precisely what a council rewriting procedure steps produces. The reviewer verified the script accepts the council's argument form.
+
+### 10. Clean, and reported as such
+
+The Script reviewer confirmed by execution rather than reading: every invoked script exists, every documented flag is accepted (`--single-file`, `--verify`, `--list-checks`), and the five data files the scripts load match `CLAUDE.md:803`. The Contrarian likewise reported the lint→cleanup `hot_thread_spent` seam holds, because `cleanup` runs `check_wiki.py` itself rather than depending on a lint report that may not exist — which matters, since `2-outputs/lint/` and `2-outputs/consistency/` are both empty right now, so a report-reading design would have silently no-opped.
+
+### 11. Any description fix must trade characters out, not append
 
 `skill-linter`'s description sits at 1018/1024 chars and `ingest` at 1010/1024. Several members proposed appending disclaimers to descriptions; on those two skills an append silently breaks frontmatter validation. Recorded as a constraint on the whole proposal set.
 
