@@ -93,9 +93,11 @@ This is a true cycle, not a sequencing preference. Raised by Council 1's Executo
 
 ### 2. The shared spine cannot be linted, and already carries broken refs
 
-`python3 check_structure.py .claude/skills/multi-skill` returns `Error: SKILL.md not found` — **and exits 0**. The scanner requires a `SKILL.md` at the target root, which the shared library has none of. So `broken_inline_ref`, `nested_reference`, `missing_toc` and `html_tag` have never run over `multi-skill/references/`, the most-cited material in the suite.
+`python3 check_structure.py .claude/skills/multi-skill` returns `Error: SKILL.md not found` and **exits 2**. The scanner requires a `SKILL.md` at the target root, which the shared library has none of. So `broken_inline_ref`, `nested_reference`, `missing_toc` and `html_tag` have never run over `multi-skill/references/`, the most-cited material in the suite.
 
-The exit-0 behaviour makes it worse than a gap: a caller that checks the exit code reads the failure as a pass.
+**Correction, recorded rather than quietly fixed.** This report first stated the scanner exits **0**, making the failure silent. That was wrong twice over: the reviewer who claimed it was wrong, and the orchestrator's verification of it was wrong in the same direction. The verifying command piped the script through `head`, so `$?` captured `head`'s status, not the script's. Three Council 2 peer reviewers independently caught it. The scanner fails loudly, and `skill-linter/SKILL.md:224` already treats exit 2 as blocking.
+
+**The coverage gap itself survives intact** — the shared spine is genuinely unlinted, and the three broken refs below prove the check never ran over it. Only the silent-failure framing dies. Noted because it cuts the finding's severity roughly in half: an unlinted folder is a real gap; an unlinted folder whose scanner *reports success* would have been a much worse one.
 
 Three broken refs confirmed missing on disk, exactly the class the unrun check would have caught:
 
@@ -133,9 +135,29 @@ Council 2's Description & Trigger member grepped all 14 descriptions for `all sk
 
 The whole-suite review has no owner, which is why this run is off-label.
 
-### 7. Safety hole: audit deletes wiki pages with no user gate, and the schema does not name it
+### 7. RETRACTED IN LARGE PART — audit's merge is quarantine-with-redirect, not an ungated deletion
 
-The most serious finding of the run. `audit/references/apply-fixes.md:101` reads, verbatim:
+**This finding was first recorded as "the most serious finding of the run" and that was wrong.** A peer reviewer tasked specifically with attacking it refuted the core, and the orchestrator verified the refutation. What survives is one real but much narrower defect. The original text is kept below the retraction so the error is legible rather than erased.
+
+**What the reviewer established, verified directly:**
+
+- `apply-fixes.md:109` — "**When a structural call is genuinely ambiguous** — is this one idea stated twice or two distinct ideas? **does the merge target page survive or the merged-away one?** — and the fact-check does not settle it, **do not perform the surgery.** Downgrade the finding to a Warning that names the options and leave the page for the user." The survivor choice is explicitly user-gated whenever it is not determinate.
+- `apply-fixes.md:99` — the prior version is copied to `2-outputs/supersede/preserve/` before removal, under the shared quarantine convention.
+- `apply-fixes.md:100` — inbound wikilinks are found and rewritten.
+
+So a merge retirement is a **quarantine-with-redirect under a determinacy gate**, not a bare deletion, and it is authorized by `CLAUDE.md:672`/`:426`. The `CLAUDE.md:744` per-file rule governs deletions that destroy content; this preserves it.
+
+**What survives, and it is worth fixing:** `apply-fixes.md:99` carries only the `-N` clash suffix and `git check-ignore -q`. It **omits the `cmp -s` byte-identity check** that `quarantine-path-convention.md:11-16` makes mandatory and that `forget` and `supersede` both wire in — and `:16` names forget/supersede/ingest, not audit. A truncated copy therefore passes audit's check and becomes the only copy. That is a genuine gap in a preservation path, one line wide.
+
+**Also downgraded:** the claimed self-contradiction at `audit/SKILL.md:214` is scoped to the unsupported-page case, not merges. Two reviewers called it sloppy phrasing rather than a contradiction, which matches the orchestrator's own earlier note.
+
+**One thing no member found:** the preserved copy that audit's merge depends on is itself prunable by `cleanup`'s opt-in preserve-folder sub-mode. The retirement's only fallback is deletable by a sibling skill.
+
+---
+
+*Original finding, retained for the record and now known to be substantially wrong:*
+
+`audit/references/apply-fixes.md:101` reads, verbatim:
 
 > "Inherit those mechanics but not supersede's approval gates: audit is the autonomy exception and asks the user nothing."
 
@@ -216,6 +238,25 @@ The one cheap, purely additive fix in the whole set is the stdout guard of Findi
 **A third missed seam.** `cleanup/SKILL.md` never names `query`, `brief`, `compare`, `reflect` or synthesis outputs, so those fall into the unprotected aged-out sweep while `log.md` and synthesis's promotion path still link to them.
 
 **An unvalidated trust root, flagged as the thing all five missed.** `pagination-map.md` is written by `ingest` on human footer-confirmation, is never grown by `audit`, and is exempt from consistency's content scan — so the one data file no check validates is the ground truth that `locator_page_mismatch` fires against. A wrong map yields confidently-wrong Criticals. That is a correctness seam, and the set found only control-flow ones.
+
+## Repair order — one fix gates all the others
+
+Council 2's fixability reviewer found a dependency that changes how this whole set should be worked, and it is the most actionable result of the run.
+
+**Fix the `h2_heading_case` inversion first, by hand, before anything else.** `skill-linter` auto-applies that check and loops until two consecutive passes are clean (`SKILL.md:201`, `:221-224`). While `SKILL.md:92` states the inverse of what the scanner enforces, that loop **cannot converge and actively corrupts H2 headings across all 14 skills**. Every other fix in this report would be applied *through* that loop. So the ordering is not a preference: applying anything else first runs it through a mechanism that is currently mis-transforming the files it touches.
+
+**And fixing `:92` alone is insufficient.** `multi-skill/references/skill-authoring-checks.md:78` repeats the same inversion — its "stopwords stay lowercase mid-heading" framing is a *title-case* concept — and names the phantom `TITLE_CASE_STOPWORDS` constant in the same sentence. The rubric and the skill must be corrected together, then the regression suite run.
+
+**One proposed fix would cause a storm.** The Structure reviewer's proposal to merge `dependent-cascade.md`, `inbound-reference-discovery.md` and `quarantine-path-convention.md` into one file renames paths cited inline across the suite — inside the one folder `check_structure.py` cannot validate (Finding 2, where it exits 0 on failure). Non-atomic application yields a broken-reference storm that no scanner would catch. This proposal should be declined or done as a single atomic change with manual verification.
+
+## Council conflict for the meta-chair
+
+The two councils disagree on repair *direction* for the same file, and it is a genuine conflict rather than a merge:
+
+- **Council 2's Best-Practices member:** the schema is behind the skills. `CLAUDE.md` should be corrected to describe what the skills already do, and "fixing" the skills to match the schema would delete working behaviour.
+- **Council 2's Adversarial member:** `CLAUDE.md:744` should be *extended* to gate a deletion that `audit/SKILL.md` does not currently gate — i.e. the schema should lead and the skill should follow.
+
+Both cannot be applied as stated. The reconciliation is that they concern different paragraphs and different kinds of gap — one is documentation lagging implementation, the other is a safety rule that never covered a case — but a maintainer applying them in sequence without noticing would first make the schema descriptive of current behaviour, then be unable to see that the deletion gap is a gap. Recorded as an explicit dissent to preserve rather than a conflict to split.
 
 ## Proposals
 
