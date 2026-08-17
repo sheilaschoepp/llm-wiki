@@ -9,7 +9,7 @@ This is the catalogue of checks performed by `scripts/check_structure.py` and th
 - Reference depth, inline refs, and TOC (warnings / suggestions)
 - Heavy-handed imperative candidate scan (separate script)
 - Synonym candidate scan (separate script)
-- H2 title-case scan (separate script)
+- H2 sentence-case scan (separate script)
 - Keyword-argument scan (separate script)
 - Severity rationale
 
@@ -65,17 +65,17 @@ The agent reading these findings must decide whether the imperative genuinely ne
 
 These are *candidates*, not confirmed findings. The agent reading this output must decide whether the terms genuinely refer to the same concept (keep as a finding) or are intentionally distinct (drop). The script's job is to surface candidates so judgement-only review can't miss them; the agent's job is the disambiguation.
 
-A per-skill confirmed-distinct allow-list, `synonym-ignore.md` in the skill-linter folder, suppresses groups a prior run already adjudicated as distinct *for that skill*, so the same false positives don't re-surface every run (they used to, since the check has no memory) — mirroring lint's verified-ignore data files. The parser suppresses a finding whose present terms are a subset of a listed group under the target skill's `## <skill-name>` section. When a run confirms a candidate is a genuine domain distinction, append it there (agent-writable curated data); never record a genuine inconsistency, and removing an entry re-surfaces its candidate.
+A per-skill confirmed-distinct allow-list, `.claude/skills/multi-skill/synonym-ignore.md`, suppresses groups a prior run already adjudicated as distinct *for that skill*, so the same false positives don't re-surface every run (they used to, since the check has no memory) — mirroring lint's verified-ignore data files. The parser suppresses a finding whose present terms are a subset of a listed group under the target skill's `## <skill-name>` section. When a run confirms a candidate is a genuine domain distinction, append it there (agent-writable curated data); never record a genuine inconsistency, and removing an entry re-surfaces its candidate.
 
-## H2 title-case scan (separate script)
+## H2 sentence-case scan (separate script)
 
-`check_h2_case.py` walks SKILL.md and every `references/*.md` sibling, flagging H2 headings that are not in title case (e.g. `## Worked example`). The check skips H2s inside fenced code blocks so markdown examples are not flagged, and skips identifier tokens after a colon-terminated label (`## Packet: schema-language`, `## Mode: full`) — a slug that names a literal argument carries no case to correct, and title-casing it would rename the thing it points at. The carve-out is deliberately narrow: it applies only to an all-lowercase word that follows a `Label:` and either contains a hyphen or is the sole word after the colon, so prose after a colon (`## Note: this is prose`) and hyphenated prose without a label (`## Working with well-formed pages`) are both still flagged.
+`check_h2_case.py` walks SKILL.md and every `references/*.md` sibling, flagging H2 headings that are not in sentence case (e.g. `## Worked Example`). The check skips H2s inside fenced code blocks so markdown examples are not flagged, and skips identifier tokens after a colon-terminated label (`## Packet: schema-language`, `## Mode: full`) — a slug that names a literal argument carries no case to correct, and title-casing it would rename the thing it points at. The carve-out is deliberately narrow: it applies only to an all-lowercase word that follows a `Label:` and either contains a hyphen or is the sole word after the colon, so prose after a colon (`## Note: this is prose`) and hyphenated prose without a label (`## Working with well-formed pages`) are both still flagged.
 
 | `check_id` | Severity | Triggers when |
 |---|---|---|
 | `h2_heading_case` | suggestion | An H2 heading in SKILL.md or any `references/*.md` is not in sentence case (only the first word, proper nouns, and acronyms may start with a capital letter). |
 
-Unlike the synonym and musts scanners, every finding here is actionable — there is no judgement call to drop a candidate. Prior judgement-only passes reliably checked SKILL.md but forgot the reference files; this script makes coverage mechanical. The stopwords (words that stay lowercase mid-heading) are defined once in `TITLE_CASE_STOPWORDS` (`scripts/check_h2_case.py`) — the conventional small set of articles, short prepositions, and conjunctions.
+Unlike the synonym and musts scanners, every finding here is actionable — there is no judgement call to drop a candidate. Prior judgement-only passes reliably checked SKILL.md but forgot the reference files; this script makes coverage mechanical. Sentence case needs no stopword list — every word after the first is lowercase unless it is a proper noun or an acronym — so the script carries no stopwords. What it does carry is `PROPER_NOUNS` (`scripts/check_h2_case.py`), the allowlist of terms that keep their capital mid-heading, and `TITLE_CASE_WORD_RE`, which matches the mid-heading capitalized word that triggers a finding. Extend `PROPER_NOUNS` when a legitimate proper noun is being flagged.
 
 ## Keyword-argument scan (separate script)
 
@@ -89,7 +89,7 @@ Unlike the synonym and musts scanners, every finding here is actionable — ther
 
 The allow-list lives in `scripts/check_kwargs.py` (`ALLOW_LIST_BUILTINS`, `ALLOW_LIST_EXCEPTIONS`, `ALLOW_LIST_OTHER`). Add to `ALLOW_LIST_OTHER` only when a real call site is flagged that the user decides should be allowed; record the reason in a one-line comment next to the entry so the allow-list stays auditable.
 
-The severity is `error` (not `suggestion`) because `coding-best-practices.md` lists keyword-only calls as a hard project rule, and `references/checklist.md` says "missing type hints, positional args at a call site that has kwargs available" are `error`-tier deviations.
+The severity is `error` (not `suggestion`) because `coding-best-practices.md` lists keyword-only calls as a hard project rule, and `.claude/skills/multi-skill/references/skill-authoring-checklist.md` says "missing type hints, positional args at a call site that has kwargs available" are `error`-tier deviations.
 
 ## Internal cross-reference scan (separate script)
 
