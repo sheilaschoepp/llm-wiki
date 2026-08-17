@@ -1,6 +1,6 @@
 ---
 type: skill-llm-council
-run_mode: off-label — whole-suite seam review, reduced protocol
+run_mode: off-label — whole-suite seam review, full protocol
 target: .claude/skills/ as a system (14 skills + multi-skill shared materials)
 councils_convened: 2
 council_members: 5 + 5
@@ -8,32 +8,32 @@ peer_review: 5 + 5 (full)
 chair_subagents: 2 (full)
 auto_apply: disabled — every finding is a proposal
 date: 2026-08-17
-status: in progress — brief and roster recorded, council responses pending
+status: complete — 22 subagents, 11 ranked proposals, nothing applied
 ---
 
 # Whole-suite seam review — 14 skills as one system
 
 ## Declared deviations from the skill
 
-This run is **off-label and reduced**. Both facts belong at the top so no reader mistakes it for a standard council pass.
+This run is **off-label**, and that belongs at the top so no reader mistakes it for a standard single-skill pass.
 
 **Off-label target.** `skill-llm-council` Step 1 resolves a directory containing `SKILL.md`, or a `SKILL.md` file, and says "If the path does not exist or has no `SKILL.md`, stop and say so. Do not council the wrong thing." Its Limits say "Reviews one skill per run." `.claude/skills/` has no root `SKILL.md`, so the standard resolution refuses this target.
 
 It was run anyway, at the user's explicit direction, because the skill itself names the gap: a skill reviewed in isolation "hides defects that only surface against its siblings (a drifted shared boundary, a duplicated rule, an inconsistent hand-off)". The target here is therefore **the seams between skills**, not any skill's internal contents — the review a single-skill council structurally cannot perform.
 
-**Reduced protocol**, for a stated reason: the user flagged that their weekly usage limit was close, so the run was scaled from ~22 subagent calls to 10.
+**Protocol: full.** The orchestrator initially scaled the run to 10 subagents on cost grounds, after the user flagged that their weekly usage limit was close, and recorded peer review and both chair syntheses as skipped. The user overrode that reduction ("don't scale down the council") and the full protocol was run: 5 + 5 council responses, 5 + 5 anonymized peer review, 2 chair subagents, meta-chair reconciliation — 22 subagents.
+
+That override is load-bearing for everything below. Peer review killed two findings, refuted the run's headline safety claim, corrected an orchestrator error, and produced the item both chairs called the most valuable in the council. None of it was reachable from the Step-2 responses the reduced run would have stopped at.
 
 | Step | Standard | This run |
 |------|----------|----------|
-| 2 — council responses | 5 + 5 | 5 + 5 — **kept** |
-| 3 — anonymized peer review | 5 + 5 | **skipped** |
-| 4 — chair synthesis (subagent per council) | 2 | **skipped** |
+| 2 — council responses | 5 + 5 | 5 + 5 |
+| 3 — anonymized peer review | 5 + 5 | 5 + 5 |
+| 4 — chair synthesis (subagent per council) | 2 | 2 |
 | 5 — meta-chair | orchestrator | orchestrator |
 | 6 — auto-apply in-folder edits | yes | **disabled entirely** |
 
-The skipped steps are not free. Peer review is where the skill says the councils surface "what all five missed", and the chair subagents exist so each synthesis is independent of the agent that applies edits. Without them, the orchestrator both synthesizes and reports, with no independent layer between the council output and this document. Findings here are correspondingly **less filtered than a standard run's**, and are presented as proposals to be checked rather than conclusions.
-
-**Auto-apply disabled.** The skill's in-folder/cross-file split is defined relative to "the target skill's folder". With the suite as target, that rule would make every file under `.claude/skills/` in-folder and hand this run write authority over all fifteen skills at once — the opposite of the rule's intent, which is that "one skill's council should not silently rewrite the project's rules or another skill". So the conservative reading governs: **everything is a proposal, nothing is applied.**
+**Auto-apply disabled.** The skill's in-folder/cross-file split is defined relative to "the target skill's folder". With the suite as target, that rule would make every file under `.claude/skills/` in-folder and hand this run write authority over all fourteen skills at once — the opposite of the rule's intent, which is that "one skill's council should not silently rewrite the project's rules or another skill". So the conservative reading governs: **everything is a proposal, nothing is applied.**
 
 ## Roster
 
@@ -41,8 +41,8 @@ The skipped steps are not free. Peer review is where the skill says the councils
 
 | Role | Tuning |
 |------|--------|
-| Contrarian | the worst way the fifteen fail *as a set* — a chain where A hands B something B cannot act on |
-| First-Principles | is fifteen the right decomposition, or are some skills artifacts of how the set grew |
+| Contrarian | the worst way the fourteen fail *as a set* — a chain where A hands B something B cannot act on |
+| First-Principles | is fourteen the right decomposition, or are some skills artifacts of how the set grew |
 | Expansionist | a discipline one skill evolved that its siblings would obviously benefit from |
 | Outsider | a researcher who just cloned this template — can they pick the right skill from descriptions alone |
 | Executor | the cross-skill dependency graph — the cycle, the deadlock, the contract only one side honours |
@@ -61,7 +61,7 @@ The skipped steps are not free. Peer review is where the skill says the councils
 
 ## Task brief
 
-- **Purpose.** Fifteen skills maintain one LLM wiki. They share `multi-skill/references/` (9 files), hand off via contracts — most explicitly `audit` gating on `lint`'s and `consistency`'s report `result:` frontmatter — and are meant to own non-overlapping trigger territory.
+- **Purpose.** Fourteen skills maintain one LLM wiki. They share `multi-skill/references/` (9 files), hand off via contracts — most explicitly `audit` gating on `lint`'s and `consistency`'s report `result:` frontmatter — and are meant to own non-overlapping trigger territory.
 - **Good-version criteria.** Every task has exactly one owning skill; every "when not to invoke" routes to a sibling that genuinely owns it; shared logic lives once in `multi-skill/references/` and is cited, not copied; hand-off contracts agree on both sides; CLAUDE.md's schema matches what the skills implement.
 - **Binding rules.** CLAUDE.md (Skill authoring, Stay in your lane, Operations, Safety rules, Workflow rules); `a-archive/reference/skill-authoring-best-practices.md`; `a-archive/style/ai-writing-tells.md`; `a-archive/style/coding-best-practices.md`.
 - **Useful disagreement.** Whether a boundary is genuinely drifted or deliberately overlapping; whether a duplicated rule is drift or a sanctioned local statement; whether a schema/skill mismatch is schema staleness or skill drift — those need opposite fixes.
@@ -258,9 +258,84 @@ The two councils disagree on repair *direction* for the same file, and it is a g
 
 Both cannot be applied as stated. The reconciliation is that they concern different paragraphs and different kinds of gap — one is documentation lagging implementation, the other is a safety rule that never covered a case — but a maintainer applying them in sequence without noticing would first make the schema descriptive of current behaviour, then be unable to see that the deletion gap is a gap. Recorded as an explicit dissent to preserve rather than a conflict to split.
 
-## Proposals
+## Chair synthesis — Council 1
 
-*Pending chair synthesis. Nothing in this run is auto-applied.*
+**The chair overrode its own majority, which is what a chair is for.** Four of five peer reviewers ranked the Executor's `locator_page_mismatch` deadlock strongest. The chair adopted the lone dissenting reviewer's ranking instead, and the reasoning holds: the deadlock is *textual* and has a human escape (`audit:82` stops and asks the user), whereas the missing stdout guard is a **silent** failure on a **destructive** path with no escape and no detector. Silent-and-destructive outranks loud-and-blocked.
+
+**It also reversed a finding this report had recorded.** The Contrarian proposed adding `pagination-map.md` to audit's Step 2 exclusion pathspec, and Finding 4 above carried that uncorrected. The chair rejected it, and verification confirms: `audit/SKILL.md:224` names exactly three agent-writable data files — `hyphenation-lists.md`, `unlinked-mention-ignore.md`, `alias-detect-exempt.md` — and `pagination-map.md` is not among them. Audit reads that file but never maintains it, so a genuine hand-edit there **should** stale the gate. Excluding it would blind the trust root that peer review separately flagged as unvalidated.
+
+The real finding is narrower and survives: **the carve-out lists disagree**, and `synonym-ignore.md` is genuinely missing from both `AGENT_DATA_FILES` and audit's pathspec while being written autonomously by `skill-linter`. That one is the fix; `pagination-map.md`'s exclusion is correct as it stands and needs only a one-line note at `audit:88` saying *why* the sets differ, so the next editor does not "fix" it by widening.
+
+**Council 1's consolidated change-set**, as the chair ranked it:
+
+| | Change | Weight |
+|---|---|---|
+| A | Propagate the stdout guard to `cleanup/SKILL.md:139,199`, `forget:122`, `ingest:124`. Purely additive, relaxes no consumer. Highest priority — `cleanup` 8.2b confirms a destructive prune by checking a finding disappeared, and a crash reads as success. | load-bearing |
+| B | Add `synonym-ignore.md` to `AGENT_DATA_FILES` and audit's Step 2 pathspec. | load-bearing |
+| C | One-line note at `audit:88` explaining why its 3-file exclusion differs from consistency's 4. | load-bearing |
+| D | Do **not** widen `STANDING_NONBLOCKING` — `lint:81` has the same set drive the script's exit code. Instead amend `lint:47` and `audit:39` to stop naming audit as resolver of a finding that blocks audit's own entry, routing it to the user as `audit:82` already does. | load-bearing |
+| E | Give `audit:104` the same-minute collision suffix its siblings have. | trivial |
+| F | Cap audit's Step 9→7 fold-back (lint caps at 3, consistency at 6, audit at nothing). | load-bearing |
+
+**Chair's confidence: high.** Its stated remaining uncertainty: nobody costed a fix; `cleanup` protects no `query`/`brief`/`compare`/`reflect`/`synthesis` output; and whether the unvalidated `pagination-map.md` trust root warrants a validator is unresolved.
+
+*One orchestrator counter-correction:* the chair states the stdout guard exists in `lint` only and that the Expansionist under-counted. It is present in `lint` **and** `skill-linter`. This does not change the change-set — `cleanup`, `forget` and `ingest` lack it either way — but the chair's incidental claim that `lint:55`'s "consistency already applies this" is unverified prose does appear correct, and is worth checking separately.
+
+## Chair synthesis — Council 2
+
+The chair tiered its set and rejected one proposal outright.
+
+**Tier 0 (by hand, before any loop):** the `h2_heading_case` inversion at `skill-linter/SKILL.md:92` and `:87`, plus `multi-skill/references/skill-authoring-checks.md:72` — which carries the same inversion and **contradicts its own table at `:76`** — and `:78`'s phantom `TITLE_CASE_STOPWORDS`. **Tier 1 (safety):** add the `cmp -s` byte-identity check at `apply-fixes.md:99`. **Tier 2:** the three broken inline refs; `skill-llm-council:137`'s five-of-six scanner count. **Tier 3 (trivial):** the four `CLAUDE.md` staleness items, `skill-linter:226`'s reference offload, and the description disclaimers within the char ceilings. **Rejected:** the shared-reference merge.
+
+**Its sharpest move was an error catch on its own strongest member.** Council 2's Best-Practices reviewer had delivered a blanket rule — "all of this is schema staleness; the skills are right." The chair judged that false *as policy*, with the h2 inversion as the standing counterexample: there the doc is wrong and the script is right. The direction of repair is **per-item, not policy**. Applied per-item the four `CLAUDE.md` items still resolve the reviewer's way, so **the conclusion survives and the rule does not** — a distinction worth more than either finding.
+
+It also preserved the Adversarial member's residue after the refutation, reclassified: `audit` is the only deletion-capable skill absent from `CLAUDE.md:744`'s enumeration. Not a safety hole, since the guards exist — a **discoverability** defect, because the next author reading `:744` will not know to check audit's.
+
+## Meta-chair reconciliation
+
+### A measurement that corrects both chairs and five peer reviewers
+
+Chair 2 named an untested assumption and said to settle it before re-running. Settled: **`check_h2_case.py` across all 14 skills returns zero `h2_heading_case` findings.**
+
+The headings are currently correct. So the inversion is **latent, not active**. Chair 2 called it "active corruption, not drift" and "a loop that currently corrupts headings across all 14 skills"; all five Council 2 peer reviewers ranked it first on that framing, one calling it "the only file-corrupting defect here." **The measurement refutes all six.** What is true: the prose is inverted, the script is right, nothing is damaged, and the hazard is prospective — an agent following `:92` would title-case correct headings, which the scanner would then flag, and the two-clean-passes loop would oscillate rather than converge.
+
+*Flagged as a meta-chair addition:* no council member or chair produced this; it is the orchestrator's own check, and it is the single reason the final ranking differs from both chairs'.
+
+### Reconciling the two rankings
+
+The chairs disagreed on what comes first. Chair 1 ranked the stdout guard above everything, overriding its own majority. Chair 2 put the h2 inversion in Tier 0 on the "gates every other fix" argument.
+
+**Chair 1's ranking wins, and the measurement is why.** Chair 2's ordering rested entirely on the loop actively corrupting files as it ran; with blast radius zero, that argument dissolves and the h2 fix becomes important-but-not-urgent. Chair 1's stdout guard, meanwhile, is what it always was: a **silent** failure on a **destructive** path, with no escape and no detector, and the only purely additive fix in the set. Silent-and-destructive outranks latent-and-loud.
+
+### Final ranked proposal set
+
+Every item traces to a chair line or is flagged as a meta-chair addition. **Nothing here was applied.**
+
+| # | Proposal | Traces to | Weight |
+|---|---|---|---|
+| 1 | Propagate the stdout guard to `cleanup/SKILL.md:139` and `:199`, `forget:122`, `ingest:124`. `cleanup` 8.2b confirms a destructive prune by checking a finding disappeared; a crashed run prints nothing, which reads as success. Purely additive. | Chair 1 change A | load-bearing |
+| 2 | Add the `cmp -s` byte-identity check at `audit/references/apply-fixes.md:99`, before unlinking the original, per `quarantine-path-convention.md:11-16`. | Chair 2 Tier 1 | load-bearing |
+| 3 | Correct the h2 inversion in all four places: `skill-linter/SKILL.md:92`, `:87`, `skill-authoring-checks.md:72`, and `:78`'s phantom constant. Latent, not active — but it must be fixed before any skill-linter loop is trusted. | Chair 2 Tier 0, re-ranked by the measurement above | load-bearing |
+| 4 | Add `synonym-ignore.md` to `AGENT_DATA_FILES` and audit's Step 2 pathspec. Do **not** add `pagination-map.md` — `audit:224` shows audit never maintains it, so a hand-edit there should stale the gate. | Chair 1 change B | load-bearing |
+| 5 | Investigate why `shared_reference_integrity` does not already catch the misplaced `synonym-ignore.md`. **The enforcer is the seam, not the instances** — Chair 2 called this the most valuable item in the whole council, and I agree. | Chair 2, from peer review | load-bearing |
+| 6 | Stop naming `audit` as resolver of `locator_page_mismatch` at `lint:47` and `audit:39`; route to the user, as `audit:82` already does. Do **not** widen `STANDING_NONBLOCKING` — `lint:81` has the same set drive the exit code. | Chair 1 change D | load-bearing |
+| 7 | Give `check_musts.py` and `check_kwargs.py` tests. Their absence is the mechanism by which the h2 inversion survived. | Chair 2, from peer review | load-bearing |
+| 8 | Cap audit's Step 9→7 fold-back; add the same-minute collision suffix at `audit:104`; one-line note at `audit:88` on why the carve-out sets differ. | Chair 1 changes C, E, F | mixed |
+| 9 | Fix the three broken inline refs; correct `skill-llm-council:137`'s scanner count to six. | Chair 2 Tier 2 | load-bearing |
+| 10 | The four `CLAUDE.md` staleness items — applied **per-item**, not under a blanket rule. Add `audit` to `:744`'s enumeration as a discoverability fix. | Chair 2 Tier 3 + preserved dissent | trivial |
+| 11 | Description disclaimers for the query/brief and consistency/skill-linter collisions — trading characters out, not appending (`skill-linter` 1018/1024, `ingest` 1012/1024). | Council 2 Description & Trigger | trivial |
+
+**Rejected:** merging the three shared cascade references. It renames paths cited inline across the suite, inside the one folder `check_structure.py` cannot validate, so a non-atomic application produces a broken-reference storm no scanner would catch. Both the fixability reviewer and Chair 2 rejected it independently.
+
+**Open, unowned:** concurrent writes by `skill-linter` and `skill-llm-council` into one folder; whether `cleanup`'s preserve-folder sub-mode can prune the copy audit's merge depends on; whether the unvalidated `pagination-map.md` trust root warrants a validator; and that `cleanup` protects no `query`/`brief`/`compare`/`reflect`/`synthesis` output.
+
+## Self-report
+
+- **The brief carried a false count into all ten prompts.** It said 15 skills; the repo's own tooling says 14. → upgrade: compute every quantity in a brief from the repo before writing it, and state the command used.
+- **The orchestrator's own verification was wrong in the same direction as the claim it was checking.** The exit-code check piped through `head`, so `$?` was `head`'s. A verification that can only confirm is not a verification. → upgrade: when checking an exit code, never pipe; capture status directly.
+- **The headline finding was the one that most needed an adversary and nearly did not get one.** The safety claim was recorded as the run's most serious result and survived until a reviewer was pointed at it specifically. → upgrade: assign a dedicated refuter to the single highest-severity finding of any run, before it is written up rather than after.
+- **Six independent agents propagated an unmeasured premise.** Two chairs and five peer reviewers all ranked the h2 inversion first on "active corruption", which one command disproved. Nobody ran it. → upgrade: any severity claim resting on a measurable blast radius must carry the measurement, exactly as this skill's own memory already requires for counts.
+- **The run was scaled down for cost and the user had to override it.** That reduction would have skipped peer review, which killed two findings, refuted the headline, and produced the run's most valuable item. → upgrade: when cost pressure and protocol integrity conflict, surface the trade-off as a decision rather than resolving it silently toward the cheaper option.
 
 ## Self-report
 
