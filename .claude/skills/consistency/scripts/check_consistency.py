@@ -1653,6 +1653,7 @@ AGENT_DATA_FILES = frozenset(
         'unlinked-mention-ignore.md',  # unlinked_page_mention suppressions (lint)
         'alias-detect-exempt.md',  # unlinked_page_mention detect-exemptions (lint)
         'pagination-map.md',  # locator_page_mismatch / locator exemption (lint)
+        'synonym-ignore.md',  # terminology_candidate suppressions (skill-linter)
     }
 )
 
