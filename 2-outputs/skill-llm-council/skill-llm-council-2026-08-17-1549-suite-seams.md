@@ -187,9 +187,39 @@ This member also re-checked the audit `result:` contract the brief flagged as wo
 
 `skill-linter`'s description sits at 1018/1024 chars and `ingest` at 1010/1024. Several members proposed appending disclaimers to descriptions; on those two skills an append silently breaks frontmatter validation. Recorded as a constraint on the whole proposal set.
 
+## Peer review (Step 3)
+
+The user directed that the protocol not be scaled down after an initial cost-based reduction. That call is vindicated by what this step produced — none of it was reachable from the Step-2 responses alone.
+
+**A finding was killed.** Council 1's Expansionist claimed `skill-linter/SKILL.md:190` declines a `result:` gate field on a false premise, citing `cleanup/SKILL.md:55` as reading it. Two peer reviewers independently found the referent inverted: `cleanup:52-57` reads `result:` for `lint`, `consistency` and `audit` only, and `:57`/`:213` explicitly place `skill-linter` among the subject-bearing kinds with **no** kept-latest and no gate read. **`skill-linter:190` is correct and the finding is wrong.** It never reached this report's findings list, but it was in the orchestrator's chat summary and is retracted here.
+
+**A severity was overstated.** Two reviewers confirmed the `locator_page_mismatch` deadlock mechanically — `error` severity, absent from `STANDING_NONBLOCKING`, both skills naming audit as resolver — but corrected its characterization: `audit/SKILL.md:82` **stops and puts the findings to the user** rather than failing silently. So it is an unreachable-clause bug with a human escape, not a hard deadlock. Real, and one notch less severe than Finding 1 states.
+
+**Two findings no council member reached:**
+
+- **A fifth agent-writable data file, missing from both carve-out lists.** `synonym-ignore.md` is agent-writable per `CLAUDE.md:803` and written autonomously by `skill-linter/SKILL.md:73,200` — yet it is absent from `AGENT_DATA_FILES` (`check_consistency.py:1650-1656`) *and* from audit's Step 2 exclusion pathspec. So any `skill-linter` run stales audit exactly as the `pagination-map.md` path in Finding 4 does. The Contrarian found one instance of this class and stopped; the class has at least two members.
+- **Three incompatible `result:` vocabularies across one seam.** `clean | blocking` (lint), `clean | findings | blocked` (consistency), `settled | interim | blocked` (audit) — all parsed by consumers at the same hand-off.
+
+**The set's shared blind spot.** Every Step-2 member reasoned from `SKILL.md` prose; only the Executor opened the script that actually decides severity. Prose seams are cheap to find and the registry is authoritative — which is why the one script-grounded response was judged strongest by all three reviewers so far.
+
+**A second finding dissolved.** The First-Principles member's claim that `query` is a third page-authoring skill contradicting `CLAUDE.md:764`'s "read-only" list does not survive: `CLAUDE.md:671` already qualifies it as "a plain `query` with no promotion". The schema is consistent; the reviewer read one half of it.
+
+**Convergence was correlated, not corroborative.** The sharpest peer-review result. Three Step-2 members independently indicted `audit` — and the reviewer assigned to the correlation angle judged that this happened because `audit/SKILL.md` is the longest and most cross-referencing file in the suite, not because three probes converged on one defect. Each named a *different* mechanism. So "audit is the fragile hub" gains **zero** independent support from the three-way agreement, even though the three specific findings each stand on their own evidence. Recorded because the read-access grant made exactly this failure mode likely, and the naive reading of Findings 1, 4, 5 and 7 together is the one the reviewer rules out.
+
+**Nobody costed a fix, and the obvious fixes are traps.** The fixability reviewer found that most proposed fixes land in `CLAUDE.md` or the shared scripts — which `consistency` and `skill-linter` may only *propose*, never apply. So this proposal set is largely not autonomously actionable by the suite that produced it. Two specific traps:
+
+- **Widening `STANDING_NONBLOCKING` to fix the deadlock would silently relax every other consumer**, because `lint/SKILL.md:81` has the same set drive the script's exit code. A real fix needs a third severity class and touches the script, `lint`, `audit` and `CLAUDE.md` together.
+- **Widening audit's Step 2 pathspec to fix the staleness loop blinds the gate to genuine hand-edits** — the condition the gate exists to catch.
+
+The one cheap, purely additive fix in the whole set is the stdout guard of Finding 3.
+
+**A third missed seam.** `cleanup/SKILL.md` never names `query`, `brief`, `compare`, `reflect` or synthesis outputs, so those fall into the unprotected aged-out sweep while `log.md` and synthesis's promotion path still link to them.
+
+**An unvalidated trust root, flagged as the thing all five missed.** `pagination-map.md` is written by `ingest` on human footer-confirmation, is never grown by `audit`, and is exempt from consistency's content scan — so the one data file no check validates is the ground truth that `locator_page_mismatch` fires against. A wrong map yields confidently-wrong Criticals. That is a correctness seam, and the set found only control-flow ones.
+
 ## Proposals
 
-*Pending. Nothing in this run is auto-applied.*
+*Pending chair synthesis. Nothing in this run is auto-applied.*
 
 ## Self-report
 
